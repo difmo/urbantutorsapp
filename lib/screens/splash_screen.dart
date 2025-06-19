@@ -46,6 +46,7 @@ class _SplashScreenState extends State<SplashScreen> {
         default:
           target = const DefaultDashboardScreen();
       }
+      // hjdhjk
 
       Navigator.pushReplacement(
         context,
