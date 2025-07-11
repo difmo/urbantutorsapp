@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:urbantutors_app/screens/splash_screen.dart';
 import '../../theme/theme_constants.dart';
 import 'package:urbantutors_app/screens/welcome/welcome_screen.dart';
- // Adjust this import path if needed
+import 'package:urbantutors_app/screens/admin/history_screen.dart';
+// Adjust this import path if needed
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
@@ -24,9 +25,14 @@ class AdminDashboardScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
-                    CircleAvatar(child: Icon(Icons.admin_panel_settings, size: 32)),
+                    CircleAvatar(
+                      child: Icon(Icons.admin_panel_settings, size: 32),
+                    ),
                     SizedBox(height: 8),
-                    Text('Admin Menu', style: TextStyle(color: Colors.white, fontSize: 18)),
+                    Text(
+                      'Admin Menu',
+                      style: TextStyle(color: Colors.white, fontSize: 18),
+                    ),
                   ],
                 ),
               ),
@@ -44,7 +50,9 @@ class AdminDashboardScreen extends StatelessWidget {
                   Navigator.pop(context); // Close drawer
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const WelcomeScreen(),
+                    ),
                   );
                 },
               ),
@@ -67,8 +75,10 @@ class AdminDashboardScreen extends StatelessWidget {
                 child: Text('A', style: TextStyle(color: primaryColor)),
               ),
               const SizedBox(width: 12),
-              const Text('Admin Dashboard',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text(
+                'Admin Dashboard',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               const Spacer(),
               Row(
                 children: const [
@@ -105,10 +115,20 @@ class AdminDashboardScreen extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: <Widget>[
-              IconButton(icon: Icon(Icons.home, color: primaryColor), onPressed: () {}),
+              IconButton(
+                icon: Icon(Icons.home, color: primaryColor),
+                onPressed: () {},
+              ),
               const SizedBox(width: 40), // space for FAB
               TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AdminHistoryPage(),
+                    ),
+                  );
+                },
                 child: Text("History", style: TextStyle(color: primaryColor)),
               ),
             ],
@@ -153,12 +173,7 @@ class AdminDashboardScreen extends StatelessWidget {
         children: [
           Icon(Icons.leaderboard, color: AppColors.primaryColor),
           const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(fontSize: 16),
-            ),
-          ),
+          Expanded(child: Text(title, style: const TextStyle(fontSize: 16))),
           const Icon(Icons.chevron_right),
         ],
       ),

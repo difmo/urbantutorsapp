@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:urbantutors_app/screens/welcome/welcome_screen.dart';
 import '../../theme/theme_constants.dart';
 import 'package:urbantutors_app/screens/student/support_screen.dart';
-import 'package:urbantutors_app/screens/student/history_screen.dart'; // Make sure AppColors is defined
+import 'package:urbantutors_app/screens/student/history_screen.dart';
+import 'package:urbantutors_app/screens/student/chat_screen.dart';
+import 'package:urbantutors_app/screens/student/upgrade_screen.dart'; // Make sure AppColors is defined
 // OPTIONAL: for logout navigation
 
 class StudentDashboardScreen extends StatelessWidget {
@@ -17,11 +19,28 @@ class StudentDashboardScreen extends StatelessWidget {
       );
     }
     else if (index == 3) {
+      // Index of 'History'
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const StudentHistoryScreen()),
       );
-    } 
+    }
+    else if (index == 1) {
+      // Index of 'Chat'
+      Navigator.push(
+        context,
+         MaterialPageRoute(builder: (context) => const
+          StudentChatBotScreen()),
+      );
+    }
+    else if (index == 2){
+      // Index of 'Upgrade'
+      Navigator.push(
+        context, 
+        MaterialPageRoute(builder: (context) => const
+          StudentUpgradeScreen()),
+      );
+    }
      else {
       _selectedIndex = index;
       // Handle other navigation logic if needed
