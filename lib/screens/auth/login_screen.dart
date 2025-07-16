@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:urbantutorsapp/controllers/AuthController.dart';
 import 'otp_screen.dart';
 import '../../theme/theme_constants.dart';
 
@@ -14,21 +17,31 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _phoneController = TextEditingController();
 
-  void _sendOtp() {
-    final phone = _phoneController.text.trim();
-    if (phone.length == 10 && RegExp(r'^[6-9]\d{9}$').hasMatch(phone)) {
+// inside _sendOtp method
+void _sendOtp() async {
+  final phone = _phoneController.text.trim();
+  if (phone.length == 10 && RegExp(r'^[6-9]\d{9}$').hasMatch(phone)) {
+    try {
+      final auth = Get.find<AuthController>();
+      await auth.sendOtp(phone);
+
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => OTPScreen(phone: phone, role: widget.role),
+          builder: (_) => OTPScreen(phone: phone, role: widget.role, receivedOtp: '0000',),
         ),
       );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid 10-digit mobile number')),
-      );
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.toString())));
     }
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please enter a valid 10-digit mobile number')),
+    );
   }
+}
+
 
   @override
   Widget build(BuildContext context) {

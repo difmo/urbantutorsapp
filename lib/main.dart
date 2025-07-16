@@ -1,8 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:urbantutorsapp/controllers/AuthController.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
+import 'package:urbantutorsapp/services/ApiService.dart';
 import 'theme/app_theme.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Correctly register ApiService (no async/await needed unless init method exists)
+  Get.put(ApiService());
+
+  // Register AuthController after ApiService
+  Get.put(AuthController());
+
   runApp(const UrbanTutorsProApp());
 }
 

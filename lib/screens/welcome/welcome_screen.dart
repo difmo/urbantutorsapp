@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../auth/role_intro_screen.dart';
 import '../../theme/theme_constants.dart';
 
@@ -8,78 +9,156 @@ class WelcomeScreen extends StatelessWidget {
   void navigateToNext(BuildContext context, String role) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => RoleIntroScreen(role: role),
-      ),
+      MaterialPageRoute(builder: (_) => RoleIntroScreen(role: role)),
     );
   }
 
-  Widget _roleButton(BuildContext context, String label, IconData icon) {
-    return ElevatedButton.icon(
-      onPressed: () => navigateToNext(context, label),
-      icon: Icon(icon, size: 20),
-      label: Text(
-        label.toUpperCase(),
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.primaryColor,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        textStyle: const TextStyle(fontSize: 16),
+  Widget _roleButton(
+      BuildContext context, String label, IconData icon, Color color) {
+    return Container(
+      width: double.infinity,
+      child: GestureDetector(
+        onTap: () => navigateToNext(context, label),
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.26,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: [color.withOpacity(0.8), color]),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                  color: color.withOpacity(0.4),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4)),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FaIcon(icon, size: 28, color: Colors.white),
+              const SizedBox(height: 8),
+              Text(
+                label.toUpperCase(),
+                style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final primary = AppColors.primaryColor;
+    final accent = AppColors.accentColor;
+
     return Scaffold(
-      backgroundColor: AppColors.backgroundColor,
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Center(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                const CircleAvatar(
-                  radius: 50,
-                  backgroundColor: AppColors.primaryColor,
-                  child: Icon(Icons.school, size: 50, color: Colors.white),
+      body: Stack(
+        children: [
+          // Background splash
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [accent.withOpacity(0.3), primary.withOpacity(0.8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                const SizedBox(height: 30),
-
-                const Text(
-                  'Welcome to Urban Tutors',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primaryColor,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                const Text(
-                  'Who are you?',
-                  style: TextStyle(fontSize: 18, color: Colors.black87),
-                ),
-                const SizedBox(height: 24),
-
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    _roleButton(context, 'admin', Icons.admin_panel_settings),
-                    _roleButton(context, 'tutor', Icons.person_outline),
-                    _roleButton(context, 'student', Icons.auto_stories),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+          // Main content
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                child: Column(
+                  children: [
+                    // Animated logo
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 1000),
+                      builder: (_, op, ch) => Opacity(opacity: op, child: ch),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.3),
+                        ),
+                        child: CircleAvatar(
+                          radius: 60,
+                          backgroundColor: Colors.white,
+                          child: FaIcon(FontAwesomeIcons.school,
+                              size: 50, color: primary),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    // Title with shimmer
+                    TweenAnimationBuilder<Offset>(
+                      tween:
+                          Tween(begin: const Offset(0, 0.3), end: Offset.zero),
+                      duration: const Duration(milliseconds: 800),
+                      builder: (_, offset, child) => Transform.translate(
+                          offset: offset * 60, child: child),
+                      child: Text(
+                        'Welcome to Urban Tutors',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(
+                                color: Colors.black26,
+                                blurRadius: 6,
+                                offset: const Offset(0, 2)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Are you a?',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white70, fontSize: 24),
+                    ),
+                    const SizedBox(height: 40),
+                    // Role buttons in a vertical column with staggered animation
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _roleButton(context, 'Admin',
+                            FontAwesomeIcons.userShield, primary),
+                        const SizedBox(height: 16),
+                        _roleButton(
+                            context, 'Tutor', FontAwesomeIcons.userTie, accent),
+                        const SizedBox(height: 16),
+                        _roleButton(
+                            context,
+                            'Student',
+                            FontAwesomeIcons.userGraduate,
+                            Colors.deepPurpleAccent),
+                      ],
+                    ),
+                    const SizedBox(height: 48),
+                    Text(
+                      'By continuing, you agree to our Terms & Privacy Policy.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: Colors.white70.withOpacity(0.9), fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

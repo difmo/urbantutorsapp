@@ -1,89 +1,159 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pin_code_fields/pin_code_fields.dart';
+import 'package:urbantutorsapp/controllers/AuthController.dart';
+
 import 'package:urbantutorsapp/screens/admin/admin_dashboard..dart';
 import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
 import 'package:urbantutorsapp/shared/default_dashboard.dart';
-
 import '../../theme/theme_constants.dart';
 
 class OTPScreen extends StatefulWidget {
   final String phone;
   final String role;
 
-  const OTPScreen({super.key, required this.phone, required this.role});
+  const OTPScreen({super.key, required this.phone, required this.role, required String receivedOtp});
 
   @override
   State<OTPScreen> createState() => _OTPScreenState();
 }
 
 class _OTPScreenState extends State<OTPScreen> {
-  final TextEditingController _otpController = TextEditingController();
+  String otp = '';
+  bool isResending = false;
 
-  void _verifyOtp() async {
-    if (_otpController.text == '123456') {
-      final prefs = await SharedPreferences.getInstance();
-      final name = prefs.getString('reg_name') ?? 'User';
-      await prefs.setBool('isLoggedIn', true);
-      await prefs.setString('user_name', name);
-      await prefs.setString('user_phone', widget.phone);
-      await prefs.setString('user_role', widget.role);
+ Future<void> _verifyOtp() async {
+  final prefs = await SharedPreferences.getInstance();
+  final name = prefs.getString('reg_name') ?? 'User';
+  final role = widget.role.toLowerCase();
+  final firebaseToken = 'dummy_token'; // Replace with actual FCM token
+  final roleId = role == 'student' ? '3' : role == 'tutor' ? '2' : '1';
 
-      // Navigate to correct dashboard
-      Widget dashboard;
-      switch (widget.role.toLowerCase()) {
-        case 'admin':
-          dashboard = const AdminDashboardScreen();
-          break;
-        case 'tutor':
-          dashboard = const TutorDashboardScreen();
-          break;
-        case 'student':
-          dashboard = const StudentDashboardScreen();
-          break;
-        default:
-          dashboard = const DefaultDashboardScreen();
-      }
-
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => dashboard),
-        (route) => false,
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid OTP. Try using 123456')),
-      );
+  try {
+    final auth = Get.find<AuthController>();
+    await auth.verifyOtp(widget.phone, otp, roleId, firebaseToken, name);
+    Widget dashboard;
+    switch (role) {
+      case 'admin':
+        dashboard = const AdminDashboard();
+        break;
+      case 'tutor':
+        dashboard = const TutorDashboard();
+        break;
+      case 'student':
+        dashboard = const StudentDashboardScreen();
+        break;
+      default:
+        dashboard = const DefaultDashboardScreen();
     }
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => dashboard),
+      (route) => false,
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(e.toString())),
+    );
+  }
+}
+
+  void _resendCode() {
+    setState(() => isResending = true);
+    Future.delayed(const Duration(seconds: 2), () {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('OTP resent')),
+      );
+      setState(() => isResending = false);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Verify OTP')),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('Enter OTP sent to +91-${widget.phone}'),
-            const SizedBox(height: 20),
+    final primary = AppColors.primaryColor;
 
-            TextField(
-              controller: _otpController,
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Verify OTP'),
+        backgroundColor: primary,
+        elevation: 1,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+        child: Column(
+          children: [
+            const Text(
+              'Verification Code',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            RichText(
+              text: TextSpan(
+                text: 'Enter the code sent to ',
+                style: const TextStyle(color: Colors.black87, fontSize: 16),
+                children: [
+                  TextSpan(
+                    text: '+91-${widget.phone}',
+                    style: TextStyle(
+                      color: primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                ],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+
+            PinCodeTextField(
+              appContext: context,
+              length: 6,
               keyboardType: TextInputType.number,
-              maxLength: 6,
-              decoration: const InputDecoration(
-                labelText: 'Enter 6-digit OTP',
-                border: OutlineInputBorder(),
+              animationType: AnimationType.fade,
+              autoFocus: true,
+              cursorColor: primary,
+              enableActiveFill: true,
+              onChanged: (value) => setState(() => otp = value),
+              pinTheme: PinTheme(
+                shape: PinCodeFieldShape.box,
+                borderRadius: BorderRadius.circular(10),
+                fieldHeight: 50,
+                fieldWidth: 45,
+                activeColor: primary,
+                selectedColor: primary,
+                inactiveColor: Colors.grey.shade300,
+                activeFillColor: Colors.white,
+                selectedFillColor: Colors.white,
+                inactiveFillColor: Colors.grey.shade100,
               ),
             ),
-            const SizedBox(height: 20),
 
+            const SizedBox(height: 30),
             ElevatedButton(
-              onPressed: _verifyOtp,
-              child: const Text('Verify OTP'),
+              onPressed: otp.length == 6 ? _verifyOtp : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: otp.length == 6 ? primary : primary.withOpacity(0.4),
+                minimumSize: const Size.fromHeight(50),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Verify OTP', style: TextStyle(fontSize: 16)),
             ),
+
+            const SizedBox(height: 16),
+            isResending
+                ? const CircularProgressIndicator()
+                : TextButton(
+                    onPressed: _resendCode,
+                    child: Text(
+                      'Resend Code',
+                      style: TextStyle(
+                          color: primary, fontWeight: FontWeight.w600),
+                    ),
+                  ),
           ],
         ),
       ),

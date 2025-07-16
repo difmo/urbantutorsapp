@@ -1,122 +1,204 @@
 import 'package:flutter/material.dart';
-import '../../theme/theme_constants.dart'; // Ensure AppColors is available here
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:urbantutorsapp/screens/admin/CreateLeadScreen.dart';
+import 'package:urbantutorsapp/screens/admin/LeadDetailsScreen.dart';
+import 'package:urbantutorsapp/widgets/AdminDrawer.dart';
+import 'package:urbantutorsapp/widgets/CustomFAB.dart';
+import 'package:urbantutorsapp/widgets/LeadCardWidget.dart';
+import '../../theme/theme_constants.dart';
+import 'package:urbantutorsapp/screens/splash_screen.dart';
 
-class AdminDashboardScreen extends StatelessWidget {
-  const AdminDashboardScreen({super.key});
+class AdminDashboard extends StatefulWidget {
+  const AdminDashboard({super.key});
+
+  @override
+  State<AdminDashboard> createState() => _AdminDashboardState();
+}
+
+class _AdminDashboardState extends State<AdminDashboard>
+    with TickerProviderStateMixin {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  late final TabController _tabController;
+  final List<String> _tabs = ['All Leads', 'Grabbed', 'Declined'];
+
+  final List<Map<String, String>> _dummyLeads = List.generate(8, (i) {
+    return {
+      'studentName': 'Student #${i + 1}',
+      'mobile': '98${70000000 + i}',
+      'subject': ['Math', 'Science', 'English', 'Physics'][i % 4],
+      'classLevel': 'Class ${6 + (i % 7)}',
+      'location': ['Delhi', 'Mumbai', 'Bangalore', 'Chennai'][i % 4],
+      'timing': '${4 + i % 3}:00 PM',
+      'coins': '${20 + i * 5}',
+      'remarks': i % 2 == 0 ? 'Requires weekend sessions' : '',
+    };
+  });
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: _tabs.length, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void _handleMenuTap(String label) async {
+    Navigator.of(context).pop();
+      if (label == 'Logout') {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isLoggedIn', false);
+          await prefs.remove('user_name');
+          await prefs.remove('user_phone');
+          await prefs.remove('user_role');
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Logged out successfully')),
+          );
+            Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => SplashScreen()),
+            (route) => false,
+            );
+        } else {
+          // Navigate to respective screen
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Navigating to $label')),
+          );
+        }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = AppColors.primaryColor;
-    final accentColor = AppColors.accentColor;
+    final primary = AppColors.primaryColor;
+    final accent = AppColors.accentColor;
 
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: primaryColor,
-          elevation: 0,
-          title: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Text('A', style: TextStyle(color: primaryColor)),
-              ),
-              SizedBox(width: 12),
-              Text('Admin Dashboard',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              Spacer(),
-              Row(
-                children: [
-                  Icon(Icons.monetization_on_outlined, size: 20),
-                  SizedBox(width: 4),
-                  Text('Coins'),
-                  SizedBox(width: 12),
-                  Icon(Icons.menu),
-                ],
-              ),
-            ],
-          ),
-          bottom: TabBar(
-            labelColor: Colors.white,
-            indicatorColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
-            tabs: [
-              Tab(text: "All Posted"),
-              Tab(text: "Grabbed"),
-              Tab(text: "Declined"),
-            ],
-          ),
-        ),
-        body: TabBarView(
+    return Scaffold(
+      key: _scaffoldKey,
+      endDrawer: AdminDrawer(onMenuTap: _handleMenuTap),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 2,
+        title: Row(
           children: [
-            _buildLeadList("All Posted Leads"),
-            _buildLeadList("Grabbed Leads"),
-            _buildLeadList("Declined Leads"),
+            CircleAvatar(
+                backgroundColor: primary,
+                child: const Text('A', style: TextStyle(color: Colors.white))),
+            const SizedBox(width: 12),
+            Text('Admin Panel',
+                style: TextStyle(fontWeight: FontWeight.bold, color: primary)),
+            const Spacer(),
+            InkWell(
+              onTap: () {},
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: accent.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.analytics, color: accent, size: 16),
+                    const SizedBox(width: 4),
+                    Text('Stats',
+                        style: TextStyle(
+                            color: primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
-        bottomNavigationBar: BottomAppBar(
-          shape: CircularNotchedRectangle(),
-          notchMargin: 8.0,
-          color: Colors.grey.shade100,
+        actions: [
+          Builder(
+            builder: (ctx) => IconButton(
+              icon: Icon(Icons.menu, color: primary),
+              onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+            ),
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: accent,
+          labelColor: primary,
+          unselectedLabelColor: Colors.grey,
+          tabs: _tabs.map((label) => Tab(text: label)).toList(),
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        physics: const BouncingScrollPhysics(),
+        children: _tabs.map((label) {
+          return RefreshIndicator(
+            onRefresh: () async {},
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: _dummyLeads.map((data) {
+                return LeadCardWidget(
+                  studentName: data['studentName']!,
+                  mobile: data['mobile']!,
+                  subject: data['subject']!,
+                  classLevel: data['classLevel']!,
+                  location: data['location']!,
+                  timing: data['timing']!,
+                  coins: data['coins']!,
+                  remarks: data['remarks']!,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => LeadDetailsScreen(
+                          studentName: data['studentName']!,
+                          mobile: data['mobile']!,
+                          subject: data['subject']!,
+                          classLevel: data['classLevel']!,
+                          location: data['location']!,
+                          timing: data['timing']!,
+                          coins: data['coins']!,
+                          remarks: data['remarks']!,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              }).toList(),
+            ),
+          );
+        }).toList(),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: CustomFAB(
+        onPressed: () {
+          Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const CreateLeadScreen()));
+        },
+      ),
+      bottomNavigationBar: BottomAppBar(
+        color: Colors.white,
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: <Widget>[
-              IconButton(icon: Icon(Icons.home, color: primaryColor), onPressed: () {}),
-              SizedBox(width: 40), // space for FAB
-              TextButton(
-                onPressed: () {},
-                child: Text("History", style: TextStyle(color: primaryColor)),
-              ),
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                  icon: Icon(FontAwesomeIcons.house, color: primary),
+                  onPressed: () {}),
+              IconButton(
+                  icon: Icon(FontAwesomeIcons.clockRotateLeft, color: primary),
+                  onPressed: () {})
             ],
           ),
         ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-        floatingActionButton: FloatingActionButton(
-          backgroundColor: accentColor,
-          onPressed: () {
-            // TODO: Post new lead
-          },
-          child: Icon(Icons.add, color: Colors.white),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLeadList(String type) {
-    return ListView(
-      padding: EdgeInsets.all(16),
-      children: [
-        _leadCard("Lead 1 • $type"),
-        SizedBox(height: 12),
-        _leadCard("Lead 2 • $type"),
-        SizedBox(height: 12),
-        _leadCard("Lead 3 • $type"),
-        SizedBox(height: 24),
-        Center(child: Icon(Icons.arrow_downward, color: Colors.grey)),
-      ],
-    );
-  }
-
-  Widget _leadCard(String title) {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.leaderboard, color: AppColors.primaryColor),
-          SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              title,
-              style: TextStyle(fontSize: 16),
-            ),
-          ),
-          Icon(Icons.chevron_right),
-        ],
       ),
     );
   }
