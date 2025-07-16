@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'otp_screen.dart';
+import 'package:urbantutorsapp/controllers/AuthController.dart';
+import 'package:urbantutorsapp/widgets/custom_button.dart';
+import 'package:urbantutorsapp/widgets/custom_input_field.dart';
 import '../../theme/theme_constants.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'otp_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   final String role;
-
   const RegisterScreen({super.key, required this.role});
 
   @override
@@ -14,74 +19,101 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _mobileController = TextEditingController();
+  final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  
+// inside _sendOtp method
+Future<void> _sendOtp() async {
+  if (_formKey.currentState!.validate()) {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('reg_name', _nameController.text.trim());
+    await prefs.setString('reg_phone', _phoneController.text.trim());
 
-  void _sendOtp() async {
-    if (_formKey.currentState!.validate()) {
-      final name = _nameController.text.trim();
-      final phone = _mobileController.text.trim();
+    try {
+      final auth = Get.find<AuthController>();
+      final otp = await auth.sendOtp(_phoneController.text.trim());
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('reg_name', name);
-      await prefs.setString('reg_phone', phone);
+      if (otp != null) {
+        debugPrint('🔐 OTP for testing: $otp');
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => OTPScreen(phone: phone, role: widget.role),
-        ),
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OTPScreen(
+              role: widget.role,
+              phone: _phoneController.text.trim(),
+              receivedOtp: otp, // Pass to OTPScreen for dev
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
       );
     }
+  }
+}
+
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final roleTitle = widget.role[0].toUpperCase() + widget.role.substring(1);
+    final formattedRole =
+        '${widget.role[0].toUpperCase()}${widget.role.substring(1)}';
 
     return Scaffold(
-      appBar: AppBar(title: Text('$roleTitle Registration')),
+      appBar: AppBar(
+        backgroundColor: AppColors.primaryColor,
+        title: Text('$formattedRole Registration'),
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.app_registration, size: 60, color: AppColors.primaryColor),
-              const SizedBox(height: 20),
-
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Full Name',
-                  prefixIcon: Icon(Icons.person),
-                ),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Enter your name' : null,
-              ),
-              const SizedBox(height: 16),
-
-              TextFormField(
-                controller: _mobileController,
-                keyboardType: TextInputType.phone,
-                maxLength: 10,
-                decoration: const InputDecoration(
-                  labelText: 'Mobile Number',
-                  prefixIcon: Icon(Icons.phone),
-                ),
-                validator: (value) =>
-                    value == null || value.length != 10
-                        ? 'Enter a valid 10-digit number'
+        padding: const EdgeInsets.all(24),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  FaIcon(
+                    FontAwesomeIcons.userPlus,
+                    size: 60,
+                    color: AppColors.primaryColor,
+                  ),
+                  const SizedBox(height: 24),
+                  CustomInputField(
+                    controller: _nameController,
+                    label: 'Full Name',
+                    icon: FontAwesomeIcons.user,
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomInputField(
+                    controller: _phoneController,
+                    label: 'Mobile Number',
+                    icon: FontAwesomeIcons.mobileAlt,
+                    keyboardType: TextInputType.phone,
+                    maxLength: 10,
+                    validator: (v) => v == null || v.trim().length != 10
+                        ? 'Enter valid 10-digit mobile number'
                         : null,
+                  ),
+                  const SizedBox(height: 24),
+                  CustomButton(
+                    label: 'Register',
+                    onPressed: _sendOtp,
+                    icon: Icons.check,
+                  )
+                ],
               ),
-              const SizedBox(height: 24),
-
-              ElevatedButton(
-                onPressed: _sendOtp,
-                child: const Text('Register & Send OTP'),
-              ),
-            ],
+            ),
           ),
         ),
       ),

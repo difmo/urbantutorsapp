@@ -21,94 +21,96 @@ class RoleIntroScreen extends StatelessWidget {
     }
   }
 
-  Color getRoleColor(String role) {
-    switch (role.toLowerCase()) {
-      case 'admin':
-        return Colors.deepPurple;
-      case 'tutor':
-        return AppColors.primaryColor;
-      case 'student':
-        return AppColors.accentColor;
-      default:
-        return Colors.grey;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final roleColor = getRoleColor(role);
     final icon = getRoleIcon(role);
+    final formattedRole = "${role[0].toUpperCase()}${role.substring(1)}";
 
     return Scaffold(
-      backgroundColor: roleColor.withOpacity(0.05),
-      appBar: AppBar(
-        backgroundColor: roleColor,
-        title: Text('${role[0].toUpperCase()}${role.substring(1)} Panel'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircleAvatar(
-              radius: 50,
-              backgroundColor: roleColor.withOpacity(0.2),
-              child: Icon(icon, size: 50, color: roleColor),
-            ),
-            const SizedBox(height: 30),
-
-            Text(
-              'Welcome $role!',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: roleColor,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            Text(
-              'Continue as $role to explore the Urban Tutors platform.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 40),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      body: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.primaryColor, AppColors.accentColor],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => LoginScreen(role: role)),
-                    );
-                  },
-                  icon: const Icon(Icons.login),
-                  label: const Text('Login'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: roleColor,
-                    minimumSize: const Size(130, 48),
+                CircleAvatar(
+                  radius: 50,
+                  backgroundColor: Colors.white,
+                  child: Icon(icon, size: 48, color: AppColors.primaryColor),
+                ),
+                const SizedBox(height: 30),
+                Text(
+                  'Welcome $formattedRole!',
+                  style: const TextStyle(
+                    fontSize: 26,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => RegisterScreen(role: role)),
-                    );
-                  },
-                  icon: const Icon(Icons.app_registration),
-                  label: const Text('Register'),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(130, 48),
-                    side: BorderSide(color: roleColor),
-                    foregroundColor: roleColor,
-                  ),
+                const SizedBox(height: 16),
+                Text(
+                  'Continue as $formattedRole to explore Urban Tutors.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70, fontSize: 16),
                 ),
+                const SizedBox(height: 40),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => LoginScreen(role: role)),
+                          );
+                        },
+                        icon: const Icon(Icons.login),
+                        label: const Text('Login'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: AppColors.primaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => RegisterScreen(role: role)),
+                          );
+                        },
+                        icon: const Icon(Icons.app_registration),
+                        label: const Text('Register'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: const BorderSide(color: Colors.white),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
               ],
-            )
-          ],
+            ),
+          ),
         ),
       ),
     );

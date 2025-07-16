@@ -1,9 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:urbantutorsapp/screens/splash_screen.dart';
+import 'package:urbantutorsapp/widgets/CustomTeacherNavBar.dart';
+import 'package:urbantutorsapp/widgets/TutorDrawer.dart';
 import '../../theme/theme_constants.dart'; // AppColors with primary & accent colors
 
-class TutorDashboardScreen extends StatelessWidget {
-  const TutorDashboardScreen({super.key});
+class TutorDashboard extends StatefulWidget {
+  const TutorDashboard({super.key});
 
+  @override
+  State<TutorDashboard> createState() => _TutorDashboardState();
+}
+
+class _TutorDashboardState extends State<TutorDashboard> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  int _currentIndex = 0;
   @override
   Widget build(BuildContext context) {
     final primaryColor = AppColors.primaryColor;
@@ -12,43 +23,81 @@ class TutorDashboardScreen extends StatelessWidget {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: primaryColor,
-          elevation: 0,
-          title: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Text('T', style: TextStyle(color: primaryColor)),
+      endDrawer: TutorDrawer(onMenuTap: (label) async {
+        if (label == 'Logout') {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isLoggedIn', false);
+          await prefs.remove('user_name');
+          await prefs.remove('user_phone');
+          await prefs.remove('user_role');
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Logged out successfully')),
+          );
+            Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => SplashScreen()),
+            (route) => false,
+            );
+        } else {
+          // Navigate to respective screen
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Navigating to $label')),
+          );
+        }
+      }),
+       
+      
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 2,
+        title: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: primaryColor,
+              child: Text('S', style: TextStyle(color: Colors.white)),
+            ),
+            SizedBox(width: 12),
+            Text('Urban Tutors',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, color: primaryColor)),
+            Spacer(),
+            SizedBox(
+              width: 8,
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+              decoration: BoxDecoration(
+                color: accentColor.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(20),
               ),
-              SizedBox(width: 12),
-              Text('Urban Tutors',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              Spacer(),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              child: Row(
                 children: [
-                  Text('Coins',
-                      style: TextStyle(fontSize: 12, color: Colors.white)),
-                  Text('(Upgrade)',
-                      style: TextStyle(fontSize: 10, color: Colors.white70)),
+                  Icon(Icons.monetization_on, color: accentColor, size: 10),
+                  const SizedBox(width: 6),
+                  Text(
+                    "200 coins",
+                    style: TextStyle(
+                      color: primaryColor,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
               ),
-              SizedBox(width: 8),
-              Icon(Icons.menu),
-            ],
-          ),
-          bottom: TabBar(
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
-            indicatorColor: Colors.white,
-            tabs: [
-              Tab(text: "Nearby"),
-              Tab(text: "Enquiry"),
-              Tab(text: "Contacted"),
-            ],
-          ),
+            ),
+          ],
         ),
+        actions: [
+          Builder(
+            builder: (context) => IconButton(
+              icon: Icon(Icons.menu, color: AppColors.primaryColor),
+              onPressed: () => Scaffold.of(context).openEndDrawer(),
+            ),
+          ),
+        ],
+      ),
         body: TabBarView(
           children: [
             _buildLeadsList("Nearby Leads"),
@@ -56,18 +105,11 @@ class TutorDashboardScreen extends StatelessWidget {
             _buildLeadsList("Contacted Leads"),
           ],
         ),
-        bottomNavigationBar: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: primaryColor,
-          unselectedItemColor: Colors.grey,
-          showUnselectedLabels: true,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.note), label: 'Notes'),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-            BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Courses'),
-            BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Chat'),
-            BottomNavigationBarItem(icon: Icon(Icons.support_agent), label: 'Support'),
-          ],
+        bottomNavigationBar: CustomTeacherNavBar(
+          currentIndex: 0,
+          onTap: (index) {
+            // Handle navigation
+          },
         ),
       ),
     );

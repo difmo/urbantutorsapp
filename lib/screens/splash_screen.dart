@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/screens/admin/admin_dashboard..dart';
 import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
 import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
 import 'package:urbantutorsapp/shared/default_dashboard.dart';
-
-
-
 import '../theme/theme_constants.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -17,28 +15,40 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen>
+    with TickerProviderStateMixin {
+  late AnimationController _logoController;
+  late Animation<double> _logoAnimation;
+
   @override
   void initState() {
     super.initState();
+
+    _logoController =
+        AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
+    _logoAnimation = CurvedAnimation(parent: _logoController, curve: Curves.easeOut);
+
+    _logoController.forward();
     _navigateAfterDelay();
   }
 
   Future<void> _navigateAfterDelay() async {
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 3));
 
     final prefs = await SharedPreferences.getInstance();
     final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
     final role = prefs.getString('user_role') ?? '';
 
+    if (!mounted) return;
+
+    Widget target;
     if (isLoggedIn) {
-      Widget target;
       switch (role.toLowerCase()) {
         case 'admin':
-          target = const AdminDashboardScreen();
+          target = const AdminDashboard();
           break;
         case 'tutor':
-          target = const TutorDashboardScreen();
+          target = const TutorDashboard();
           break;
         case 'student':
           target = const StudentDashboardScreen();
@@ -46,60 +56,75 @@ class _SplashScreenState extends State<SplashScreen> {
         default:
           target = const DefaultDashboardScreen();
       }
-      // hjdhjk
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => target),
-      );
     } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-      );
+      target = const WelcomeScreen();
     }
+
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => target));
+  }
+
+  @override
+  void dispose() {
+    _logoController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final primary = AppColors.primaryColor;
+    final accent = AppColors.accentColor;
+
     return Scaffold(
       body: Container(
         width: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [AppColors.primaryColor, AppColors.accentColor],
+            colors: [primary, accent],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
         ),
-        child: const Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircleAvatar(
-              radius: 50,
-              backgroundColor: Colors.white,
-              child: Icon(Icons.school, size: 50, color: AppColors.primaryColor),
+        child: Center(
+          child: FadeTransition(
+            opacity: _logoAnimation,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.2),
+                  ),
+                  child: CircleAvatar(
+                    radius: 58,
+                    backgroundColor: Colors.white,
+                    child: FaIcon(FontAwesomeIcons.school,
+                        size: 50, color: primary),
+                  ),
+                ),
+                const SizedBox(height: 28),
+                Text(
+                  'Urban Tutors',
+                  style: TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    letterSpacing: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Empowering Learning Everywhere',
+                  style: TextStyle(fontSize: 16, color: Colors.white70),
+                ),
+                const SizedBox(height: 40),
+                const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ],
             ),
-            SizedBox(height: 20),
-            Text(
-              'Urban Tutors',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: 1.2,
-              ),
-            ),
-            SizedBox(height: 10),
-            Text(
-              'Empowering Learning Everywhere',
-              style: TextStyle(fontSize: 16, color: Colors.white70),
-            ),
-            SizedBox(height: 30),
-            CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-            ),
-          ],
+          ),
         ),
       ),
     );
