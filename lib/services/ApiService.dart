@@ -1,55 +1,83 @@
 import 'package:dio/dio.dart';
-import 'package:get/get.dart' hide Response, FormData;
 
-class ApiService extends GetxService {
-  late final Dio _dio;
 
-  ApiService() {
-    _dio = Dio(BaseOptions(baseUrl: 'https://urbantutors.pro/api/', connectTimeout:Duration(microseconds: 500), receiveTimeout:Duration(microseconds: 100)));
-  }
+class ApiService {
+  static final Dio _dio = Dio(
+    BaseOptions(
+      baseUrl: 'https://urbantutors.pro/api/',
+      connectTimeout: Duration(seconds: 10),
+      receiveTimeout: Duration(seconds: 15),
+      sendTimeout: Duration(seconds: 10),
+    ),
+  );
 
-  Future<Response> sendOtp(String mobile) async {
-    return _post('/send_otp', FormData.fromMap({'mobile': mobile}));
-  }
-
-  Future<Response> verifyOtp({
-    required String mobile,
-    required String otp,
-    required String name,
-    required String roleId,
-    required String firebaseToken,
+  static Future<Response> post(
+    String path,
+    dynamic data, {
+    String? token,
+    bool isJson = false,
   }) async {
-    return _post('/verify_otp', FormData.fromMap({
-      'mobile': mobile,
-      'otp': otp,
-      'name': name,
-      'role_id': roleId,
-      'fairbasetoken': firebaseToken,
-    }));
-  }
-
-  Future<Response> getUserProfile(String token) async {
-    return _post('/user_profile', null, token: token);
-  }
-
-  Future<Response> updateProfile(
-    String token, Map<String, dynamic> body) async {
-    return _post('/profileupdate', body, token: token, isJson: true);
-  }
-
-  Future<Response> _post(String path, dynamic data,
-      {String? token, bool isJson = false}) async {
     try {
-      Options opts = Options(
+      Options options = Options(
         headers: {
           'Authorization': token != null ? 'Bearer $token' : null,
           'Content-Type': isJson ? 'application/json' : 'multipart/form-data',
         },
       );
-      return await _dio.post(path, data: data, options: opts);
+      return await _dio.post(path, data: data, options: options);
     } on DioError catch (e) {
-      if (e.response != null) throw Exception(e.response?.data);
-      throw Exception('Network error: ${e.message}');
+      throw Exception(e.response?.data ?? 'Network error: ${e.message}');
     }
   }
+
+  static Future<Response> get(
+    String path, {
+    String? token,
+  }) async {
+    try {
+      Options options = Options(
+        headers: {
+          'Authorization': token != null ? 'Bearer $token' : null,
+        },
+      );
+      return await _dio.get(path, options: options);
+    } on DioError catch (e) {
+      throw Exception(e.response?.data ?? 'Network error: ${e.message}');
+    }
+  }
+
+  static Future<Response> put(
+    String path,
+    dynamic data, {
+    String? token,
+  }) async {
+    try {
+      Options options = Options(
+        headers: {
+          'Authorization': token != null ? 'Bearer $token' : null,
+          'Content-Type': 'application/json',
+        },
+      );
+      return await _dio.put(path, data: data, options: options);
+    } on DioError catch (e) {
+      throw Exception(e.response?.data ?? 'Network error: ${e.message}');
+    }
+  }
+
+  static Future<Response> delete(
+    String path, {
+    String? token,
+  }) async {
+    try {
+      Options options = Options(
+        headers: {
+          'Authorization': token != null ? 'Bearer $token' : null,
+        },
+      );
+      return await _dio.delete(path, options: options);
+    } on DioError catch (e) {
+      throw Exception(e.response?.data ?? 'Network error: ${e.message}');
+    }
+  }
+
 }

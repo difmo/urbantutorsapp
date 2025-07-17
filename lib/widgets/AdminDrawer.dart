@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:urbantutorsapp/screens/admin/admit_profile.dart';
 import '../theme/theme_constants.dart';
 
 class AdminDrawer extends StatelessWidget {
@@ -65,6 +68,13 @@ class AdminDrawer extends StatelessWidget {
                       ],
                     ),
                   ),
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.grey),
+                    onPressed: () {
+                      // Navigate to the profile edit page
+                      Get.to(() => AdmitProfile());
+                    },
+                  ),
                 ],
               ),
             ),
@@ -76,18 +86,20 @@ class AdminDrawer extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 children: [
-                  _drawerItem(Icons.dashboard_customize_rounded, 'Dashboard', primary, accent),
+                  _drawerItem(Icons.dashboard_customize_rounded, 'Dashboard',
+                      primary, accent),
                   const Divider(indent: 20, endIndent: 20),
                   _drawerItem(Icons.settings, 'Settings', primary, accent),
-                  _drawerItem(Icons.info_outline_rounded, 'About Us', primary, accent),
-                  _drawerItem(Icons.privacy_tip_rounded, 'Privacy Policy', primary, accent),
+                  _drawerItem(
+                      Icons.info_outline_rounded, 'About Us', primary, accent),
+                  _drawerItem(Icons.privacy_tip_rounded, 'Privacy Policy',
+                      primary, accent),
                   _drawerItem(Icons.logout, 'Logout', primary, accent),
                 ],
               ),
             ),
 
             // Logout button at bottom
-            
           ],
         ),
       ),

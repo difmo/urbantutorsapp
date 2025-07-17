@@ -34,7 +34,9 @@ class _OTPScreenState extends State<OTPScreen> {
 
   try {
     final auth = Get.find<AuthController>();
+    print('skdlu');
     await auth.verifyOtp(widget.phone, otp, roleId, firebaseToken, name);
+    print('mera');
     Widget dashboard;
     switch (role) {
       case 'admin':

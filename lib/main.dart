@@ -8,11 +8,7 @@ import 'theme/app_theme.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Correctly register ApiService (no async/await needed unless init method exists)
-  Get.put(ApiService());
-
-  // Register AuthController after ApiService
-  Get.put(AuthController());
+  // Get.put(AuthController(),permanent: true);    // ✅ 
 
   runApp(const UrbanTutorsProApp());
 }
@@ -22,7 +18,7 @@ class UrbanTutorsProApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return GetMaterialApp( // ✅ Use GetMaterialApp for GetX navigation/dialogs
       debugShowCheckedModeBanner: false,
       title: 'Urban Tutors Pro',
       theme: AppTheme.lightTheme,

@@ -16,13 +16,14 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _phoneController = TextEditingController();
-
+ final AuthController auth = Get.put(AuthController());
 // inside _sendOtp method
 void _sendOtp() async {
   final phone = _phoneController.text.trim();
   if (phone.length == 10 && RegExp(r'^[6-9]\d{9}$').hasMatch(phone)) {
     try {
-      final auth = Get.find<AuthController>();
+     
+      
       await auth.sendOtp(phone);
 
       Navigator.push(
