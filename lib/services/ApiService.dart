@@ -5,7 +5,7 @@ class ApiService extends GetxService {
   late final Dio _dio;
 
   ApiService() {
-    _dio = Dio(BaseOptions(baseUrl: 'https://urbantutors.pro/api/', connectTimeout:Duration(microseconds: 500), receiveTimeout:Duration(microseconds: 100)));
+    _dio = Dio(BaseOptions(baseUrl: 'https://urbantutors.pro/api/', connectTimeout:Duration(seconds: 10), receiveTimeout:Duration(seconds: 10)));
   }
 
   Future<Response> sendOtp(String mobile) async {
