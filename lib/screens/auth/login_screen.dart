@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 import 'package:urbantutorsapp/controllers/AuthController.dart';
 import 'otp_screen.dart';
 import '../../theme/theme_constants.dart';

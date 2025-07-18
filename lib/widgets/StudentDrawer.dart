@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart' show SharedPreferences;
 import '../theme/theme_constants.dart';
 
 class StudentDrawer extends StatelessWidget {

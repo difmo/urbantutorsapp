@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:urbantutorsapp/controllers/AuthController.dart';
@@ -30,11 +29,11 @@ class _OTPScreenState extends State<OTPScreen> {
   final name = prefs.getString('reg_name') ?? 'User';
   final role = widget.role.toLowerCase();
   final firebaseToken = 'dummy_token'; // Replace with actual FCM token
-  final roleId = role == 'student' ? '3' : role == 'tutor' ? '2' : '1';
+  final roleId = role == 'student' ? 3 : role == 'tutor' ? 2 : 1;
 
   try {
     final auth = Get.find<AuthController>();
-    await auth.verifyOtp(widget.phone, otp, roleId, firebaseToken, name);
+    await auth.verifyOtp(widget.phone, otp, name,roleId, firebaseToken);
     Widget dashboard;
     switch (role) {
       case 'admin':

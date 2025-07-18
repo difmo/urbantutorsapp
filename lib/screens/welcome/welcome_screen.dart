@@ -15,7 +15,7 @@ class WelcomeScreen extends StatelessWidget {
 
   Widget _roleButton(
       BuildContext context, String label, IconData icon, Color color) {
-    return Container(
+    return SizedBox(
       width: double.infinity,
       child: GestureDetector(
         onTap: () => navigateToNext(context, label),

@@ -14,7 +14,7 @@ class TutorDashboard extends StatefulWidget {
 
 class _TutorDashboardState extends State<TutorDashboard> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  int _currentIndex = 0;
+  final int _currentIndex = 0;
   @override
   Widget build(BuildContext context) {
     final primaryColor = AppColors.primaryColor;

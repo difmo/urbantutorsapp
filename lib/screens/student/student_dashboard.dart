@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:urbantutorsapp/screens/auth/login_screen.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
+import 'package:urbantutorsapp/screens/student/StudentProfileScreen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/ChatUserListScreen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/HistoryScreen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -51,11 +53,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Logged out successfully')),
           );
-            Navigator.pushAndRemoveUntil(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (context) => SplashScreen()),
             (route) => false,
-            );
+          );
         } else {
           // Navigate to respective screen
           if (!mounted) return;
@@ -64,15 +66,23 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           );
         }
       }),
-      
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 2,
         title: Row(
           children: [
-            CircleAvatar(
-              backgroundColor: primaryColor,
-              child: Text('S', style: TextStyle(color: Colors.white)),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => StudentProfileScreen()),
+                );
+              },
+              child: CircleAvatar(
+                backgroundColor: primaryColor,
+                child: Text('S', style: TextStyle(color: Colors.white)),
+              ),
             ),
             SizedBox(width: 12),
             Text('Urban Tutors',
@@ -124,28 +134,24 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           _screens[4],
         ],
       ),
-  bottomNavigationBar: Container(
-  decoration: BoxDecoration(
-    color: Colors.white,
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black12,
-        blurRadius: 4,
-        offset: Offset(0, -2),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 4,
+              offset: Offset(0, -2),
+            ),
+          ],
+        ),
+        child: CustomStudentNavBar(
+          currentIndex: _currentIndex,
+          onTap: (index) => setState(() => _currentIndex = index),
+        ),
       ),
-    ],
-  ),
-  child: CustomStudentNavBar(
-    currentIndex: _currentIndex,
-    onTap: (index) => setState(() => _currentIndex = index),
-  ),
-      ),
-    
-
     );
   }
-  
-
 
   Widget _buildDashboardBody(Color primaryColor, Color accentColor) {
     return SingleChildScrollView(
@@ -235,30 +241,35 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           // Navigate to Notes Screen
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => NotesScreen()),
+            MaterialPageRoute(builder: (context) => PyqScreen()),
           );
-        }else if (label == 'PYQ’s') {
+        } else if (label == 'PYQ’s') {
           // Navigate to PYQ's Screen
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => PYQScreen()), // Replace with actual PYQ's screen
+            MaterialPageRoute(
+                builder: (context) =>
+                    PyqScreen()), // Replace with actual PYQ's screen
           );
         } else if (label == 'Assignments') {
           // Navigate to Assignments Screen
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => NotesScreen()), // Replace with actual Assignments screen
+            MaterialPageRoute(
+                builder: (context) =>
+                    NotesScreen()), // Replace with actual Assignments screen
           );
         } else if (label == 'Schedule') {
           // Navigate to Schedule Screen
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => NotesScreen()), // Replace with actual Schedule screen
+            MaterialPageRoute(
+                builder: (context) =>
+                    NotesScreen()), // Replace with actual Schedule screen
           );
         }
         // Add more conditions for other features if needed
         // Navigate to respective feature screen
-    
       },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 20),
@@ -292,13 +303,17 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           // Navigate to Search Tutor Screen
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => SearchTutorScreen()), // Replace with actual Search Tutor screen
+            MaterialPageRoute(
+                builder: (context) =>
+                    SearchTutorScreen()), // Replace with actual Search Tutor screen
           );
         } else if (label == 'Join Live Class') {
           // Navigate to Live Class Screen
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => NotesScreen()), // Replace with actual Live Class screen
+            MaterialPageRoute(
+                builder: (context) =>
+                    NotesScreen()), // Replace with actual Live Class screen
           );
         }
       },
@@ -317,7 +332,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
             const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),

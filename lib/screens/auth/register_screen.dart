@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/controllers/AuthController.dart';
 import 'package:urbantutorsapp/widgets/custom_button.dart';
@@ -22,7 +21,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   
-// inside _sendOtp method
 Future<void> _sendOtp() async {
   if (_formKey.currentState!.validate()) {
     final prefs = await SharedPreferences.getInstance();
@@ -42,19 +40,21 @@ Future<void> _sendOtp() async {
             builder: (_) => OTPScreen(
               role: widget.role,
               phone: _phoneController.text.trim(),
-              receivedOtp: otp, // Pass to OTPScreen for dev
+              receivedOtp: otp,
             ),
           ),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      debugPrint('Exception during OTP sending: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send OTP')),
+        );
+      }
     }
   }
 }
-
 
   @override
   void dispose() {
