@@ -14,8 +14,9 @@ import '../../theme/theme_constants.dart';
 class OTPScreen extends StatefulWidget {
   final String phone;
   final String role;
+  final String otp;
 
-  const OTPScreen({super.key, required this.phone, required this.role, required String receivedOtp});
+  const OTPScreen({super.key, required this.phone, required this.role, required this.otp});
 
   @override
   State<OTPScreen> createState() => _OTPScreenState();
@@ -35,7 +36,7 @@ class _OTPScreenState extends State<OTPScreen> {
   try {
     final auth = Get.find<AuthController>();
     print('skdlu');
-    await auth.verifyOtp(widget.phone, otp, roleId, firebaseToken, name);
+    await auth.verifyOtp(widget.phone, otp, name, roleId, firebaseToken);
     print('mera');
     Widget dashboard;
     switch (role) {
@@ -100,6 +101,13 @@ class _OTPScreenState extends State<OTPScreen> {
                 children: [
                   TextSpan(
                     text: '+91-${widget.phone}',
+                    style: TextStyle(
+                      color: primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                    TextSpan(
+                    text: '+91-${widget.otp}',
                     style: TextStyle(
                       color: primary,
                       fontWeight: FontWeight.bold,

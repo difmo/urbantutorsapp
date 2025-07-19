@@ -6,7 +6,10 @@ class ProfileController extends GetxController {
   
 Future<StudentProfileModel> fetchUserProfile(String token) async {
     final response = await ProfileService().getUserProfile(token);
+ 
     if (response.success) {
+        print("Fromprofilecontroller");
+         print(response.data!.studentName ?? "asda");
       return response;
     } else {
       throw Exception('Failed to load user profile: ${response.message}');

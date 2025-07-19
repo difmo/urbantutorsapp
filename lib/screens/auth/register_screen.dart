@@ -50,7 +50,7 @@ print(_phoneController.text);
             builder: (_) => OTPScreen(
               role: widget.role,
               phone: _phoneController.text.trim(),
-              receivedOtp: otp, // Pass to OTPScreen for dev
+              otp: otp, // Pass to OTPScreen for dev
             ),
           ),
         );

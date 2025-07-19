@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 
 class ApiService {
@@ -11,22 +12,34 @@ class ApiService {
     ),
   );
 
+
   static Future<Response> post(
     String path,
     dynamic data, {
     String? token,
     bool isJson = false,
   }) async {
+   final token1 =  await TokenStorage.getToken();
+   if(token1 == null)
+   {
+    print("token null hai yaha");
+   }
+
+    print('fromapiservice'+token1.toString());
     try {
       Options options = Options(
         headers: {
-          'Authorization': token != null ? 'Bearer $token' : null,
-          'Content-Type': isJson ? 'application/json' : 'multipart/form-data',
+         'Authorization': 'Bearer $token1'
+
+          // 'Content-Type': isJson ? 'application/json' : 'multipart/form-data',
         },
       );
       return await _dio.post(path, data: data, options: options);
     } on DioError catch (e) {
       throw Exception(e.response?.data ?? 'Network error: ${e.message}');
+    }catch (e) {
+      print('Pritam'+e.toString());
+      throw(e);
     }
   }
 

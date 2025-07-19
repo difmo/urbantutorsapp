@@ -42,6 +42,10 @@ class AuthController extends GetxController {
         print('kml');
     isLoading.value = true;
     try {
+      print("mobile"+mobile);
+      print("name"+name);
+      print("otp"+otp);
+      print("roleId"+roleId);
       print('pgl');
       final res = await authService.verifyOtp(
           mobile: mobile,
@@ -49,7 +53,7 @@ class AuthController extends GetxController {
           name: name,
           roleId: roleId,
           firebaseToken: fbToken);
-      token.value = res.data['token'];
+      token.value = res.data.token;
       debugPrint('OTP sent456789: $otp');
       print(token.value);
       print('main bhi');
@@ -64,7 +68,8 @@ class AuthController extends GetxController {
         debugPrint('OTP sent: $otp');
       }
     } catch (e) {
-      print(e);
+
+      print("errorfromcontroller"+e.toString());
       Get.snackbar('Error', e.toString());
     } finally {
       isLoading.value = false;

@@ -24,12 +24,12 @@ void _sendOtp() async {
     try {
      
       
-      await auth.sendOtp(phone);
+    final otp =  await auth.sendOtp(phone);
 
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => OTPScreen(phone: phone, role: widget.role, receivedOtp: '0000',),
+          builder: (_) => OTPScreen(phone: phone, role: widget.role, otp: otp ?? "0000",),
         ),
       );
     } catch (e) {

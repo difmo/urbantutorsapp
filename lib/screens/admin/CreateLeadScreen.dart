@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/route_manager.dart';
+import 'package:urbantutorsapp/controllers/lead_controller.dart';
+import 'package:urbantutorsapp/controllers/lead_create_controller.dart';
+import 'package:urbantutorsapp/models/lead_create_model_request.dart';
 import 'package:urbantutorsapp/widgets/searchable_location_field.dart.dart';
 import '../../theme/theme_constants.dart';
 
@@ -11,6 +16,10 @@ class CreateLeadScreen extends StatefulWidget {
 
 class _CreateLeadScreenState extends State<CreateLeadScreen> {
   final _formKey = GlobalKey<FormState>();
+
+  final LeadCreateController leadCreateController =
+      Get.put(LeadCreateController());
+
   String? selectedClass;
   String? selectedSubject;
   String? location;
@@ -155,6 +164,20 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
 
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
+      final data = leadCreateRequest(
+          name: name ?? "",
+          mobile: phone ?? "",
+          boardId: "8",
+          classId: "6",
+          location: location ?? "Lucknow",
+          state: 'uttar pradesh',
+          mode: "Offline",
+          fee: "552",
+          leadId: "4",
+          subjectId: "9",
+          userId: "7");
+
+      leadCreateController.createOrUpdateLead(data);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Lead submitted successfully')),
       );

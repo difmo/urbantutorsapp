@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:urbantutorsapp/controllers/lead_controller.dart';
 import 'package:urbantutorsapp/screens/admin/CreateLeadScreen.dart';
 import 'package:urbantutorsapp/screens/admin/LeadDetailsScreen.dart';
+import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/widgets/AdminDrawer.dart';
 import 'package:urbantutorsapp/widgets/CustomFAB.dart';
 import 'package:urbantutorsapp/widgets/LeadCardWidget.dart';
 import '../../theme/theme_constants.dart';
-import 'package:urbantutorsapp/screens/splash_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -22,22 +24,12 @@ class _AdminDashboardState extends State<AdminDashboard>
   late final TabController _tabController;
   final List<String> _tabs = ['All Leads', 'Grabbed', 'Declined'];
 
-  final List<Map<String, String>> _dummyLeads = List.generate(8, (i) {
-    return {
-      'studentName': 'Student #${i + 1}',
-      'mobile': '98${70000000 + i}',
-      'subject': ['Math', 'Science', 'English', 'Physics'][i % 4],
-      'classLevel': 'Class ${6 + (i % 7)}',
-      'location': ['Delhi', 'Mumbai', 'Bangalore', 'Chennai'][i % 4],
-      'timing': '${4 + i % 3}:00 PM',
-      'coins': '${20 + i * 5}',
-      'remarks': i % 2 == 0 ? 'Requires weekend sessions' : '',
-    };
-  });
+  final LeadController leadController = Get.put(LeadController());
 
   @override
   void initState() {
     super.initState();
+    leadController.fetchLeads(); // fetch on load
     _tabController = TabController(length: _tabs.length, vsync: this);
   }
 
@@ -49,28 +41,25 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   void _handleMenuTap(String label) async {
     Navigator.of(context).pop();
-      if (label == 'Logout') {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isLoggedIn', false);
-          await prefs.remove('user_name');
-          await prefs.remove('user_phone');
-          await prefs.remove('user_role');
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Logged out successfully')),
-          );
-            Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => SplashScreen()),
-            (route) => false,
-            );
-        } else {
-          // Navigate to respective screen
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Navigating to $label')),
-          );
-        }
+    if (label == 'Logout') {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Logged out successfully')),
+      );
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => SplashScreen()),
+        (route) => false,
+      );
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Navigating to $label')),
+      );
+    }
   }
 
   @override
@@ -138,39 +127,53 @@ class _AdminDashboardState extends State<AdminDashboard>
         physics: const BouncingScrollPhysics(),
         children: _tabs.map((label) {
           return RefreshIndicator(
-            onRefresh: () async {},
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: _dummyLeads.map((data) {
-                return LeadCardWidget(
-                  studentName: data['studentName']!,
-                  mobile: data['mobile']!,
-                  subject: data['subject']!,
-                  classLevel: data['classLevel']!,
-                  location: data['location']!,
-                  timing: data['timing']!,
-                  coins: data['coins']!,
-                  remarks: data['remarks']!,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => LeadDetailsScreen(
-                          studentName: data['studentName']!,
-                          mobile: data['mobile']!,
-                          subject: data['subject']!,
-                          classLevel: data['classLevel']!,
-                          location: data['location']!,
-                          timing: data['timing']!,
-                          coins: data['coins']!,
-                          remarks: data['remarks']!,
+            onRefresh: () => leadController.fetchLeads(),
+            child: Obx(() {
+              if (leadController.isLoading.value) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (leadController.studentLeads.isEmpty) {
+                return const Center(child: Text('No leads available.'));
+              }
+
+              final leads = leadController.studentLeads;
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: leads.length,
+                itemBuilder: (context, index) {
+                  final lead = leads[index];
+                  return LeadCardWidget(
+                    studentName: lead.studentName,
+                    mobile: lead.mobile.toString(),
+                    subject: lead.subjectName,
+                    classLevel: lead.courseName,
+                    location: lead.location,
+                    timing: "NA", // update if timing available
+                    coins: lead.price,
+                    remarks: lead.remark ?? '',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => LeadDetailsScreen(
+                            studentName: lead.studentName,
+                            mobile: lead.mobile.toString(),
+                            subject: lead.subjectName,
+                            classLevel: lead.courseName,
+                            location: lead.location,
+                            timing: "NA",
+                            coins: lead.price,
+                            remarks: lead.remark ?? '',
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                );
-              }).toList(),
-            ),
+                      );
+                    },
+                  );
+                },
+              );
+            }),
           );
         }).toList(),
       ),
