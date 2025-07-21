@@ -59,6 +59,7 @@ class AuthController extends GetxController {
       print('main bhi');
 
       TokenStorage.saveToken(token.value);
+      TokenStorage.saveRole("Admin");
 
       print(res);
       // Get.snackbar('Success', 'Logged in.');

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/route_manager.dart';
+import 'package:urbantutorsapp/controllers/get_classes_controller.dart';
 import 'package:urbantutorsapp/controllers/lead_controller.dart';
 import 'package:urbantutorsapp/controllers/lead_create_controller.dart';
+import 'package:urbantutorsapp/models/get_classes_model.dart';
 import 'package:urbantutorsapp/models/lead_create_model_request.dart';
 import 'package:urbantutorsapp/widgets/searchable_location_field.dart.dart';
 import '../../theme/theme_constants.dart';
@@ -19,8 +21,9 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
 
   final LeadCreateController leadCreateController =
       Get.put(LeadCreateController());
-
-  String? selectedClass;
+  final GetClassesController getClassesController =
+      Get.put(GetClassesController());
+  // String? selectedClass;
   String? selectedSubject;
   String? location;
   String? phone;
@@ -38,6 +41,8 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
     'Class 11',
     'Class 12'
   ];
+  ClassData? selectedClass;
+
   final List<String> subjects = [
     'Math',
     'Science',
@@ -47,6 +52,17 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
     'Biology',
     'Computer Science'
   ];
+
+  @override
+  void initState() {
+    getClassesController.fetchClasses().then((_) {
+      print("Class list loaded:");
+      for (var item in getClassesController.classList) {
+        print(item.className);
+      }
+    });
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -82,8 +98,19 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
               ),
               const SizedBox(height: 24),
               _sectionTitle("Class & Subject"),
-              _buildDropdownField(
-                  'Select Class', classes, (val) => selectedClass = val),
+              Obx(() {
+                return _buildDropdownField1<ClassData>(
+                  label: 'Select Class',
+                  items: getClassesController.classList,
+                  selectedItem:selectedClass,
+                  itemLabel: (item) => item.className,
+                  onChanged: (val) {
+                    setState(() {
+                      selectedClass = val;
+                    });
+                  },
+                );
+              }),
               const SizedBox(height: 16),
               _buildDropdownField(
                   'Select Subject', subjects, (val) => selectedSubject = val),
@@ -112,6 +139,27 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
       ),
     );
   }
+Widget _buildDropdownField1<T>({
+  required String label,
+  required List<T> items,
+  required T? selectedItem,
+  required String Function(T) itemLabel, // how to display the item
+  required ValueChanged<T?> onChanged,
+}) {
+  return DropdownButtonFormField<T>(
+    value: selectedItem,
+    hint: Text(label),
+    isExpanded: true,
+    items: items.map((item) {
+      return DropdownMenuItem<T>(
+        value: item,
+        child: Text(itemLabel(item)), // get display name
+      );
+    }).toList(),
+    onChanged: onChanged,
+    validator: (value) => value == null ? 'Please select $label' : null,
+  );
+}
 
   Widget _buildDropdownField(
       String label, List<String> items, Function(String?) onChanged) {

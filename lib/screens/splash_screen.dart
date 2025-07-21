@@ -6,6 +6,7 @@ import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
 import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
 import 'package:urbantutorsapp/shared/default_dashboard.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 import '../theme/theme_constants.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -24,9 +25,10 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    _logoController =
-        AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
-    _logoAnimation = CurvedAnimation(parent: _logoController, curve: Curves.easeOut);
+    _logoController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1000));
+    _logoAnimation =
+        CurvedAnimation(parent: _logoController, curve: Curves.easeOut);
 
     _logoController.forward();
     _navigateAfterDelay();
@@ -35,15 +37,16 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _navigateAfterDelay() async {
     await Future.delayed(const Duration(seconds: 3));
 
-    final prefs = await SharedPreferences.getInstance();
-    final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-    final role = prefs.getString('user_role') ?? '';
+    final token = await TokenStorage.getToken(); // Get token
+    final role = await TokenStorage.getRole();
 
     if (!mounted) return;
 
     Widget target;
-    if (isLoggedIn) {
-      switch (role.toLowerCase()) {
+
+    if (token != null && role == 'Admin') {
+      // Token exists → user is logged in
+      switch (role!.toLowerCase()) {
         case 'admin':
           target = const AdminDashboard();
           break;
@@ -57,10 +60,12 @@ class _SplashScreenState extends State<SplashScreen>
           target = const DefaultDashboardScreen();
       }
     } else {
+      // No token → go to welcome screen
       target = const WelcomeScreen();
     }
 
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => target));
+    Navigator.pushReplacement(
+        context, MaterialPageRoute(builder: (_) => target));
   }
 
   @override
