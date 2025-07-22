@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:urbantutorsapp/models/user_model.dart';
 import 'package:urbantutorsapp/services/ApiService.dart';
+import 'package:urbantutorsapp/utils/api_constants.dart';
 
 class ProfileService {
   Future<StudentProfileModel> getUserProfile(String token) async {
@@ -9,7 +10,7 @@ class ProfileService {
     try{
       print('tryerrocomes');
       final response = await ApiService.post(
-      '/user_profile', 
+      ApiConstants.PROFILE_SERVICE, 
       null,
       token: token,
     );

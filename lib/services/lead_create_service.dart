@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:urbantutorsapp/utils/api_constants.dart';
 
 class LeadCreateService{
   final Dio _dio = Dio();
@@ -32,7 +33,7 @@ class LeadCreateService{
       });
 
       Response response = await _dio.post(
-        'https://urbantutors.pro/api/leadscreateupdate',
+        ApiConstants.LEAD_CREATE_URL,
         data: formData,
       );
       return response;

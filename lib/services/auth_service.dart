@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:urbantutorsapp/models/user_new_modal.dart';
 import 'package:urbantutorsapp/services/ApiService.dart';
+import 'package:urbantutorsapp/utils/api_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 
@@ -21,7 +22,7 @@ Future<LoginResponse> verifyOtp({
     print('mynameiskhan: $otp');
 
     final response = await ApiService.post(
-      '/verify_otp',
+      ApiConstants.VERIFY_OTP,
       FormData.fromMap({
         'mobile': mobile,           // static mobile
         'otp': otp,                  // static OTP

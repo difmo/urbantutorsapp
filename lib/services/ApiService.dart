@@ -1,11 +1,12 @@
 import 'package:dio/dio.dart';
+import 'package:urbantutorsapp/utils/api_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 
 class ApiService {
   static final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: 'https://urbantutors.pro/api/',
+      baseUrl: ApiConstants.BASE_URL,
       connectTimeout: Duration(seconds: 10),
       receiveTimeout: Duration(seconds: 15),
       sendTimeout: Duration(seconds: 10),

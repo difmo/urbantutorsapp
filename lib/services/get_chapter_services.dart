@@ -1,25 +1,23 @@
 import 'package:dio/dio.dart';
-import 'package:urbantutorsapp/models/get_classes_model.dart';
+import 'package:urbantutorsapp/models/get_chapter_model.dart';
 import 'package:urbantutorsapp/services/ApiService.dart';
 import 'package:urbantutorsapp/utils/api_constants.dart';
 
-class GetClassesService {
-  Future<GetClassesModel> fetchClasses() async {
+class GetChapterServices {
+  Future<GetChapterModel> fetchChapters() async {
     try {
-     Response response = await ApiService.post(ApiConstants.GETCLASS_URL, {
-        'board_id': '1',
-        'type': 'pyq',
-      });
+      Response response = await ApiService.post(
+          ApiConstants.GET_CHAPTER_URL, {'subject_id': "1", 'type': "Note"});
 
       if (response.statusCode == 200) {
-        print("response from if get classes services");
+        print("response from if get chapter ");
         print(response.data);
-        return GetClassesModel.fromJson(response.data);
+        return GetChapterModel.fromJson(response.data);
       } else {
-        throw Exception('Failed to load class data');
+        throw Exception('Failed to load Chapter data');
       }
     } on DioError catch (e) {
-      print("response from catch get classesservice");
+      print("response from catch get chaptersrvices");
       print(e.toString());
       if (e.response != null) {
         throw Exception('Error from server: ${e.response?.data}');
