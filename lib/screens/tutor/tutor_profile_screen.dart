@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../theme/theme_constants.dart'; // Ensure this contains AppColors
+import '../../theme/theme_constants.dart';
 
 class TutorProfileScreen extends StatelessWidget {
   const TutorProfileScreen({super.key});
@@ -12,7 +12,7 @@ class TutorProfileScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: primaryColor,
-        title: const Text('Profile'),
+        title: const Text('Tutor Profile'),
         actions: [
           TextButton(
             onPressed: () {
@@ -22,28 +22,42 @@ class TutorProfileScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
+      body: SingleChildScrollView(  
         padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SizedBox(height: 24),
+            const Text("Personal Information",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 12),
             const CircleAvatar(
               radius: 48,
-              backgroundImage: AssetImage('assets/icons/app_icon.png'), // Replace with real profile image
+              backgroundImage: AssetImage('assets/icons/app_icon.png'),
             ),
             const SizedBox(height: 16),
             _buildReadOnlyField("First name", "Christian"),
             _buildReadOnlyField("Last name", "Joseph"),
             _buildReadOnlyField("Phone number", "+91 987654321"),
             _buildReadOnlyField("Email ID", "josephc@hotmail.com"),
-            _buildReadOnlyField("School", "Halton District School Board"),
-            const SizedBox(height: 12),
-            _buildDropdownField("Program", ["M.B.A", "B.Ed", "PhD"], "M.B.A"),
-            const SizedBox(height: 12),
-            _buildDropdownField("Subject", ["Math", "Physics", "Biology"], "Math"),
             const SizedBox(height: 24),
-            Text(
-              "Looking to change password?",
-              style: TextStyle(color: accentColor, fontSize: 14),
+            const Text("Qualifications",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 12),
+            _buildReadOnlyField("School", "Halton District School Board"),
+            _buildDropdownField("Program", ["M.B.A", "B.Ed", "PhD"], "M.B.A"),
+            const SizedBox(height: 24),
+            const Text("Teaching Categories",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 12),
+            _buildDropdownField(
+                "Subject", ["Math", "Physics", "Biology"], "Math"),
+            const SizedBox(height: 24),
+            Center(
+              child: Text(
+                "Looking to change password?",
+                style: TextStyle(color: accentColor, fontSize: 14),
+              ),
             ),
           ],
         ),
@@ -73,7 +87,8 @@ class TutorProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDropdownField(String label, List<String> items, String selectedItem) {
+  Widget _buildDropdownField(
+      String label, List<String> items, String selectedItem) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -99,6 +114,7 @@ class TutorProfileScreen extends StatelessWidget {
             },
           ),
         ),
+        const SizedBox(height: 12),
       ],
     );
   }

@@ -26,8 +26,8 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        versionCode = 1
+        versionName = "1.0.0"
     }
 
     buildTypes {
@@ -42,3 +42,12 @@ android {
 flutter {
     source = "../.."
 }
+
+
+// [Unknown]:  Delhi
+// What is the name of your State or Province?
+//   [Unknown]:  Delhi
+// What is the two-letter country code for this unit?
+//   [Unknown]:  91
+// Is CN=Vikash Kumar, OU=Development Team, O=SYBRA CORPORATION, L=Delhi, ST=Delhi, C=91 correct?
+//   [no]:  

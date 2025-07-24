@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class TokenStorage {
   static const String _tokenKey = 'auth_token';
   static const String _roleKey = 'user_role';
+  static const String _roleIdKey = 'role_id';
 
   /// Save token to local storage
   static Future<void> saveToken(String token) async {
@@ -16,19 +17,27 @@ class TokenStorage {
     await prefs.setString(_roleKey, role);
   }
 
-  /// Get token from local storage
+  static Future<void> saveRoleId(int roleId) async
+  {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_roleIdKey,roleId.toString());
+  }
+
+  static Future<String?> getRoleId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_roleIdKey);
+  }
+
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_tokenKey);
   }
 
-  /// Get role from local storage
   static Future<String?> getRole() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_roleKey);
   }
 
-  /// Clear both token and role from local storage
   static Future<void> clearTokenAndRole() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);

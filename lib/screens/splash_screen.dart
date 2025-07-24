@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/screens/admin/admin_dashboard..dart';
 import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
@@ -35,25 +34,26 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _navigateAfterDelay() async {
-    await Future.delayed(const Duration(seconds: 3));
+    await Future.delayed(const Duration(seconds: 10));
 
     final token = await TokenStorage.getToken(); // Get token
-    final role = await TokenStorage.getRole();
+    // final role = await TokenStorage.getRole();
+    final roleId = await TokenStorage.getRoleId();
 
     if (!mounted) return;
 
     Widget target;
 
-    if (token != null && role == 'Admin') {
-      // Token exists → user is logged in
-      switch (role!.toLowerCase()) {
-        case 'admin':
+    if (token != null) {
+     
+      switch (roleId) {
+        case '1':
           target = const AdminDashboard();
           break;
-        case 'tutor':
+        case '2':
           target = const TutorDashboard();
           break;
-        case 'student':
+        case '3':
           target = const StudentDashboardScreen();
           break;
         default:

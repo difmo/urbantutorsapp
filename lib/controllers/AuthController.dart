@@ -39,13 +39,13 @@ class AuthController extends GetxController {
 
   Future<void> verifyOtp(String mobile, String otp, String name, String roleId,
       String fbToken) async {
-        print('kml');
+    print('kml');
     isLoading.value = true;
     try {
-      print("mobile"+mobile);
-      print("name"+name);
-      print("otp"+otp);
-      print("roleId"+roleId);
+      print("mobile" + mobile);
+      print("name" + name);
+      print("otp" + otp);
+      print("roleId" + roleId);
       print('pgl');
       final res = await authService.verifyOtp(
           mobile: mobile,
@@ -59,18 +59,17 @@ class AuthController extends GetxController {
       print('main bhi');
 
       TokenStorage.saveToken(token.value);
+      TokenStorage.saveRoleId(res.data.userData.roles[0].roleId);
       TokenStorage.saveRole("Admin");
 
       print(res);
-      // Get.snackbar('Success', 'Logged in.');
       if (Get.context != null) {
         // Get.snackbar('Success', 'OTP sent. [Dev only: $otp]');
       } else {
         debugPrint('OTP sent: $otp');
       }
     } catch (e) {
-
-      print("errorfromcontroller"+e.toString());
+      print("errorfromcontroller" + e.toString());
       Get.snackbar('Error', e.toString());
     } finally {
       isLoading.value = false;

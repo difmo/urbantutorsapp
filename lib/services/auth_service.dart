@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:urbantutorsapp/models/user_new_modal.dart';
 import 'package:urbantutorsapp/services/ApiService.dart';
 import 'package:urbantutorsapp/utils/api_constants.dart';
-import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 
 class AuthService {

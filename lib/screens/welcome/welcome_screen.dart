@@ -91,10 +91,17 @@ class WelcomeScreen extends StatelessWidget {
                           color: Colors.white.withOpacity(0.3),
                         ),
                         child: CircleAvatar(
-                          radius: 60,
-                          backgroundColor: Colors.white,
-                          child: FaIcon(FontAwesomeIcons.school,
-                              size: 50, color: primary),
+                          radius: 40,
+                          backgroundColor: Colors.transparent,
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/icons/urban.png',
+                              width: 80, // same as diameter
+                              height: 80,
+                              fit: BoxFit
+                                  .cover, // ensures the image fills the circle
+                            ),
+                          ),
                         ),
                       ),
                     ),
