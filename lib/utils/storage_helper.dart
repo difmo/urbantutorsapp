@@ -43,4 +43,6 @@ class TokenStorage {
     await prefs.remove(_tokenKey);
     await prefs.remove(_roleKey);
   }
+
+  static Future<void> clear() async {}
 }

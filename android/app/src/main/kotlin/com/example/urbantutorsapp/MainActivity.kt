@@ -1,4 +1,4 @@
-package com.example.urbantutorsapp
+package pro.urbantutors.app
 
 import io.flutter.embedding.android.FlutterActivity
 

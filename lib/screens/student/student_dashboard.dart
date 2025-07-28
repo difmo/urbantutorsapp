@@ -10,6 +10,7 @@ import 'package:urbantutorsapp/screens/student/childs_screens/UpgradeScreen.dart
 import 'package:urbantutorsapp/screens/student/pdf_courses_screen.dart';
 import 'package:urbantutorsapp/screens/student/pyq_screen.dart';
 import 'package:urbantutorsapp/screens/student/search_tutor_screen.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/CustomStudentNavBar.dart';
 import 'package:urbantutorsapp/widgets/StudentDrawer.dart';
 import '../../theme/theme_constants.dart';
@@ -47,6 +48,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           await prefs.remove('user_name');
           await prefs.remove('user_phone');
           await prefs.remove('user_role');
+          await TokenStorage.clearTokenAndRole();
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Logged out successfully')),
@@ -75,7 +77,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               child: Text('S', style: TextStyle(color: Colors.white)),
             ),
             SizedBox(width: 12),
-            Text('Urban Tutors',
+            Text('Welcome, Student',
                 style: TextStyle(
                     fontWeight: FontWeight.bold, color: primaryColor)),
             Spacer(),

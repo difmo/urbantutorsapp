@@ -36,7 +36,7 @@ class SupportScreen extends StatelessWidget {
             title: "Email Us",
             subtitle: "support@urbantutors.com",
             onTap: () {},
-            color: Colors.deepOrange,
+            color: Colors.green,
           ),
           _contactOption(
             icon: Icons.phone,

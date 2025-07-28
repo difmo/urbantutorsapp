@@ -42,12 +42,15 @@ class RoleIntroScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Logo Image
                 CircleAvatar(
-                  radius: 50,
-                  backgroundColor: Colors.white,
-                  child: Icon(icon, size: 48, color: AppColors.primaryColor),
+                  radius: 40,
+                  backgroundColor: Colors.transparent,
+                  backgroundImage: const AssetImage('assets/icons/urban.png'),
                 ),
                 const SizedBox(height: 30),
+
+                // Welcome Text
                 Text(
                   'Welcome $formattedRole!',
                   style: const TextStyle(
@@ -63,21 +66,26 @@ class RoleIntroScreen extends StatelessWidget {
                   style: const TextStyle(color: Colors.white70, fontSize: 16),
                 ),
                 const SizedBox(height: 40),
+
+                // Login and Register Buttons
                 Row(
                   children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
+                    // Login Button
+               Expanded(
+                      child: OutlinedButton.icon(
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => LoginScreen(role: role)),
+                            MaterialPageRoute(
+                              builder: (_) => LoginScreen(role: role),
+                            ),
                           );
                         },
                         icon: const Icon(Icons.login),
                         label: const Text('Login'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: AppColors.primaryColor,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: const BorderSide(color: Colors.white),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -85,13 +93,18 @@ class RoleIntroScreen extends StatelessWidget {
                         ),
                       ),
                     ),
+
                     const SizedBox(width: 16),
+
+                    // Register Button
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => RegisterScreen(role: role)),
+                            MaterialPageRoute(
+                              builder: (_) => RegisterScreen(role: role),
+                            ),
                           );
                         },
                         icon: const Icon(Icons.app_registration),
@@ -107,7 +120,7 @@ class RoleIntroScreen extends StatelessWidget {
                       ),
                     ),
                   ],
-                )
+                ),
               ],
             ),
           ),

@@ -6,6 +6,7 @@ import 'package:urbantutorsapp/controllers/lead_controller.dart';
 import 'package:urbantutorsapp/screens/admin/CreateLeadScreen.dart';
 import 'package:urbantutorsapp/screens/admin/LeadDetailsScreen.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/AdminDrawer.dart';
 import 'package:urbantutorsapp/widgets/CustomFAB.dart';
 import 'package:urbantutorsapp/widgets/LeadCardWidget.dart';
@@ -44,6 +45,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     if (label == 'Logout') {
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
+      await TokenStorage.clearTokenAndRole();
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -71,16 +73,35 @@ class _AdminDashboardState extends State<AdminDashboard>
       key: _scaffoldKey,
       endDrawer: AdminDrawer(onMenuTap: _handleMenuTap),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.primaryColor,
         elevation: 2,
         title: Row(
           children: [
-            CircleAvatar(
-                backgroundColor: primary,
-                child: const Text('A', style: TextStyle(color: Colors.white))),
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [AppColors.primaryColor, AppColors.accentColor],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              padding: const EdgeInsets.all(2), // optional for slight border
+              child: CircleAvatar(
+                backgroundColor:
+                    Colors.transparent, // make it transparent to show gradient
+                radius: 24,
+                child: const Text(
+                  'A',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
             const SizedBox(width: 12),
-            Text('Admin Panel',
-                style: TextStyle(fontWeight: FontWeight.bold, color: primary)),
+            Text('Welcome, Admin',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, color: Colors.white)),
             const Spacer(),
             InkWell(
               onTap: () {},
@@ -97,7 +118,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                     const SizedBox(width: 4),
                     Text('Stats',
                         style: TextStyle(
-                            color: primary,
+                            color: Colors.white,
                             fontSize: 12,
                             fontWeight: FontWeight.w600)),
                   ],
@@ -109,7 +130,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         actions: [
           Builder(
             builder: (ctx) => IconButton(
-              icon: Icon(Icons.menu, color: primary),
+              icon: Icon(Icons.menu, color: Colors.white),
               onPressed: () => Scaffold.of(ctx).openEndDrawer(),
             ),
           ),
@@ -117,8 +138,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: accent,
-          labelColor: primary,
-          unselectedLabelColor: Colors.grey,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white, 
           tabs: _tabs.map((label) => Tab(text: label)).toList(),
         ),
       ),
@@ -194,10 +215,10 @@ class _AdminDashboardState extends State<AdminDashboard>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
-                  icon: Icon(FontAwesomeIcons.house, color: primary),
+                  icon: Icon(FontAwesomeIcons.house, color: Colors.lightGreen),
                   onPressed: () {}),
               IconButton(
-                  icon: Icon(FontAwesomeIcons.clockRotateLeft, color: primary),
+                  icon: Icon(FontAwesomeIcons.clockRotateLeft, color: Colors.lightGreen),
                   onPressed: () {})
             ],
           ),

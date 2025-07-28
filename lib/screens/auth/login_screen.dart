@@ -52,34 +52,36 @@ void _sendOtp() async {
       appBar: AppBar(title: Text('$roleTitle Login')),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.phone_android, size: 60, color: AppColors.primaryColor),
-            const SizedBox(height: 20),
-
-            const Text(
-              'Login with Mobile Number',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 16),
-
-            TextFormField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              maxLength: 10,
-              decoration: const InputDecoration(
-                labelText: 'Mobile Number',
-                prefixIcon: Icon(Icons.phone),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.phone_android, size: 60, color: AppColors.primaryColor),
+              const SizedBox(height: 20),
+          
+              const Text(
+                'Login with Mobile Number',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
               ),
-            ),
-            const SizedBox(height: 24),
-
-            ElevatedButton(
-              onPressed: _sendOtp,
-              child: const Text('Send OTP'),
-            ),
-          ],
+              const SizedBox(height: 16),
+          
+              TextFormField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                maxLength: 10,
+                decoration: const InputDecoration(
+                  labelText: 'Mobile Number',
+                  prefixIcon: Icon(Icons.phone),
+                ),
+              ),
+              const SizedBox(height: 24),
+          
+              ElevatedButton(
+                onPressed: _sendOtp,
+                child: const Text('Send OTP'),
+              ),
+            ],
+          ),
         ),
       ),
     );

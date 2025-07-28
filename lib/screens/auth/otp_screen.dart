@@ -87,84 +87,86 @@ class _OTPScreenState extends State<OTPScreen> {
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
-        child: Column(
-          children: [
-            const Text(
-              'Verification Code',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            RichText(
-              text: TextSpan(
-                text: 'Enter the code sent to ',
-                style: const TextStyle(color: Colors.black87, fontSize: 16),
-                children: [
-                  TextSpan(
-                    text: '+91-${widget.phone}',
-                    style: TextStyle(
-                      color: primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              const Text(
+                'Verification Code',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              RichText(
+                text: TextSpan(
+                  text: 'Enter the code sent to ',
+                  style: const TextStyle(color: Colors.black87, fontSize: 16),
+                  children: [
                     TextSpan(
-                    text: '+91-${widget.otp}',
-                    style: TextStyle(
-                      color: primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  )
-                ],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-
-            PinCodeTextField(
-              appContext: context,
-              length: 6,
-              keyboardType: TextInputType.number,
-              animationType: AnimationType.fade,
-              autoFocus: true,
-              cursorColor: primary,
-              enableActiveFill: true,
-              onChanged: (value) => setState(() => otp = value),
-              pinTheme: PinTheme(
-                shape: PinCodeFieldShape.box,
-                borderRadius: BorderRadius.circular(10),
-                fieldHeight: 50,
-                fieldWidth: 45,
-                activeColor: primary,
-                selectedColor: primary,
-                inactiveColor: Colors.grey.shade300,
-                activeFillColor: Colors.white,
-                selectedFillColor: Colors.white,
-                inactiveFillColor: Colors.grey.shade100,
-              ),
-            ),
-
-            const SizedBox(height: 30),
-            ElevatedButton(
-              onPressed: otp.length == 6 ? _verifyOtp : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: otp.length == 6 ? primary : primary.withOpacity(0.4),
-                minimumSize: const Size.fromHeight(50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              child: const Text('Verify OTP', style: TextStyle(fontSize: 16)),
-            ),
-
-            const SizedBox(height: 16),
-            isResending
-                ? const CircularProgressIndicator()
-                : TextButton(
-                    onPressed: _resendCode,
-                    child: Text(
-                      'Resend Code',
+                      text: '+91-${widget.phone}',
                       style: TextStyle(
-                          color: primary, fontWeight: FontWeight.w600),
+                        color: primary,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-          ],
+                    //   TextSpan(
+                    //   text: '+91-${widget.otp}',
+                    //   style: TextStyle(
+                    //     color: primary,
+                    //     fontWeight: FontWeight.bold,
+                    //   ),
+                    // )
+                  ],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+          
+              PinCodeTextField(
+                appContext: context,
+                length: 6,
+                keyboardType: TextInputType.number,
+                animationType: AnimationType.fade,
+                autoFocus: true,
+                cursorColor: primary,
+                enableActiveFill: true,
+                onChanged: (value) => setState(() => otp = value),
+                pinTheme: PinTheme(
+                  shape: PinCodeFieldShape.box,
+                  borderRadius: BorderRadius.circular(10),
+                  fieldHeight: 50,
+                  fieldWidth: 45,
+                  activeColor: primary,
+                  selectedColor: primary,
+                  inactiveColor: Colors.grey.shade300,
+                  activeFillColor: Colors.white,
+                  selectedFillColor: Colors.white,
+                  inactiveFillColor: Colors.grey.shade100,
+                ),
+              ),
+          
+              const SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: otp.length == 6 ? _verifyOtp : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: otp.length == 6 ? primary : primary.withOpacity(0.4),
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('Verify OTP', style: TextStyle(fontSize: 16)),
+              ),
+          
+              const SizedBox(height: 16),
+              isResending
+                  ? const CircularProgressIndicator()
+                  : TextButton(
+                      onPressed: _resendCode,
+                      child: Text(
+                        'Resend Code',
+                        style: TextStyle(
+                            color: primary, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+            ],
+          ),
         ),
       ),
     );

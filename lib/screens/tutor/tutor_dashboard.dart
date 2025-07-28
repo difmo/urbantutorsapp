@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
+import 'package:urbantutorsapp/screens/tutor/tutor_chat_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_courses_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_profile_screen.dart';
+import 'package:urbantutorsapp/screens/tutor/tutor_profile_screen.dart';
+import 'package:urbantutorsapp/screens/tutor/tutor_support_screen.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/CustomTeacherNavBar.dart';
 import 'package:urbantutorsapp/widgets/TutorDrawer.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -35,6 +39,8 @@ class _TutorDashboardState extends State<TutorDashboard> {
             await prefs.remove('user_name');
             await prefs.remove('user_phone');
             await prefs.remove('user_role');
+            await TokenStorage.clearTokenAndRole();
+
             if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Logged out successfully')),
@@ -61,7 +67,7 @@ class _TutorDashboardState extends State<TutorDashboard> {
                 child: Text('S', style: TextStyle(color: Colors.white)),
               ),
               SizedBox(width: 12),
-              Text('Urban Tutors',
+              Text('Welcome, Tutor',
                   style: TextStyle(
                       fontWeight: FontWeight.bold, color: primaryColor)),
               Spacer(),
@@ -105,29 +111,37 @@ class _TutorDashboardState extends State<TutorDashboard> {
             Center(child: Text("Coming Soon")),
           ],
         ),
-        
+        bottomNavigationBar: CustomTeacherNavBar(
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
 
-bottomNavigationBar: CustomTeacherNavBar(
-  currentIndex: _currentIndex,
-  onTap: (index) {
-    setState(() {
-      _currentIndex = index;
-    });
-
-    if (index == 1) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const TutorProfileScreen()),
-      );
-    } else if (index == 2) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => CoursesScreen()),
-      );
-    }
-  },
-),
-
+            if (index == 1) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const TutorProfileScreen()),
+              );
+            } else if (index == 2) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => CoursesScreen()),
+              );
+            } else if (index == 3) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => TutorChatScreen()),
+              );
+            } else if (index == 4) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => TutorSupportScreen())
+              );
+            }
+          },
+        ),
       ),
     );
   }

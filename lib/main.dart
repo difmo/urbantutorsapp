@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:urbantutorsapp/controllers/AuthController.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
-import 'package:urbantutorsapp/services/ApiService.dart';
+
 import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Get.put(AuthController(),permanent: true);    // ✅ 
+  Get.put(AuthController(),permanent: true);    // ✅ 
 
   runApp(const UrbanTutorsProApp());
 }

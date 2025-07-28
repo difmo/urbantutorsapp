@@ -3,9 +3,10 @@ import 'package:urbantutorsapp/models/user_model.dart';
 import 'package:urbantutorsapp/services/profile_services.dart';
 
 class ProfileController extends GetxController {
+  final ProfileService _profileService = ProfileService();
   
 Future<StudentProfileModel> fetchUserProfile(String token) async {
-    final response = await ProfileService().getUserProfile(token);
+    final response = await _profileService.getUserProfile(token);
  
     if (response.success) {
         print("Fromprofilecontroller");

@@ -23,9 +23,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
-  final AuthService authService =Get.put( AuthService());
-  final ProfileService authService1 =Get.put( ProfileService());
-  final AuthController auth = Get.put(AuthController());
+  final AuthController auth = Get.find<AuthController>();
   
 // inside _sendOtp method
 Future<void> _sendOtp() async {
