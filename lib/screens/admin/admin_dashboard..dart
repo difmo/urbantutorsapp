@@ -24,13 +24,13 @@ class _AdminDashboardState extends State<AdminDashboard>
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late final TabController _tabController;
   final List<String> _tabs = ['All Leads', 'Grabbed', 'Declined'];
-
   final LeadController leadController = Get.put(LeadController());
+  int _selectedIndex = -1;
 
   @override
   void initState() {
     super.initState();
-    leadController.fetchLeads(); // fetch on load
+    leadController.fetchLeads();
     _tabController = TabController(length: _tabs.length, vsync: this);
   }
 
@@ -73,7 +73,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       key: _scaffoldKey,
       endDrawer: AdminDrawer(onMenuTap: _handleMenuTap),
       appBar: AppBar(
-        backgroundColor: AppColors.primaryColor,
+        backgroundColor: primary,
         elevation: 2,
         title: Row(
           children: [
@@ -81,15 +81,14 @@ class _AdminDashboardState extends State<AdminDashboard>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
-                  colors: [AppColors.primaryColor, AppColors.accentColor],
+                  colors: [primary, accent],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
               ),
-              padding: const EdgeInsets.all(2), // optional for slight border
+              padding: const EdgeInsets.all(2),
               child: CircleAvatar(
-                backgroundColor:
-                    Colors.transparent, // make it transparent to show gradient
+                backgroundColor: Colors.transparent,
                 radius: 24,
                 child: const Text(
                   'A',
@@ -99,7 +98,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               ),
             ),
             const SizedBox(width: 12),
-            Text('Welcome, Admin',
+            const Text('Welcome, Admin',
                 style: TextStyle(
                     fontWeight: FontWeight.bold, color: Colors.white)),
             const Spacer(),
@@ -107,7 +106,8 @@ class _AdminDashboardState extends State<AdminDashboard>
               onTap: () {},
               borderRadius: BorderRadius.circular(20),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 decoration: BoxDecoration(
                   color: accent.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(20),
@@ -116,7 +116,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                   children: [
                     Icon(Icons.analytics, color: accent, size: 16),
                     const SizedBox(width: 4),
-                    Text('Stats',
+                    const Text('Stats',
                         style: TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -130,7 +130,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         actions: [
           Builder(
             builder: (ctx) => IconButton(
-              icon: Icon(Icons.menu, color: Colors.white),
+              icon: const Icon(Icons.menu, color: Colors.white),
               onPressed: () => Scaffold.of(ctx).openEndDrawer(),
             ),
           ),
@@ -139,7 +139,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           controller: _tabController,
           indicatorColor: accent,
           labelColor: Colors.white,
-          unselectedLabelColor: Colors.white, 
+          unselectedLabelColor: Colors.white,
           tabs: _tabs.map((label) => Tab(text: label)).toList(),
         ),
       ),
@@ -171,7 +171,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                     subject: lead.subjectName,
                     classLevel: lead.courseName,
                     location: lead.location,
-                    timing: "NA", // update if timing available
+                    timing: "NA",
                     coins: lead.price,
                     remarks: lead.remark ?? '',
                     onTap: () {
@@ -201,8 +201,8 @@ class _AdminDashboardState extends State<AdminDashboard>
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: CustomFAB(
         onPressed: () {
-          Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const CreateLeadScreen()));
+          Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const CreateLeadScreen()));
         },
       ),
       bottomNavigationBar: BottomAppBar(
@@ -215,11 +215,31 @@ class _AdminDashboardState extends State<AdminDashboard>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
-                  icon: Icon(FontAwesomeIcons.house, color: Colors.lightGreen),
-                  onPressed: () {}),
+                icon: Icon(
+                  FontAwesomeIcons.house,
+                  color: _selectedIndex == 2
+                      ? Colors.lightGreen
+                      : const Color(0xFFCACFCC),
+                ),
+                onPressed: () {
+                  setState(() {
+                    _selectedIndex = 2;
+                  });
+                },
+              ),
               IconButton(
-                  icon: Icon(FontAwesomeIcons.clockRotateLeft, color: Colors.lightGreen),
-                  onPressed: () {})
+                icon: Icon(
+                  FontAwesomeIcons.clockRotateLeft,
+                  color: _selectedIndex == 0
+                      ? Colors.lightGreen
+                      : const Color(0xFFCACFCC),
+                ),
+                onPressed: () {
+                  setState(() {
+                    _selectedIndex = 0;
+                  });
+                },
+              ),
             ],
           ),
         ),

@@ -68,18 +68,35 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       }),
       
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.primaryColor,
         elevation: 2,
+        toolbarHeight: 75,
         title: Row(
           children: [
-            CircleAvatar(
-              backgroundColor: primaryColor,
-              child: Text('S', style: TextStyle(color: Colors.white)),
-            ),
+            Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [primaryColor, accentColor],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                padding: const EdgeInsets.all(2),
+                child: const CircleAvatar(
+                  backgroundColor: Colors.transparent,
+                  radius: 24,
+                  child: Text(
+                    'S',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
             SizedBox(width: 12),
             Text('Welcome, Student',
                 style: TextStyle(
-                    fontWeight: FontWeight.bold, color: primaryColor)),
+                    fontWeight: FontWeight.bold, color: Colors.white)),
             Spacer(),
             SizedBox(
               width: 8,
@@ -97,7 +114,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   Text(
                     "200 coins",
                     style: TextStyle(
-                      color: primaryColor,
+                      color: Colors.white,
                       fontWeight: FontWeight.w600,
                       fontSize: 12,
                     ),
@@ -110,7 +127,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         actions: [
           Builder(
             builder: (context) => IconButton(
-              icon: Icon(Icons.menu, color: AppColors.primaryColor),
+              icon: Icon(Icons.menu, color: Colors.white),
               onPressed: () => Scaffold.of(context).openEndDrawer(),
             ),
           ),
