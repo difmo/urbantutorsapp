@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../auth/role_intro_screen.dart';
 import '../../theme/theme_constants.dart';
 
@@ -63,10 +64,14 @@ class WelcomeScreen extends StatelessWidget {
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [accent.withOpacity(0.3), primary.withOpacity(0.8)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+                gradient: RadialGradient(
+                  center: Alignment.center,
+                  radius: 1.0,
+                  colors: [
+                    Color.fromRGBO(96, 199, 87, 1), // #60C757 at 16%
+                    Color.fromRGBO(237, 221, 83, 1), // #EDDD53 at 100%
+                  ],
+                  stops: [0.16, 1.0],
                 ),
               ),
             ),
@@ -133,7 +138,10 @@ class WelcomeScreen extends StatelessWidget {
                     Text(
                       'Are you a?',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white70, fontSize: 24),
+                      style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 40),
                     // Role buttons in a vertical column with staggered animation
@@ -154,11 +162,27 @@ class WelcomeScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 48),
-                    Text(
-                      'By continuing, you agree to our Terms & Privacy Policy.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: Colors.white70.withOpacity(0.9), fontSize: 12),
+                    GestureDetector(
+                      onTap: () async {
+                        const url =
+                            'https://www.urbantutors.pro/terms-and-conditions';
+                        // if (await canLaunchUrl(Uri.parse(url))) {
+                          await launchUrl(Uri.parse(url),
+                              mode: LaunchMode.externalApplication);
+                        // } else {
+                        //   throw 'Could not launch $url';
+                        // }
+                      },
+                      child: Text(
+                        'By continuing, you agree to our Terms & Privacy Policy.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white70.withOpacity(0.9),
+                          fontSize: 12,
+                          decoration: TextDecoration.none
+                        ,
+                        ),
+                      ),
                     ),
                   ],
                 ),

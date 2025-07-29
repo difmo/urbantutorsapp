@@ -24,43 +24,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final AuthController auth = Get.find<AuthController>();
-  
+
 // inside _sendOtp method
-Future<void> _sendOtp() async {
-  print("fhfg");
-   print(_phoneController.text);
-  if (_formKey.currentState!.validate()) {
+  Future<void> _sendOtp() async {
+    print("fhfg");
     print(_phoneController.text);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('reg_name', _nameController.text.trim());
-    await prefs.setString('reg_phone', _phoneController.text.trim());
+    if (_formKey.currentState!.validate()) {
+      print(_phoneController.text);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('reg_name', _nameController.text.trim());
+      await prefs.setString('reg_phone', _phoneController.text.trim());
 
-    try {
-print(_phoneController.text);
-      final otp = await auth.sendOtp(_phoneController.text.trim());
-print(_phoneController.text);
-      if (otp != null) {
-        debugPrint('🔐 OTP for testing: $otp');
+      try {
+        print(_phoneController.text);
+        final otp = await auth.sendOtp(_phoneController.text.trim());
+        print(_phoneController.text);
+        if (otp != null) {
+          debugPrint('🔐 OTP for testing: $otp');
 
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => OTPScreen(
-              role: widget.role,
-              phone: _phoneController.text.trim(),
-              otp: otp, // Pass to OTPScreen for dev
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => OTPScreen(
+                role: widget.role,
+                phone: _phoneController.text.trim(),
+                otp: otp, // Pass to OTPScreen for dev
+              ),
             ),
-          ),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
         );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
     }
   }
-}
-
 
   @override
   void dispose() {
@@ -87,10 +86,17 @@ print(_phoneController.text);
               key: _formKey,
               child: Column(
                 children: [
-                  FaIcon(
-                    FontAwesomeIcons.userPlus,
-                    size: 60,
-                    color: AppColors.primaryColor,
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundColor: Colors.transparent,
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/icons/urban.png',
+                        width: 80, // same as diameter
+                        height: 80,
+                        fit: BoxFit.cover, // ensures the image fills the circle
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 24),
                   CustomInputField(
@@ -115,7 +121,7 @@ print(_phoneController.text);
                   CustomButton(
                     label: 'Register',
                     onPressed: _sendOtp,
-                    icon: Icons.check,
+                    // icon: Icons.check,
                   )
                 ],
               ),

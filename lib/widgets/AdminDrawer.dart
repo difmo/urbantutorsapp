@@ -16,92 +16,90 @@ class AdminDrawer extends StatelessWidget {
 
     return Drawer(
       backgroundColor: Colors.white,
-      child: SafeArea(
-        child: Column(
-          children: [
-            // Profile Header
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-              decoration: BoxDecoration(
-                color: primary.withOpacity(0.1),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(24),
-                  bottomRight: Radius.circular(24),
+      child: Column(
+        children: [
+          // Profile Header
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+            decoration: BoxDecoration(
+              color: primary.withOpacity(0.1),
+              // borderRadius: const BorderRadius.only(
+              //   bottomLeft: Radius.circular(24),
+              //   bottomRight: Radius.circular(24),
+              // ),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 36,
+                  backgroundColor: primary.withOpacity(0.2),
+                  child: const Text(
+                    "N",
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryColor,
+                    ),
+                  ),
                 ),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 36,
-                    backgroundColor: primary.withOpacity(0.2),
-                    child: const Text(
-                      "N",
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryColor,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'Nikhil Kumar',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryColor,
+                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'Nikhil Kumar',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primaryColor,
-                          ),
+                      SizedBox(height: 4),
+                      Text(
+                        'nikhil@email.com',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.black54,
                         ),
-                        SizedBox(height: 4),
-                        Text(
-                          'nikhil@email.com',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.black54,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.edit, color: Colors.grey),
-                    onPressed: () {
-                      // Navigate to the profile edit page
-                      Get.to(() => AdmitProfile());
-                    },
-                  ),
-                ],
-              ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.grey),
+                  onPressed: () {
+                    // Navigate to the profile edit page
+                    Get.to(() => AdmitProfile());
+                  },
+                ),
+              ],
             ),
+          ),
 
-            const SizedBox(height: 20),
+          const SizedBox(height: 20),
 
-            // Drawer Menu
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                children: [
-                  _drawerItem(Icons.dashboard_customize_rounded, 'Dashboard',
-                      primary, accent),
-                  const Divider(indent: 20, endIndent: 20),
-                  _drawerItem(Icons.settings, 'Settings', primary, accent),
-                  _drawerItem(
-                      Icons.info_outline_rounded, 'About Us', primary, accent),
-                  _drawerItem(Icons.privacy_tip_rounded, 'Privacy Policy',
-                      primary, accent),
-                  _drawerItem(Icons.logout, 'Logout', primary, accent),
-                ],
-              ),
+          // Drawer Menu
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              children: [
+                _drawerItem(Icons.dashboard_customize_rounded, 'Dashboard',
+                    primary, accent),
+                const Divider(indent: 20, endIndent: 20),
+                _drawerItem(Icons.settings, 'Settings', primary, accent),
+                _drawerItem(
+                    Icons.info_outline_rounded, 'About Us', primary, accent),
+                _drawerItem(Icons.privacy_tip_rounded, 'Privacy Policy',
+                    primary, accent),
+                _drawerItem(Icons.logout, 'Logout', primary, accent),
+              ],
             ),
+          ),
 
-            // Logout button at bottom
-          ],
-        ),
+          // Logout button at bottom
+        ],
       ),
     );
   }

@@ -151,7 +151,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
               const SizedBox(height: 32),
               ElevatedButton.icon(
                 onPressed: _submitForm,
-                icon: const Icon(Icons.check),
+                // icon: const Icon(Icons.check),
                 label: const Text('Submit Lead'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primary,
