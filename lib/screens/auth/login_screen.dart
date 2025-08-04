@@ -5,7 +5,6 @@ import 'package:urbantutorsapp/controllers/AuthController.dart';
 import 'otp_screen.dart';
 import '../../theme/theme_constants.dart';
 
-
 class LoginScreen extends StatefulWidget {
   final String role;
 
@@ -42,24 +41,21 @@ class _LoginScreenState extends State<LoginScreen> {
       showLoadingDialog(); // 🔄 Show loader after 1 second
 
       try {
-        Future.delayed(Duration(seconds: 2), ()async {
-  
+        Future.delayed(Duration(seconds: 2), () async {
+          final otp = await auth.sendOtp(phone);
 
+          Navigator.of(context).pop(); // ❌ Close loader
 
-        final otp = await auth.sendOtp(phone);
-
-        Navigator.of(context).pop(); // ❌ Close loader
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => OTPScreen(
-              phone: phone,
-              role: widget.role,
-              otp: otp ?? "0000",
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => OTPScreen(
+                phone: phone,
+                role: widget.role,
+                otp: otp ?? "0000",
+              ),
             ),
-          ),
-        );
+          );
         });
       } catch (e) {
         Navigator.of(context).pop(); // ❌ Close loader on error
@@ -69,7 +65,8 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid 10-digit mobile number')),
+        const SnackBar(
+            content: Text('Please enter a valid 10-digit mobile number')),
       );
     }
   }
@@ -86,26 +83,50 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.phone_android, size: 60, color: AppColors.primaryColor),
+              const Icon(Icons.phone_android,
+                  size: 60, color: AppColors.primaryColor),
               const SizedBox(height: 20),
-
               const Text(
                 'Login with Mobile Number',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 16),
-
               TextFormField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
                 maxLength: 10,
-                decoration: const InputDecoration(
+                buildCounter: (_,
+                        {required int currentLength,
+                        required bool isFocused,
+                        required int? maxLength}) =>
+                    null,
+                decoration: InputDecoration(
                   labelText: 'Mobile Number',
-                  prefixIcon: Icon(Icons.phone),
+                  labelStyle: const TextStyle(
+                    color: Color(0xFF9B9B9B),
+                  ),
+                  prefixIcon: const Icon(Icons.phone),
+                  filled: true,
+                  fillColor: Colors.transparent,
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(
+                      color: const Color(0xFF9B9B9B).withOpacity(0.1),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(
+                      color: AppColors.primaryColor,
+                      width: 1.5,
+                    ),
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
-
               ElevatedButton(
                 onPressed: _sendOtp,
                 child: const Text('Send OTP'),

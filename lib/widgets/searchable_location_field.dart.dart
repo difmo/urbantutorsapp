@@ -81,6 +81,7 @@ class _SearchableLocationFieldState extends State<SearchableLocationField> {
       focusNode: _focus,
       decoration: InputDecoration(
         labelText: 'Location',
+        labelStyle: const TextStyle(color: Color(0xFF9B9B9B)),
         hintText: 'Type to search location',
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         filled: true,

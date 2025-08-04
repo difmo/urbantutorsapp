@@ -1,10 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart' show SharedPreferences;
+import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:urbantutorsapp/screens/student/childs_screens/student_profile.dart';
 import '../theme/theme_constants.dart';
 
-class StudentDrawer extends StatelessWidget {
+class StudentDrawer extends StatefulWidget {
   final Function(String label) onMenuTap;
+
   const StudentDrawer({super.key, required this.onMenuTap});
+
+  @override
+  State<StudentDrawer> createState() => _StudentDrawerState();
+}
+
+class _StudentDrawerState extends State<StudentDrawer> {
+  String selectedLabel = 'Settings'; // Default selected menu
+
+  void handleTap(String label) {
+    setState(() {
+      selectedLabel = label;
+    });
+    widget.onMenuTap(label);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,23 +47,55 @@ class StudentDrawer extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: primaryColor.withOpacity(0.1),
-                    child: const Text(
-                      "S",
-                      style: TextStyle(
-                        fontSize: 22,
-                        color: Colors.black87,
-                        fontWeight: FontWeight.bold,
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      CircleAvatar(
+                        radius: 30,
+                        backgroundColor: primaryColor.withOpacity(0.1),
+                        child: const Text(
+                          "S",
+                          style: TextStyle(
+                            fontSize: 22,
+                            color: Colors.black87,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                    ),
+                      Positioned(
+                        bottom: -2,
+                        right: -2,
+                        child: GestureDetector(
+                          onTap: () {
+                            Get.to(() => const StudentProfileScreen());
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.edit,
+                              size: 16,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(width: 12),
-                  Expanded(
+                  const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
                           'Shaurabh Kumar',
                           style: TextStyle(
@@ -83,11 +132,15 @@ class StudentDrawer extends StatelessWidget {
   }
 
   Widget _drawerItem(IconData icon, String label, {Color? color}) {
+    final bool isSelected = selectedLabel == label;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Card(
-        elevation: 0.5,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primaryColor.withOpacity(0.08) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: ListTile(
           leading: Icon(icon, color: color ?? Colors.grey.shade800),
           title: Text(
@@ -98,7 +151,7 @@ class StudentDrawer extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
-          onTap: () => onMenuTap(label),
+          onTap: () => handleTap(label),
         ),
       ),
     );

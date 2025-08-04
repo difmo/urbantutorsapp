@@ -3,14 +3,16 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/controllers/lead_controller.dart';
-import 'package:urbantutorsapp/screens/admin/CreateLeadScreen.dart';
-import 'package:urbantutorsapp/screens/admin/LeadDetailsScreen.dart';
+import 'package:urbantutorsapp/screens/admin/CreateLeadScreen.dart' as create;
+import 'package:urbantutorsapp/screens/admin/LeadDetailsScreen.dart' as details;
+import 'package:urbantutorsapp/screens/admin/history_screen.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/AdminDrawer.dart';
 import 'package:urbantutorsapp/widgets/CustomFAB.dart';
 import 'package:urbantutorsapp/widgets/LeadCardWidget.dart';
 import '../../theme/theme_constants.dart';
+import 'package:lottie/lottie.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -106,8 +108,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               onTap: () {},
               borderRadius: BorderRadius.circular(20),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 decoration: BoxDecoration(
                   color: accent.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(20),
@@ -153,9 +154,27 @@ class _AdminDashboardState extends State<AdminDashboard>
               if (leadController.isLoading.value) {
                 return const Center(child: CircularProgressIndicator());
               }
-
               if (leadController.studentLeads.isEmpty) {
-                return const Center(child: Text('No leads available.'));
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Lottie.asset(
+                        'assets/icons/animation/empty.json',
+                        width: 250,
+                        repeat: true,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'No leads available',
+                        style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.black54,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                );
               }
 
               final leads = leadController.studentLeads;
@@ -178,7 +197,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => LeadDetailsScreen(
+                          builder: (_) => details.LeadDetailsScreen(
                             studentName: lead.studentName,
                             mobile: lead.mobile.toString(),
                             subject: lead.subjectName,
@@ -187,6 +206,11 @@ class _AdminDashboardState extends State<AdminDashboard>
                             timing: "NA",
                             coins: lead.price,
                             remarks: lead.remark ?? '',
+                            name: '',
+                            className: '',
+                            fee: '',
+                            mode: '',
+                            gender: '',
                           ),
                         ),
                       );
@@ -201,8 +225,8 @@ class _AdminDashboardState extends State<AdminDashboard>
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: CustomFAB(
         onPressed: () {
-          Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => const CreateLeadScreen()));
+          Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const create.CreateLeadScreen()));
         },
       ),
       bottomNavigationBar: BottomAppBar(
@@ -238,6 +262,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                   setState(() {
                     _selectedIndex = 0;
                   });
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => AdminHistoryScreen()));
                 },
               ),
             ],

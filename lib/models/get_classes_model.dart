@@ -22,7 +22,7 @@ class GetClassesModel {
 
 class ClassData {
   final int boardId;
-  final int classId;
+  final String classId;
   final String className;
   final String type;
 
@@ -36,8 +36,8 @@ class ClassData {
   factory ClassData.fromJson(Map<String, dynamic> json) {
     return ClassData(
       boardId: json['board_id'] ?? 0,
-      classId: json['class_id'] ?? 0,
-      className: json['ClassName'] ?? '',
+      classId: json['class_id'].toString(),         // ✅ Important: force to String
+      className: json['ClassName'] ?? '',           // ✅ Ensure key is correct
       type: json['type'] ?? '',
     );
   }

@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -163,27 +164,57 @@ class WelcomeScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 48),
                     GestureDetector(
-                      onTap: () async {
-                        const url =
-                            'https://www.urbantutors.pro/terms-and-conditions';
-                        // if (await canLaunchUrl(Uri.parse(url))) {
+                        onTap: () async {
+                          const url =
+                              'https://www.urbantutors.pro/terms-and-conditions';
+                          // if (await canLaunchUrl(Uri.parse(url))) {
                           await launchUrl(Uri.parse(url),
                               mode: LaunchMode.externalApplication);
-                        // } else {
-                        //   throw 'Could not launch $url';
-                        // }
-                      },
-                      child: Text(
-                        'By continuing, you agree to our Terms & Privacy Policy.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white70.withOpacity(0.9),
-                          fontSize: 12,
-                          decoration: TextDecoration.none
-                        ,
-                        ),
-                      ),
-                    ),
+                          // } else {
+                          //   throw 'Could not launch $url';
+                          // }
+                        },
+                        child: RichText(
+                          textAlign: TextAlign.center,
+                          text: TextSpan(
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                            children: [
+                              const TextSpan(
+                                  text: 'By continuing, you agree to our '),
+                              TextSpan(
+                                text: 'Terms',
+                                style: const TextStyle(
+                                  color: Color(0xFF1E88E5),
+                                  decoration: TextDecoration.underline,
+                                ),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () {
+                                    // TODO: navigate to Terms page
+                                  },
+                              ),
+                              const TextSpan(text: ' & '),
+                              TextSpan(
+                                text: 'Privacy Policy',
+                                style: const TextStyle(
+                                  color: Color(0xFF1E88E5),
+                                  decoration: TextDecoration.underline,
+                                ),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () async {
+                                    const url =
+                                        'https://www.urbantutors.pro/terms-and-conditions';
+                                    await launchUrl(Uri.parse(url),
+                                        mode: LaunchMode.externalApplication);
+                                    // TODO: navigate to Privacy Policy page
+                                  },
+                              ),
+                              const TextSpan(text: '.'),
+                            ],
+                          ),
+                        )),
                   ],
                 ),
               ),

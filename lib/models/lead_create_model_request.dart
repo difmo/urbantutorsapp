@@ -22,7 +22,7 @@ class leadCreateRequest {
     required this.fee,
     required this.leadId,
     required this.subjectId,
-    required this.userId,
+    required this.userId, required String tutorGender, required String maxHits, required String supportAgent,
   });
 
   Map<String, dynamic> toFormDate(){

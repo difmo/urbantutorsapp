@@ -6,9 +6,11 @@ import 'package:urbantutorsapp/utils/api_constants.dart';
 class GetClassesService {
   Future<GetClassesModel> fetchClasses() async {
     try {
-     Response response = await ApiService.post(ApiConstants.GETCLASS_URL, {
-        'board_id': '1',
-        'type': 'pyq',
+      Response response = await ApiService.post(ApiConstants.GETCLASS_URL, {
+        "board_id": 1,
+        "class_id": 2,
+        "ClassName": "Class X",
+        "type": "pyq"
       });
 
       if (response.statusCode == 200) {

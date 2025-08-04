@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:urbantutorsapp/screens/tutor/tutor_profile_screen_edit.dart';
 import '../../theme/theme_constants.dart';
 
 class TutorProfileScreen extends StatelessWidget {
@@ -6,116 +8,130 @@ class TutorProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = AppColors.primaryColor;
-    final accentColor = AppColors.accentColor;
+    final themeColor = AppColors.primaryColor;
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: primaryColor,
-        title: const Text('Tutor Profile'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              // TODO: Implement edit logic
-            },
-            child: const Text('Edit', style: TextStyle(color: Colors.white)),
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          // 🌊 Top curved background
+          ClipPath(
+            clipper: TopWaveClipper(),
+            child: Container(
+              height: 260,
+              color: themeColor.withOpacity(0.2),
+            ),
+          ),
+
+          // 🔙 Back button
+          Positioned(
+            top: 50,
+            left: 20,
+            child: GestureDetector(
+              onTap: () {
+                Get.back();
+              },
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
+                child: Icon(Icons.arrow_back, color: themeColor),
+              ),
+            ),
+          ),
+
+          // ✏️ Edit button
+          Positioned(
+            top: 50,
+            right: 20,
+            child: GestureDetector(
+              onTap: () {
+                Get.to(() => TutorProfileScreenEdit());// TODO: Navigate to edit screen
+              },
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
+                child: Icon(Icons.edit, color: themeColor),
+              ),
+            ),
+          ),
+
+          // 🧾 Profile content
+          Padding(
+            padding: const EdgeInsets.only(top: 160),
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  // 👤 Profile Picture
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundImage: AssetImage('assets/icons/profile.jpg'),
+                    backgroundColor: Colors.grey.shade200,
+                  ),
+                  const SizedBox(height: 20),
+
+                  _buildInfoTile(Icons.person, "First Name", "Christian"),
+                  _buildInfoTile(Icons.person_outline, "Last Name", "Joseph"),
+                  _buildInfoTile(Icons.phone, "Phone Number", "+91 987654321"),
+                  _buildInfoTile(Icons.email, "Email", "josephc@hotmail.com"),
+                  _buildInfoTile(Icons.school, "School", "Halton District School Board"),
+                  _buildInfoTile(Icons.menu_book, "Program", "M.B.A"),
+                  _buildInfoTile(Icons.book_online, "Subject", "Math"),
+                  const SizedBox(height: 16),
+
+                 
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
           ),
         ],
       ),
-      body: SingleChildScrollView(  
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 24),
-            const Text("Personal Information",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 12),
-            const CircleAvatar(
-              radius: 48,
-              backgroundImage: AssetImage('assets/icons/app_icon.png'),
-            ),
-            const SizedBox(height: 16),
-            _buildReadOnlyField("First name", "Christian"),
-            _buildReadOnlyField("Last name", "Joseph"),
-            _buildReadOnlyField("Phone number", "+91 987654321"),
-            _buildReadOnlyField("Email ID", "josephc@hotmail.com"),
-            const SizedBox(height: 24),
-            const Text("Qualifications",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 12),
-            _buildReadOnlyField("School", "Halton District School Board"),
-            _buildDropdownField("Program", ["M.B.A", "B.Ed", "PhD"], "M.B.A"),
-            const SizedBox(height: 24),
-            const Text("Teaching Categories",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 12),
-            _buildDropdownField(
-                "Subject", ["Math", "Physics", "Biology"], "Math"),
-            const SizedBox(height: 24),
-            Center(
-              child: Text(
-                "Looking to change password?",
-                style: TextStyle(color: accentColor, fontSize: 14),
-              ),
-            ),
-          ],
-        ),
+    );
+  }
+
+  Widget _buildInfoTile(IconData icon, String title, String subtitle) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: ListTile(
+        leading: Icon(icon, color: AppColors.primaryColor),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(subtitle),
       ),
     );
   }
+}
 
-  Widget _buildReadOnlyField(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          child: Text(value, style: const TextStyle(fontSize: 14)),
-        ),
-        const SizedBox(height: 12),
-      ],
-    );
+/// 🌊 Wave clipper for curved background
+class TopWaveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    Path path = Path();
+    path.lineTo(0, size.height * 0.75);
+    path.quadraticBezierTo(
+        size.width * 0.5, size.height, size.width, size.height * 0.75);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
   }
 
-  Widget _buildDropdownField(
-      String label, List<String> items, String selectedItem) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          child: DropdownButtonFormField<String>(
-            value: selectedItem,
-            isExpanded: true,
-            decoration: const InputDecoration(border: InputBorder.none),
-            items: items
-                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                .toList(),
-            onChanged: (val) {
-              // TODO: Handle dropdown change
-            },
-          ),
-        ),
-        const SizedBox(height: 12),
-      ],
-    );
-  }
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }

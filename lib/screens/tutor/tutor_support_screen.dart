@@ -8,8 +8,8 @@ class TutorSupportScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
+      
+        body: Column(
           children: [
             _buildAppBar(context),
             const SizedBox(height: 20),
@@ -55,14 +55,14 @@ class TutorSupportScreen extends StatelessWidget {
             ),
           ],
         ),
-      ),
+      
     );
   }
 
   Widget _buildAppBar(BuildContext context) {
     return Container(
       color: AppColors.primaryColor,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 35),
       child: Row(
         children: [
           GestureDetector(

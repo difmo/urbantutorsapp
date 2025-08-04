@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 import 'package:urbantutorsapp/screens/admin/admit_profile.dart';
 import '../theme/theme_constants.dart';
 
@@ -12,110 +11,127 @@ class AdminDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final primary = AppColors.primaryColor;
-    final accent = AppColors.accentColor;
 
     return Drawer(
       backgroundColor: Colors.white,
-      child: Column(
-        children: [
-          // Profile Header
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-            decoration: BoxDecoration(
-              color: primary.withOpacity(0.1),
-              // borderRadius: const BorderRadius.only(
-              //   bottomLeft: Radius.circular(24),
-              //   bottomRight: Radius.circular(24),
-              // ),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 36,
-                  backgroundColor: primary.withOpacity(0.2),
-                  child: const Text(
-                    "N",
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryColor,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Nikhil Kumar',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryColor,
-                        ),
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Profile Header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+              child: Row(
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      const CircleAvatar(
+                        radius: 32,
+                        backgroundImage: AssetImage('assets/icons/profile.jpg'), // Replace with your asset or keep text
+                        backgroundColor: Colors.transparent,
                       ),
-                      SizedBox(height: 4),
-                      Text(
-                        'nikhil@email.com',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.black54,
+                      Positioned(
+                        bottom: -2,
+                        right: -2,
+                        child: GestureDetector(
+                          onTap: () {
+                            Get.to(() => AdmitProfile());
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 3,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.edit,
+                              size: 16,
+                              color: Colors.black87,
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.grey),
-                  onPressed: () {
-                    // Navigate to the profile edit page
-                    Get.to(() => AdmitProfile());
-                  },
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Nikhil Kumar',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primaryColor,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: const [
+                            Expanded(
+                              child: Text(
+                                'nikhil@email.com',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.black54,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+            const SizedBox(height: 16),
 
-          const SizedBox(height: 20),
-
-          // Drawer Menu
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              children: [
-                _drawerItem(Icons.dashboard_customize_rounded, 'Dashboard',
-                    primary, accent),
-                const Divider(indent: 20, endIndent: 20),
-                _drawerItem(Icons.settings, 'Settings', primary, accent),
-                _drawerItem(
-                    Icons.info_outline_rounded, 'About Us', primary, accent),
-                _drawerItem(Icons.privacy_tip_rounded, 'Privacy Policy',
-                    primary, accent),
-                _drawerItem(Icons.logout, 'Logout', primary, accent),
-              ],
-            ),
-          ),
-
-          // Logout button at bottom
-        ],
+            // Drawer Menu Items
+            _drawerItem(Icons.dashboard_customize_rounded, 'Dashboard', isActive: true),
+            _drawerItem(Icons.settings, 'Settings'),
+            _drawerItem(Icons.info_outline_rounded, 'About Us'),
+            _drawerItem(Icons.privacy_tip_rounded, 'Privacy Policy'),
+            _drawerItem(Icons.logout, 'Logout', color: Colors.red),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _drawerItem(IconData icon, String label, Color primary, Color accent) {
+  // Drawer Item with optional active state styling
+  Widget _drawerItem(IconData icon, String label, {Color? color, bool isActive = false}) {
+    final Color background = isActive ? AppColors.primaryColor.withOpacity(0.08) : Colors.white;
+    final Color iconColor = color ?? Colors.grey.shade800;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: ListTile(
-        leading: Icon(icon, color: primary),
-        title: Text(
-          label,
-          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w500),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Container(
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(12),
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        onTap: () => onMenuTap(label),
-        hoverColor: accent.withOpacity(0.1),
+        child: ListTile(
+          leading: Icon(icon, color: iconColor),
+          title: Text(
+            label,
+            style: TextStyle(
+              fontSize: 15,
+              color: iconColor,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          onTap: () => onMenuTap(label),
+        ),
       ),
     );
   }

@@ -44,4 +44,6 @@ class SubjectData {
       type: json['type'] ?? '',
     );
   }
+
+  get id => null;
 }

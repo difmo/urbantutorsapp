@@ -17,9 +17,13 @@ class GetClassesController extends GetxController {
 
       if (response.success) {
         classList.value = response.data;
-        Get.snackbar('Success', response.message);
+
+        // ✅ Debug classId type and values
         print("Class data fetched successfully:");
-        print(response.data);
+        for (var cls in classList) {
+          print("ClassName: ${cls.className}, ClassId: ${cls.classId}, Type: ${cls.classId.runtimeType}");
+        }
+
       } else {
         Get.snackbar('Failed', response.message);
         print("Failed to fetch class data:");
