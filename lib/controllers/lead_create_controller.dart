@@ -8,7 +8,7 @@ class LeadCreateController extends GetxController {
 
   var isSubmitting = false.obs;
 
-  Future<void> createOrUpdateLead(leadCreateRequest request) async {
+  Future<void> createOrUpdateLead(LeadCreateRequest request) async {
     isSubmitting.value = true;
 
     print('📤 Submitting Lead with data:');
@@ -37,10 +37,10 @@ class LeadCreateController extends GetxController {
         mode: request.mode,
         fee: request.fee,
         leadId:'1',
-        subjectId: request.subjectId,
+        subjectId:'1',
         userId: request.userId,
       );
-
+print(response);
       if (response.statusCode == 200 && response.data['success'] == true) {
         Get.snackbar('Success', response.data['message'] ?? 'Lead created successfully');
         print("Lead created successfully:");

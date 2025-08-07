@@ -45,5 +45,9 @@ class SubjectData {
     );
   }
 
-  get id => null;
+  /// ✅ Use this getter to access subjectId as `id`
+  int get id => subjectId;
+
+  /// ✅ Use this getter to access subjectName as `name`
+  String get name => subjectName;
 }

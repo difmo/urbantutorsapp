@@ -5,7 +5,7 @@ import '../theme/theme_constants.dart';
 
 class TutorDrawer extends StatelessWidget {
   final Function(String label) onMenuTap;
-  final String activeLabel; // 👈 NEW: To highlight selected menu
+  final String activeLabel;
 
   const TutorDrawer({
     Key? key,
@@ -20,93 +20,102 @@ class TutorDrawer extends StatelessWidget {
     return Drawer(
       backgroundColor: Colors.white,
       child: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              child: Row(
-                children: [
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundColor: primaryColor.withOpacity(0.15),
-                        child: const Text(
-                          "N",
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primaryColor,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: -4,
-                        right: -4,
-                        child: GestureDetector(
-                          onTap: () {
-                            Get.to(() => const TutorProfileScreen());
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.edit,
-                              size: 18,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                child: Row(
+                  children: [
+                    Stack(
+                      clipBehavior: Clip.none,
                       children: [
-                        Text(
-                          'Nikhil Kumar',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primaryColor,
+                        CircleAvatar(
+                          radius: 30,
+                          backgroundColor: primaryColor.withOpacity(0.15),
+                          child: const Text(
+                            "N",
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryColor,
+                            ),
                           ),
                         ),
-                        SizedBox(height: 4),
-                        Text(
-                          'nikhil@email.com',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.black54,
+                        Positioned(
+                          bottom: -4,
+                          right: -4,
+                          child: GestureDetector(
+                            onTap: () {
+                              Get.to(() => const TutorProfileScreen());
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 4,
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.edit,
+                                size: 18,
+                                color: Colors.black87,
+                              ),
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Nikhil Kumar',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryColor,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'nikhil@email.com',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
 
-            // Drawer Items
-            _drawerItem(Icons.dashboard_customize_rounded, 'Dashboard'),
-            _drawerItem(Icons.settings, 'Settings'),
-            _drawerItem(Icons.info_outline_rounded, 'About Us'),
-            _drawerItem(Icons.privacy_tip_rounded, 'Privacy Policy'),
-            _drawerItem(Icons.logout, 'Logout', color: Colors.red),
-          ],
+              const SizedBox(height: 20),
+
+              // Drawer Items from Image
+              _drawerItem(Icons.person, 'Profile'),
+              _drawerItem(Icons.account_balance_wallet, 'Wallet'),
+              _drawerItem(Icons.attach_money, 'Wallet History'),
+              _drawerItem(Icons.description, 'Terms & Conditions'),
+              _drawerItem(Icons.language, 'Connected Websites & Apps'),
+              _drawerItem(Icons.feedback, 'Feedback'),
+              _drawerItem(Icons.star_rate, 'Rate us'),
+              _drawerItem(Icons.share, 'Share app'),
+              _drawerItem(Icons.info_outline, 'About us'),
+              _drawerItem(Icons.delete, 'Delete Account'),
+              _drawerItem(Icons.logout, 'Logout', color: Colors.red),
+            ],
+          ),
         ),
       ),
     );

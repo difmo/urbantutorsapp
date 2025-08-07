@@ -45,7 +45,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
 
   @override
   void initState() {
-    getClassesController.fetchClasses();
+    getClassesController.fetchClasses(boardId: 8);
     getSubjectController.fetchSubjects();
     super.initState();
   }
@@ -162,7 +162,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                   bottom: true,
                   child: ElevatedButton.icon(
                     onPressed: _submitForm,
-                    icon: const Icon(Icons.check),
+                    
                     label: const Text('Submit Lead'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primary,
@@ -274,11 +274,11 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
       print("Selected Board ID: $selectedBoardId");
       print("Selected Subject ID: ${selectedSubject?.subjectId}");
 
-      final data = leadCreateRequest(
+      final data = LeadCreateRequest(
         name: name ?? "",
         mobile: phone ?? "",
         boardId: selectedBoardId ?? "",
-        classId: selectedClass?.classId ?? "",
+        classId: selectedClass?.classId.toString() ?? "",
         location: location ?? "",
         state: selectedState ?? "",
         mode: teachingMode ?? "",

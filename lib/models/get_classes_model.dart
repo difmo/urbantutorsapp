@@ -21,24 +21,22 @@ class GetClassesModel {
 }
 
 class ClassData {
-  final int boardId;
-  final String classId;
-  final String className;
-  final String type;
+  final int id;
+  final String name;
 
   ClassData({
-    required this.boardId,
-    required this.classId,
-    required this.className,
-    required this.type,
+    required this.id,
+    required this.name,
   });
 
   factory ClassData.fromJson(Map<String, dynamic> json) {
     return ClassData(
-      boardId: json['board_id'] ?? 0,
-      classId: json['class_id'].toString(),         // ✅ Important: force to String
-      className: json['ClassName'] ?? '',           // ✅ Ensure key is correct
-      type: json['type'] ?? '',
+      id: json['course_id'] ?? 0,
+      name: json['course_name'] ?? '',
     );
   }
+
+  /// Optional: Provide getters for dropdowns
+  int get classId => id;
+  String get className => name;
 }

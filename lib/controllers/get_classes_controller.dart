@@ -8,29 +8,32 @@ class GetClassesController extends GetxController {
   var isLoading = false.obs;
   var classList = <ClassData>[].obs;
 
-  Future<void> fetchClasses() async {
+  
+
+  /// Call this method with a valid boardId (e.g. 1, 2, etc.)
+  Future<void> fetchClasses({required int boardId}) async {
     isLoading.value = true;
 
     try {
-      print('Fetching class data from controller...');
-      final response = await getClassesService.fetchClasses();
+      print('📡 Fetching class data for boardId: $boardId');
+
+      final response = await getClassesService.fetchClasses(boardId: boardId);
 
       if (response.success) {
         classList.value = response.data;
 
-        // ✅ Debug classId type and values
-        print("Class data fetched successfully:");
+        // ✅ Debug output
+        print("✅ Class data fetched successfully:");
         for (var cls in classList) {
-          print("ClassName: ${cls.className}, ClassId: ${cls.classId}, Type: ${cls.classId.runtimeType}");
+          print("Class ID: ${cls.id}, Class Name: ${cls.name}");
         }
 
       } else {
         Get.snackbar('Failed', response.message);
-        print("Failed to fetch class data:");
-        print(response.message);
+        print("❌ Failed: ${response.message}");
       }
     } catch (e) {
-      print("ErrorFromGetClassesController");
+      print("❌ Error in GetClassesController:");
       print(e.toString());
       Get.snackbar('Error', e.toString());
     } finally {

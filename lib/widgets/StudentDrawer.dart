@@ -14,7 +14,7 @@ class StudentDrawer extends StatefulWidget {
 }
 
 class _StudentDrawerState extends State<StudentDrawer> {
-  String selectedLabel = 'Settings'; // Default selected menu
+  String selectedLabel = 'Term and Conditions'; // Default selected menu
 
   void handleTap(String label) {
     setState(() {
@@ -30,102 +30,108 @@ class _StudentDrawerState extends State<StudentDrawer> {
     return Drawer(
       backgroundColor: Colors.white,
       child: SafeArea(
-        child: Column(
-          children: [
-            // Profile Header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.shade200,
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  )
-                ],
-              ),
-              child: Row(
-                children: [
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundColor: primaryColor.withOpacity(0.1),
-                        child: const Text(
-                          "S",
-                          style: TextStyle(
-                            fontSize: 22,
-                            color: Colors.black87,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: -2,
-                        right: -2,
-                        child: GestureDetector(
-                          onTap: () {
-                            Get.to(() => const StudentProfileScreen());
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.edit,
-                              size: 16,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        child: SingleChildScrollView( // 💡 Add this in case of overflow
+          child: Column(
+            children: [
+              // Profile Header
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.shade200,
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    )
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Stack(
+                      clipBehavior: Clip.none,
                       children: [
-                        Text(
-                          'Shaurabh Kumar',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primaryColor,
+                        CircleAvatar(
+                          radius: 30,
+                          backgroundColor: primaryColor.withOpacity(0.1),
+                          child: const Text(
+                            "S",
+                            style: TextStyle(
+                              fontSize: 22,
+                              color: Colors.black87,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                        SizedBox(height: 4),
-                        Text(
-                          'shaurabh@email.com',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.black54,
+                        Positioned(
+                          bottom: -2,
+                          right: -2,
+                          child: GestureDetector(
+                            onTap: () {
+                              Get.to(() => const StudentProfileScreen());
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 4,
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.edit,
+                                size: 16,
+                                color: Colors.black87,
+                              ),
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Shaurabh Kumar',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryColor,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'shaurabh@email.com',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
 
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
 
-            // Navigation Items
-            _drawerItem(Icons.settings, 'Settings'),
-            _drawerItem(Icons.info_outline, 'About Us'),
-            _drawerItem(Icons.logout, 'Logout', color: Colors.red),
-          ],
+              // Updated Navigation Items based on image
+              _drawerItem(Icons.description, 'Term and Conditions'),
+              _drawerItem(Icons.language, 'Connected Websites & Apps'),
+              _drawerItem(Icons.feedback, 'Feedback'),
+              _drawerItem(Icons.notifications, 'Notifications'),
+              _drawerItem(Icons.share, 'Share app'),
+              _drawerItem(Icons.delete_forever, 'Delete Account'),
+              _drawerItem(Icons.logout, 'Logout', color: Colors.red),
+            ],
+          ),
         ),
       ),
     );

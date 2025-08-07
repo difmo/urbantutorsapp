@@ -8,54 +8,52 @@ class TutorSupportScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      
-        body: Column(
-          children: [
-            _buildAppBar(context),
-            const SizedBox(height: 20),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Text(
-                "How can we help you?",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
+      body: Column(
+        children: [
+          _buildAppBar(context),
+          const SizedBox(height: 20),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              "How can we help you?",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 8),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Text(
-                "If you're facing issues or need assistance, feel free to reach out to us.",
-                style: TextStyle(fontSize: 14, color: Colors.black54),
-              ),
+          ),
+          const SizedBox(height: 8),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              "If you're facing issues or need assistance, feel free to reach out to us.",
+              style: TextStyle(fontSize: 14, color: Colors.black54),
             ),
-            const SizedBox(height: 30),
-            _buildSupportOption(
-              icon: Icons.email_outlined,
-              label: "Email Support",
-              onTap: () {
-                // TODO: open mail client or support form
-              },
-            ),
-            _buildSupportOption(
-              icon: Icons.phone_outlined,
-              label: "Call Support",
-              onTap: () {
-                // TODO: initiate call
-              },
-            ),
-            _buildSupportOption(
-              icon: Icons.help_outline,
-              label: "FAQs",
-              onTap: () {
-                // TODO: navigate to FAQ screen
-              },
-            ),
-          ],
-        ),
-      
+          ),
+          const SizedBox(height: 30),
+          _buildSupportOption(
+            icon: Icons.email_outlined,
+            label: "Email Support",
+            onTap: () {
+              // TODO: open mail client or support form
+            },
+          ),
+          _buildSupportOption(
+            icon: Icons.phone_outlined,
+            label: "Call Support",
+            onTap: () {
+              // TODO: initiate call
+            },
+          ),
+          _buildSupportOption(
+            icon: Icons.help_outline,
+            label: "FAQs",
+            onTap: () {
+              // TODO: navigate to FAQ screen
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -89,32 +87,33 @@ class TutorSupportScreen extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      child: InkWell(
-        onTap: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Material(
+        color: Colors.grey.shade100,
         borderRadius: BorderRadius.circular(12),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.accentColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.accentColor.withOpacity(0.5)),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            children: [
-              Icon(icon, color: AppColors.primaryColor),
-              const SizedBox(width: 16),
-              Text(
-                label,
-                style: TextStyle(
-                  color: AppColors.primaryColor,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          splashColor: AppColors.accentColor.withOpacity(0.1),
+          highlightColor: AppColors.accentColor.withOpacity(0.05),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Icon(icon, color: AppColors.primaryColor),
+                const SizedBox(width: 16),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: AppColors.primaryColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-              const Spacer(),
-              const Icon(Icons.chevron_right, color: Colors.grey),
-            ],
+                const Spacer(),
+               
+              ],
+            ),
           ),
         ),
       ),

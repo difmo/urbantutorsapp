@@ -84,7 +84,7 @@ class _CreateLeadScreenState extends State<LeadDetailsScreen> {
 
   @override
   void initState() {
-    getClassesController.fetchClasses();
+    getClassesController.fetchClasses(boardId: 1);
     getSubjectController.fetchSubjects();
     fetchTutors(searchRadius);
     super.initState();
@@ -373,7 +373,7 @@ class _CreateLeadScreenState extends State<LeadDetailsScreen> {
         return;
       }
 
-      final data = leadCreateRequest(
+      final data = LeadCreateRequest(
         name: name ?? "",
         mobile: phone ?? "",
         boardId: selectedBoardId ?? "",

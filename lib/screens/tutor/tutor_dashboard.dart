@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_chat_screen.dart';
+import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_courses_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_profile_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_profile_screen.dart';
@@ -89,27 +90,41 @@ class _TutorDashboardState extends State<TutorDashboard> {
                       fontWeight: FontWeight.bold, color: Colors.white)),
               Spacer(),
               SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.15),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context, 
+                      MaterialPageRoute(builder: (context) => TutorCoinsScreen()));
+                  },
                   borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.monetization_on, color: accentColor, size: 10),
-                    const SizedBox(width: 6),
-                    Text(
-                      "200 coins",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: accentColor.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                  ],
+                    child: Row(
+                      children: [
+                        Icon(Icons.monetization_on,
+                            color: accentColor, size: 10),
+                        const SizedBox(width: 6),
+                        const Text(
+                          "200 coins",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+              )
+             
             ],
           ),
           actions: [

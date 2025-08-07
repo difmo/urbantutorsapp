@@ -4,29 +4,37 @@ import 'package:urbantutorsapp/services/ApiService.dart';
 import 'package:urbantutorsapp/utils/api_constants.dart';
 
 class GetClassesService {
-  Future<GetClassesModel> fetchClasses() async {
+  Future<GetClassesModel> fetchClasses({
+    required int boardId,
+    int? classId,
+    String? className,
+    String? type,
+  }) async {
     try {
-      Response response = await ApiService.post(ApiConstants.GETCLASS_URL, {
-        "board_id": 1,
-        "class_id": 2,
-        "ClassName": "Class X",
-        "type": "pyq"
-      });
+      final Map<String, dynamic> body = {
+        "board_id": boardId,
+        if (classId != null) "class_id": classId,
+        if (className != null) "ClassName": className,
+        if (type != null) "type": type,
+      };
+
+      Response response = await ApiService.post(ApiConstants.GETCLASS_URL, body);
 
       if (response.statusCode == 200) {
-        print("response from if get classes services");
+        print("✅ Classes fetched successfully:");
         print(response.data);
         return GetClassesModel.fromJson(response.data);
       } else {
-        throw Exception('Failed to load class data');
+        throw Exception('❌ Failed to load class data. Status: ${response.statusCode}');
       }
     } on DioError catch (e) {
-      print("response from catch get classesservice");
+      print("❌ DioError while fetching classes:");
       print(e.toString());
+
       if (e.response != null) {
-        throw Exception('Error from server: ${e.response?.data}');
+        throw Exception('Server Error: ${e.response?.data}');
       } else {
-        throw Exception('Network error: ${e.message}');
+        throw Exception('Network Error: ${e.message}');
       }
     }
   }
