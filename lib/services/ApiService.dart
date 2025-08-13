@@ -12,6 +12,9 @@ class ApiService {
       sendTimeout: Duration(seconds: 10),
     ),
   );
+  // ApiService() {
+  //   _dio = Dio(BaseOptions(baseUrl: 'https://urbantutors.pro/api/', connectTimeout:Duration(seconds: 10), receiveTimeout:Duration(seconds: 10)));
+  // }
 
 
   static Future<Response> post(
