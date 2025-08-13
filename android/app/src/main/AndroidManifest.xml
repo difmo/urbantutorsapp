@@ -1,19 +1,28 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="pro.urbantutors.app">
+
     <!-- Required permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="28" /> <!-- Needed only for Android 9 and below -->
+        android:maxSdkVersion="28" /> <!-- Only for Android 9 and below -->
+
+    <!-- Intent query for URL launcher -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
 
     <application
         android:name="${applicationName}"
         android:label="Urban Tutors"
         android:icon="@mipmap/ic_launcher"
-        android:requestLegacyExternalStorage="true"> <!-- Optional: only for Android 10 -->
+        android:requestLegacyExternalStorage="true"> <!-- Optional: for Android 10 -->
+        
 
-        <!-- Main activity -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -22,11 +31,11 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode">
-            
+
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
-            
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -48,77 +57,6 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
     </application>
-
-    <!-- Intent query (needed for text processing plugins) -->
-    <queries>plugins {
-    id 'com.android.application'
-    id 'kotlin-android'
-    id 'dev.flutter.flutter-gradle-plugin'
-}
-
-// ✅ Load keystore.properties
-def keystoreProperties = new Properties()
-def keystorePropertiesFile = file("../keystore.properties")
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-    println("✅ Loaded keystore: " + keystoreProperties['storeFile']) // Debug print
-} else {
-    println("❌ keystore.properties file NOT found")
-}
-
-android {
-    namespace 'pro.urbantutors.app'
-    compileSdk flutter.compileSdkVersion
-    ndkVersion flutter.ndkVersion
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
-
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
-
-    defaultConfig {
-        applicationId "pro.urbantutors.app"
-        minSdk flutter.minSdkVersion
-        targetSdk flutter.targetSdkVersion
-        versionCode 4
-        versionName "1.0.3"
-    }
-
-    signingConfigs {
-        release {
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
-            storeFile file(keystoreProperties['storeFile'])  // ✅ Key line
-            storePassword keystoreProperties['storePassword']
-        }
-    }
-
-    buildTypes {
-        release {
-            signingConfig signingConfigs.release
-            minifyEnabled false
-            shrinkResources false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
-
-    lintOptions {
-        disable 'InvalidPackage'
-        checkReleaseBuilds false
-    }
-}
-
-flutter {
-    source '../..'
-}
-        <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT" />
-            <data android:mimeType="text/plain" />
-        </intent>
-    </queries>
 </manifest>

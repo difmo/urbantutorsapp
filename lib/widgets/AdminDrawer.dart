@@ -1,6 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:urbantutorsapp/screens/admin/admin_tutor_page.dart';
+import 'package:urbantutorsapp/screens/admin/amount_option_admin.dart';
+import 'package:urbantutorsapp/screens/admin/notification_admin.dart';
+import 'package:urbantutorsapp/screens/admin/parents_student_admin.dart';
+import 'package:urbantutorsapp/screens/admin/transaction_admin.dart';
+import 'package:urbantutorsapp/screens/admin/wallet_hits_admin.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import 'package:urbantutorsapp/screens/admin/admit_profile.dart';
+import 'package:urbantutorsapp/screens/admin/class_list_admin.dart';
+import 'package:urbantutorsapp/screens/admin/feedback_admin.dart';
+import 'package:urbantutorsapp/screens/admin/support_agent.dart';
+import 'package:urbantutorsapp/screens/admin/term_conditions_admin.dart';
 import '../theme/theme_constants.dart';
 
 class AdminDrawer extends StatelessWidget {
@@ -20,7 +33,8 @@ class AdminDrawer extends StatelessWidget {
             children: [
               // Profile Header
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                 child: Row(
                   children: [
                     Stack(
@@ -28,7 +42,8 @@ class AdminDrawer extends StatelessWidget {
                       children: [
                         const CircleAvatar(
                           radius: 32,
-                          backgroundImage: AssetImage('assets/icons/profile.jpg'),
+                          backgroundImage:
+                              AssetImage('assets/icons/profile.jpg'),
                           backgroundColor: Colors.transparent,
                         ),
                         Positioned(
@@ -61,10 +76,10 @@ class AdminDrawer extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(width: 12),
-                    Expanded(
+                    const Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text(
                             'Nikhil Kumar',
                             style: TextStyle(
@@ -89,20 +104,79 @@ class AdminDrawer extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-          
-              // Drawer Items from Uploaded Image
-              _drawerItem(Icons.people_alt, 'Tutors'),
-              _drawerItem(Icons.person, 'Parents / Students'),
-              _drawerItem(Icons.balance, 'Transaction'),
-              _drawerItem(Icons.account_balance_wallet, 'Wallet Hits'),
-              _drawerItem(Icons.attach_money, 'Amount Options'),
-              _drawerItem(Icons.notifications_active, 'Send Notification'),
-              _drawerItem(Icons.notifications_none, 'Notification History'),
-              _drawerItem(Icons.language, 'Connected Websites & Apps'),
-              _drawerItem(Icons.feedback, 'Feedbacks'),
-              _drawerItem(Icons.contact_phone, 'Add Contact'),
-          
-              // Expandable Dynamic Dropdown section
+
+              // Drawer Items
+              _drawerItem(Icons.people_alt, 'Tutors',onTap: () {
+                Get.to(() => AdminTutorPage());
+              },),
+              _drawerItem(
+                Icons.person,
+                'Parents / Students',
+                onTap: () {
+                  Get.to(() => ParentsStudentAdmin());
+                },
+              ),
+              _drawerItem(
+                Icons.balance,
+                'Transaction',
+                onTap: () {
+                  Get.to(() => TransactionAdmin());
+                },
+              ),
+              _drawerItem(
+                Icons.account_balance_wallet,
+                'Wallet Hits',
+                onTap: () {
+                  Get.to(() => WalletHitsPage());
+                },
+              ),
+              _drawerItem(
+                Icons.attach_money,
+                'Amount Options',
+                onTap: () {
+                  Get.to(() => AmountOptionsScreen());
+                },
+              ),
+
+              _drawerItem(
+                Icons.notifications_active,
+                'Send Notification',
+                onTap: () {
+                  showNotificationBottomSheet(context);
+                },
+              ),
+
+              _drawerItem(
+                Icons.notifications_none,
+                'Notification History',
+                onTap: () {
+                  Get.to(() => const NotificationPage());
+                },
+              ),
+
+              _drawerItem(
+                Icons.language,
+                'Connected Websites & Apps',
+                onTap: () async {
+                  await _launchURL('https://www.urbantutors.pro/');
+                },
+              ),
+
+              _drawerItem(
+                Icons.feedback,
+                'Feedbacks',
+                onTap: () {
+                  Get.to(() => const FeedbackScreen());
+                },
+              ),
+              _drawerItem(
+                Icons.contact_phone,
+                'Add Contact',
+                onTap: () {
+                  Get.to(() => const SupportAgentsScreen());
+                },
+              ),
+
               ExpansionTile(
                 leading: const Icon(Icons.view_list),
                 title: const Text(
@@ -110,14 +184,25 @@ class AdminDrawer extends StatelessWidget {
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
                 ),
                 children: [
-                  _drawerItem(Icons.group, 'Class List', isSubItem: true),
+                  _drawerItem(Icons.group, 'Class List', isSubItem: true,
+                      onTap: () {
+                    Get.to(() => const ClassListAdmin());
+                  }),
                   _drawerItem(Icons.home, 'Board List', isSubItem: true),
                   _drawerItem(Icons.book, 'Subject List', isSubItem: true),
                 ],
               ),
-          
-              _drawerItem(Icons.description, 'Terms & Conditions'),
-              _drawerItem(Icons.share, 'Share'),
+
+              _drawerItem(Icons.description, 'Terms & Conditions', onTap: () {
+                Get.to(() => const TermsAndConditionsScreen());
+              }),
+
+              _drawerItem(Icons.share, 'Share', onTap: () {
+                Share.share(
+                  'Check out this amazing app: https://play.google.com/store/apps/details?id=com.urbantutors.app',
+                );
+              }),
+
               _drawerItem(Icons.logout, 'Logout', color: Colors.red),
             ],
           ),
@@ -126,9 +211,24 @@ class AdminDrawer extends StatelessWidget {
     );
   }
 
-  // Updated drawer item method with optional sub-item styling
-  Widget _drawerItem(IconData icon, String label,
-      {Color? color, bool isActive = false, bool isSubItem = false}) {
+  static Future<void> _launchURL(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      debugPrint('Could not launch $url');
+      throw 'Could not launch $url';
+    }
+  }
+
+  Widget _drawerItem(
+    IconData icon,
+    String label, {
+    Color? color,
+    bool isActive = false,
+    bool isSubItem = false,
+    VoidCallback? onTap,
+  }) {
     final Color background =
         isActive ? AppColors.primaryColor.withOpacity(0.08) : Colors.white;
     final Color iconColor = color ?? Colors.grey.shade800;
@@ -153,9 +253,144 @@ class AdminDrawer extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
-          onTap: () => onMenuTap(label),
+          onTap: onTap ?? () => onMenuTap(label),
         ),
       ),
     );
   }
+}
+
+// 🔻 Notification Bottom Sheet Function
+void showNotificationBottomSheet(BuildContext context) {
+  final TextEditingController titleController = TextEditingController();
+  final TextEditingController messageController = TextEditingController();
+
+  final RxString selectedRole = 'Teacher'.obs;
+  final RxString selectedState = 'All'.obs;
+
+  final List<String> roles = ['Teacher', 'Student'];
+  final List<String> states = [
+    'All',
+    'Delhi',
+    'Maharashtra',
+    'UP',
+    'Karnataka'
+  ];
+
+  showModalBottomSheet(
+    backgroundColor: Colors.white,
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (_) {
+      return SafeArea(
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 16,
+            right: 16,
+            top: 50,
+          ),
+          child: Wrap(
+            spacing: 23,
+            children: [
+              const Center(
+                child: Text(
+                  'Send Notification',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Role Dropdown
+              Obx(() => DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(
+                      labelText: 'Select Role',
+                      border: OutlineInputBorder(),
+                    ),
+                    value: selectedRole.value,
+                    items: roles.map((role) {
+                      return DropdownMenuItem(value: role, child: Text(role));
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) selectedRole.value = value;
+                    },
+                  )),
+
+              SizedBox(
+                height: 16,
+              ),
+              // State Dropdown
+              Obx(() => DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(
+                      labelText: 'Select State',
+                      border: OutlineInputBorder(),
+                    ),
+                    value: selectedState.value,
+                    items: states.map((state) {
+                      return DropdownMenuItem(value: state, child: Text(state));
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) selectedState.value = value;
+                    },
+                  )),
+              const SizedBox(height: 12),
+
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Title',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: messageController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Message',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryColor,
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+                onPressed: () {
+                  final title = titleController.text.trim();
+                  final message = messageController.text.trim();
+
+                  if (title.isNotEmpty && message.isNotEmpty) {
+                    Navigator.pop(context);
+                    Get.snackbar(
+                      'Success',
+                      'Notification sent!',
+                      backgroundColor: Colors.green.shade100,
+                      snackPosition: SnackPosition.BOTTOM,
+                    );
+                    // TODO: Add your API call here
+                  } else {
+                    Get.snackbar(
+                      'Error',
+                      'Please enter both title and message',
+                      backgroundColor: Colors.red.shade100,
+                      snackPosition: SnackPosition.BOTTOM,
+                    );
+                  }
+                },
+                child: const Text('Send Notification'),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }

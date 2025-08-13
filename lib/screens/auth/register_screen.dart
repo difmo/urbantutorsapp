@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart'; // ⬅️ Added for opening link
 import 'package:urbantutorsapp/controllers/AuthController.dart';
 import 'package:urbantutorsapp/widgets/custom_button.dart';
 import 'package:urbantutorsapp/widgets/custom_input_field.dart';
@@ -23,7 +24,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _phoneController = TextEditingController();
   final AuthController auth = Get.find<AuthController>();
 
+  bool _agreed = false; // ⬅️ New checkbox state
+
   Future<void> _sendOtp() async {
+    if (!_agreed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please agree to Terms & Conditions')),
+      );
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('reg_name', _nameController.text.trim());
@@ -50,6 +60,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
           SnackBar(content: Text(e.toString())),
         );
       }
+    }
+  }
+
+  Future<void> _openTerms() async {
+    const url = 'https://urbantutors.pro/privacy-policy';
+    if (await canLaunch(url)) {
+      await launch(url, forceSafariVC: false, forceWebView: false);
+    } else {
+      throw 'Could not launch $url';
     }
   }
 
@@ -97,7 +116,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     icon: FontAwesomeIcons.user,
                     validator: (v) =>
                         v == null || v.trim().isEmpty ? 'Required' : null,
-                         labelStyle: TextStyle(color: Colors.grey),
+                    labelStyle: const TextStyle(color: Colors.grey),
                   ),
                   const SizedBox(height: 16),
                   CustomInputField(
@@ -111,6 +130,43 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ? 'Enter valid 10-digit mobile number'
                         : null,
                   ),
+                  const SizedBox(height: 16),
+
+                  // ✅ Terms & Conditions checkbox
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: _agreed,
+                        onChanged: (value) {
+                          setState(() {
+                            _agreed = value ?? false;
+                          });
+                        },
+                        activeColor: AppColors.primaryColor,
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: _openTerms,
+                          child: RichText(
+                            text: TextSpan(
+                              style: const TextStyle(color: Colors.black87),
+                              children: [
+                                const TextSpan(text: 'I agree to '),
+                                TextSpan(
+                                  text: 'Terms & Conditions',
+                                  style: const TextStyle(
+                                    color: Colors.blue,
+                                    
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
                   const SizedBox(height: 24),
                   CustomButton(
                     label: 'Register',

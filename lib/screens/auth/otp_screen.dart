@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:urbantutorsapp/controllers/AuthController.dart';
 
-import 'package:urbantutorsapp/screens/admin/admin_dashboard..dart';
+import 'package:urbantutorsapp/screens/admin/admin_dashboard.dart';
 import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
 import 'package:urbantutorsapp/shared/default_dashboard.dart';

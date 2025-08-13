@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:urbantutorsapp/screens/tutor/Terms_conditions_tutor.dart';
+import 'package:urbantutorsapp/screens/tutor/feedback_tutor.dart';
+import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
+import 'package:urbantutorsapp/screens/tutor/tutor_profile.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_profile_screen.dart';
+import 'package:urbantutorsapp/screens/tutor/wallet_tutor_history.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/theme_constants.dart';
 
 class TutorDrawer extends StatelessWidget {
-  final Function(String label) onMenuTap;
+  final Function(String label)? onMenuTap;
   final String activeLabel;
 
   const TutorDrawer({
     Key? key,
-    required this.onMenuTap,
+    this.onMenuTap,
     this.activeLabel = '',
   }) : super(key: key);
 
@@ -25,7 +31,8 @@ class TutorDrawer extends StatelessWidget {
             children: [
               // Header
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
                 child: Row(
                   children: [
                     Stack(
@@ -48,6 +55,7 @@ class TutorDrawer extends StatelessWidget {
                           right: -4,
                           child: GestureDetector(
                             onTap: () {
+                              Navigator.pop(context); // Close drawer
                               Get.to(() => const TutorProfileScreen());
                             },
                             child: Container(
@@ -102,13 +110,60 @@ class TutorDrawer extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              // Drawer Items from Image
-              _drawerItem(Icons.person, 'Profile'),
-              _drawerItem(Icons.account_balance_wallet, 'Wallet'),
-              _drawerItem(Icons.attach_money, 'Wallet History'),
-              _drawerItem(Icons.description, 'Terms & Conditions'),
-              _drawerItem(Icons.language, 'Connected Websites & Apps'),
-              _drawerItem(Icons.feedback, 'Feedback'),
+              // Drawer Items
+              _drawerItem(
+                Icons.person,
+                'Profile',
+                onTap: () {
+                  Navigator.pop(context);
+                  Get.to(() => ProfileScreen());
+                },
+              ),
+              _drawerItem(
+                Icons.account_balance_wallet,
+                'Wallet',
+                onTap: () {
+                  Navigator.pop(context);
+                  Get.to(() => TutorCoinsScreen());
+                },
+              ),
+              _drawerItem(
+                Icons.attach_money,
+                'Wallet History',
+                onTap: () {
+                  Navigator.pop(context);
+                  Get.to(() => WalletTutorHistory());
+                },
+              ),
+              _drawerItem(
+                Icons.description,
+                'Terms & Conditions',
+                onTap: () {
+                  Navigator.pop(context);
+                  Get.to(() => TermsConditionsTutor());
+                },
+              ),
+              _drawerItem(
+                Icons.language,
+                'Connected Websites & Apps',
+                onTap: () async {
+                  Navigator.pop(context);
+                  final url = Uri.parse('https://urbantutors.pro/');
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  } else {
+                    Get.snackbar('Error', 'Cound not oprn the Website');
+                  }
+                },
+              ),
+              _drawerItem(
+                Icons.feedback,
+                'Feedback',
+                onTap: () {
+                  Navigator.pop(context);
+                  Get.to(() => FeedbackTutor());
+                },
+              ),
               _drawerItem(Icons.star_rate, 'Rate us'),
               _drawerItem(Icons.share, 'Share app'),
               _drawerItem(Icons.info_outline, 'About us'),
@@ -125,10 +180,12 @@ class TutorDrawer extends StatelessWidget {
     IconData icon,
     String label, {
     Color? color,
+    VoidCallback? onTap,
   }) {
     final bool isActive = label == activeLabel;
-    final Color background =
-        isActive ? AppColors.primaryColor.withOpacity(0.08) : Colors.transparent;
+    final Color background = isActive
+        ? AppColors.primaryColor.withOpacity(0.08)
+        : Colors.transparent;
     final Color iconColor = color ?? Colors.grey.shade800;
 
     return Padding(
@@ -148,7 +205,12 @@ class TutorDrawer extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
-          onTap: () => onMenuTap(label),
+          onTap: onTap ??
+              () {
+                if (onMenuTap != null) {
+                  onMenuTap!(label);
+                }
+              },
         ),
       ),
     );
