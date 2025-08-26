@@ -5,8 +5,9 @@ import '../../theme/theme_constants.dart';
 
 class RoleIntroScreen extends StatelessWidget {
   final String role;
+  final int roleId;
 
-  const RoleIntroScreen({super.key, required this.role});
+  const RoleIntroScreen({super.key, required this.role,required this.roleId});
 
   IconData getRoleIcon(String role) {
     switch (role.toLowerCase()) {
@@ -77,7 +78,7 @@ class RoleIntroScreen extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => LoginScreen(role: role),
+                              builder: (_) => LoginScreen(role: role,roleId: roleId,),
                             ),
                           );
                         },

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:urbantutorsapp/screens/tutor/Terms_conditions_tutor.dart';
+import 'package:urbantutorsapp/screens/tutor/aboutUs_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/feedback_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_profile.dart';
-import 'package:urbantutorsapp/screens/tutor/tutor_profile_screen.dart';
+import 'package:urbantutorsapp/screens/tutor/tutor_pyq_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/wallet_tutor_history.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/theme_constants.dart';
@@ -18,6 +20,53 @@ class TutorDrawer extends StatelessWidget {
     this.onMenuTap,
     this.activeLabel = '',
   }) : super(key: key);
+
+  Future<void> _launchRateUs() async {
+    const url =
+        'https://play.google.com/store/apps/details?id=pro.urbantutors.app&hl=en_IN';
+    final uri = Uri.parse(url);
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      Get.snackbar('Error', 'Could not open Play Store Link');
+    }
+  }
+
+  void _shareApp() {
+    const playStoreLink =
+        'https://play.google.com/store/apps/details?id=pro.urbantutors.app&pcampaignid=web_share';
+    Share.share('Check out Urban Tutors App: $playStoreLink');
+  }
+
+  void _showDeleteDialog(BuildContext context) {
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Delete Account'),
+            content: const Text('Are you sure you want to delete your?'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primaryColor),
+                child: const Text('CANCEL'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primaryColor),
+                child: const Text('CONFIRM'),
+              ),
+            ],
+          );
+        });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +105,7 @@ class TutorDrawer extends StatelessWidget {
                           child: GestureDetector(
                             onTap: () {
                               Navigator.pop(context); // Close drawer
-                              Get.to(() => const TutorProfileScreen());
+                              Get.to(() => const TutorPYQScreen());
                             },
                             child: Container(
                               padding: const EdgeInsets.all(6),
@@ -164,10 +213,34 @@ class TutorDrawer extends StatelessWidget {
                   Get.to(() => FeedbackTutor());
                 },
               ),
-              _drawerItem(Icons.star_rate, 'Rate us'),
-              _drawerItem(Icons.share, 'Share app'),
-              _drawerItem(Icons.info_outline, 'About us'),
-              _drawerItem(Icons.delete, 'Delete Account'),
+              _drawerItem(Icons.star_rate, 'Rate us', onTap: () {
+                Navigator.pop(context);
+                _launchRateUs();
+              }),
+              _drawerItem(
+                Icons.share,
+                'Share app',
+                onTap: () {
+                  Navigator.pop(context);
+                  _shareApp();
+                },
+              ),
+              _drawerItem(
+                Icons.info_outline,
+                'About us',
+                onTap: () {
+                  Navigator.pop(context);
+                  Get.to(() => AboutusTutor());
+                },
+              ),
+              _drawerItem(
+                Icons.delete,
+                'Delete Account',
+                onTap: () {
+                  Navigator.pop(context);
+                  _showDeleteDialog(context);
+                },
+              ),
               _drawerItem(Icons.logout, 'Logout', color: Colors.red),
             ],
           ),

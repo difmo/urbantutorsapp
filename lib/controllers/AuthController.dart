@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:urbantutorsapp/services/ApiService.dart';
@@ -17,6 +19,7 @@ class AuthController extends GetxController {
       final res = await _authService.sendOtp(mobile);
       final otp = res.data?['data']?['otp_data']?['mobile_otp']?.toString();
       debugPrint('OTP sent: $otp');
+
       return otp;
     } catch (e) {
       Get.snackbar('Error', e.toString());
@@ -26,7 +29,14 @@ class AuthController extends GetxController {
     }
   }
 
-  Future<void> verifyOtp(String mobile, String otp, String name, String roleId, String fbToken) async {
+  void printJson(dynamic data) {
+    const JsonEncoder encoder = JsonEncoder.withIndent('  ');
+    final prettyJson = encoder.convert(data);
+    print(prettyJson);
+  }
+
+  Future<void> verifyOtp(String mobile, String otp, String name, String roleId,
+      String fbToken) async {
     isLoading.value = true;
     try {
       final res = await _authService.verifyOtp(
@@ -37,12 +47,16 @@ class AuthController extends GetxController {
         firebaseToken: fbToken,
       );
       token.value = res.data.token;
-
+      print(res.data.userData.roles);
+      printJson(res.data);
+      print("Tokenvalue");
+      print(token.value);
       await TokenStorage.saveToken(token.value);
       await TokenStorage.saveRoleId(res.data.userData.roles[0].roleId);
       await TokenStorage.saveRole("Admin");
-
     } catch (e) {
+      print("Error while otp verification");
+      print(e.toString());
       Get.snackbar('Error', e.toString());
     } finally {
       isLoading.value = false;
@@ -53,7 +67,8 @@ class AuthController extends GetxController {
   Future<void> logout() async {
     try {
       token.value = '';
-      await TokenStorage.clear(); // or use TokenStorage.removeToken() if available
+      await TokenStorage
+          .clear(); // or use TokenStorage.removeToken() if available
       Get.offAllNamed('/role-intro'); // or your login screen
     } catch (e) {
       Get.snackbar('Logout Error', e.toString());

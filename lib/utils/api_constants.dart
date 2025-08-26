@@ -9,4 +9,6 @@ class ApiConstants {
   static const LEAD_CREATE_URL = 'https://urbantutors.pro/api/leadscreateupdate';
   static const LEAD_SERVICE_URL = '/leads_vew';
   static const PROFILE_SERVICE = '/user_profile';
+  static const PROFILE_UPDATE = '/profileupdate';
+  static const USER_PROFIEL_FETCH = '/user_profile';
 }
