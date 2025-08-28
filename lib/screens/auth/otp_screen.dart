@@ -16,7 +16,8 @@ class OTPScreen extends StatefulWidget {
   final String role;
   final String otp;
 
-  const OTPScreen({super.key, required this.phone, required this.role, required this.otp});
+  const OTPScreen(
+      {super.key, required this.phone, required this.role, required this.otp});
 
   @override
   State<OTPScreen> createState() => _OTPScreenState();
@@ -26,44 +27,48 @@ class _OTPScreenState extends State<OTPScreen> {
   String otp = '';
   bool isResending = false;
 
- Future<void> _verifyOtp() async {
-  final prefs = await SharedPreferences.getInstance();
-  final name = prefs.getString('reg_name') ?? 'User';
-  final role = widget.role.toLowerCase();
-  final firebaseToken = 'dummy_token'; // Replace with actual FCM token
-  final roleId = role == 'student' ? '3' : role == 'tutor' ? '2' : '1';
+  Future<void> _verifyOtp() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('reg_name') ?? 'User';
+    final role = widget.role.toLowerCase();
+    final firebaseToken = 'dummy_token'; // Replace with actual FCM token
+    final roleId = role == 'student'
+        ? '3'
+        : role == 'tutor'
+            ? '2'
+            : '1';
 
-  try {
-    final auth = Get.find<AuthController>();
-    print('skdlu');
-    await auth.verifyOtp(widget.phone, otp, name, roleId, firebaseToken);
-    print('mera');
-    Widget dashboard;
-    switch (role) {
-      case 'admin':
-        dashboard = const AdminDashboard();
-        break;
-      case 'tutor':
-        dashboard = const TutorDashboard();
-        break;
-      case 'student':
-        dashboard = const StudentDashboardScreen();
-        break;
-      default:
-        dashboard = const DefaultDashboardScreen();
+    try {
+      final auth = Get.find<AuthController>();
+      print('skdlu');
+      await auth.verifyOtp(widget.phone, otp, name, roleId, firebaseToken);
+      print('mera');
+      Widget dashboard;
+      switch (role) {
+        case 'admin':
+          dashboard = const AdminDashboard();
+          break;
+        case 'tutor':
+          dashboard = const TutorDashboard();
+          break;
+        case 'student':
+          dashboard = const StudentDashboardScreen();
+          break;
+        default:
+          dashboard = const DefaultDashboardScreen();
+      }
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => dashboard),
+        (route) => false,
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
     }
-
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => dashboard),
-      (route) => false,
-    );
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(e.toString())),
-    );
   }
-}
 
   void _resendCode() {
     setState(() => isResending = true);
@@ -119,7 +124,6 @@ class _OTPScreenState extends State<OTPScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
-          
               PinCodeTextField(
                 appContext: context,
                 length: 6,
@@ -142,18 +146,18 @@ class _OTPScreenState extends State<OTPScreen> {
                   inactiveFillColor: Colors.grey.shade100,
                 ),
               ),
-          
               const SizedBox(height: 30),
               ElevatedButton(
                 onPressed: otp.length == 6 ? _verifyOtp : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: otp.length == 6 ? primary : primary.withOpacity(0.4),
+                  backgroundColor:
+                      otp.length == 6 ? primary : primary.withOpacity(0.4),
                   minimumSize: const Size.fromHeight(50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
                 child: const Text('Verify OTP', style: TextStyle(fontSize: 16)),
               ),
-          
               const SizedBox(height: 16),
               isResending
                   ? const CircularProgressIndicator()

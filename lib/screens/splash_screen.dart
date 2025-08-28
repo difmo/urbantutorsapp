@@ -34,7 +34,7 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _navigateAfterDelay() async {
-    await Future.delayed(const Duration(seconds: 5));
+    await Future.delayed(const Duration(seconds: 2));
 
     final token = await TokenStorage.getToken(); // Get token
     // final role = await TokenStorage.getRole();
@@ -46,7 +46,6 @@ class _SplashScreenState extends State<SplashScreen>
     Widget target;
 
     if (token != null) {
-     
       switch (roleId) {
         case '1':
           target = const AdminDashboard();
@@ -107,18 +106,18 @@ class _SplashScreenState extends State<SplashScreen>
                       radius: 58,
                       backgroundColor: Colors.white,
                       child: CircleAvatar(
-                            radius: 40,
-                            backgroundColor: Colors.transparent,
-                            child: ClipOval(
-                              child: Image.asset(
-                                'assets/icons/urban.png',
-                                width: 80, // same as diameter
-                                height: 80,
-                                fit: BoxFit
-                                    .cover, // ensures the image fills the circle
-                              ),
-                            ),
+                        radius: 40,
+                        backgroundColor: Colors.transparent,
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/icons/urban.png',
+                            width: 80, // same as diameter
+                            height: 80,
+                            fit: BoxFit
+                                .cover, // ensures the image fills the circle
                           ),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 28),
