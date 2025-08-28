@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:urbantutorsapp/screens/admin/admin_dashboard..dart';
+import 'package:urbantutorsapp/screens/admin/admin_dashboard.dart';
 import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
 import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
@@ -33,28 +32,46 @@ class _SplashScreenState extends State<SplashScreen>
     _navigateAfterDelay();
   }
 
+  // Future<bool> isProfileDone() async {
+  //   _profileUpdateController.fetchProfileUpdate();
+
+  //   if (_profileUpdateController.profileData.value!.status == "Active") {
+  //     return true;
+  //   } else {
+  //     return false;
+  //   }
+  // }
+
   Future<void> _navigateAfterDelay() async {
     await Future.delayed(const Duration(seconds: 2));
 
-    final token = await TokenStorage.getToken(); // Get token
-    // final role = await TokenStorage.getRole();
-    final roleId = await TokenStorage.getRoleId();
-    print(roleId);
-    print("Comes from tutorDashboard");
+    final token = await StorageService.getToken(); // Get token
+    // final role = await StorageService.getRole();
+    final roleId = await StorageService.getRoleId();
+    print("Role Id from splash screen  $roleId");
+    print("Comes from splash screen");
     if (!mounted) return;
 
     Widget target;
+    final String? profileStatus = await StorageService.getIsProfileActive();
 
+    print("profilstatuse");
+    print(profileStatus);
     if (token != null) {
       switch (roleId) {
         case '1':
-          target = const AdminDashboard();
+          target = const StudentDashboardScreen();
           break;
+        // case '2':
+        //   target = false ? TutorDashboard() : profileStatus == "pending" || profileStatus == null
+        //       ? ProfileFormScreen()
+        //       : TutorDashboard();
+        //   break;
         case '2':
           target = const TutorDashboard();
           break;
         case '3':
-          target = const StudentDashboardScreen();
+          target = const AdminDashboard();
           break;
         default:
           target = const DefaultDashboardScreen();

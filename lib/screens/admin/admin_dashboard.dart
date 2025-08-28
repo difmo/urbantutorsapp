@@ -3,14 +3,16 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/controllers/lead_controller.dart';
-import 'package:urbantutorsapp/screens/admin/CreateLeadScreen.dart';
-import 'package:urbantutorsapp/screens/admin/LeadDetailsScreen.dart';
+import 'package:urbantutorsapp/screens/admin/CreateLeadScreen.dart' as create;
+import 'package:urbantutorsapp/screens/admin/LeadDetailsScreen.dart' as details;
+import 'package:urbantutorsapp/screens/admin/history_screen.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/AdminDrawer.dart';
 import 'package:urbantutorsapp/widgets/CustomFAB.dart';
 import 'package:urbantutorsapp/widgets/LeadCardWidget.dart';
 import '../../theme/theme_constants.dart';
+import 'package:lottie/lottie.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -24,13 +26,13 @@ class _AdminDashboardState extends State<AdminDashboard>
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late final TabController _tabController;
   final List<String> _tabs = ['All Leads', 'Grabbed', 'Declined'];
-
   final LeadController leadController = Get.put(LeadController());
+  int _selectedIndex = -1;
 
   @override
   void initState() {
     super.initState();
-    leadController.fetchLeads(); // fetch on load
+    leadController.fetchLeads();
     _tabController = TabController(length: _tabs.length, vsync: this);
   }
 
@@ -45,7 +47,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     if (label == 'Logout') {
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
-      await TokenStorage.clearTokenAndRole();
+      await StorageService.clearTokenAndRole();
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -73,7 +75,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       key: _scaffoldKey,
       endDrawer: AdminDrawer(onMenuTap: _handleMenuTap),
       appBar: AppBar(
-        backgroundColor: AppColors.primaryColor,
+        backgroundColor: primary,
         elevation: 2,
         title: Row(
           children: [
@@ -81,15 +83,14 @@ class _AdminDashboardState extends State<AdminDashboard>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
-                  colors: [AppColors.primaryColor, AppColors.accentColor],
+                  colors: [primary, accent],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
               ),
-              padding: const EdgeInsets.all(2), // optional for slight border
+              padding: const EdgeInsets.all(2),
               child: CircleAvatar(
-                backgroundColor:
-                    Colors.transparent, // make it transparent to show gradient
+                backgroundColor: Colors.transparent,
                 radius: 24,
                 child: const Text(
                   'A',
@@ -99,7 +100,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               ),
             ),
             const SizedBox(width: 12),
-            Text('Welcome, Admin',
+            const Text('Welcome, Admin',
                 style: TextStyle(
                     fontWeight: FontWeight.bold, color: Colors.white)),
             const Spacer(),
@@ -116,7 +117,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                   children: [
                     Icon(Icons.analytics, color: accent, size: 16),
                     const SizedBox(width: 4),
-                    Text('Stats',
+                    const Text('Stats',
                         style: TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -130,7 +131,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         actions: [
           Builder(
             builder: (ctx) => IconButton(
-              icon: Icon(Icons.menu, color: Colors.white),
+              icon: const Icon(Icons.menu, color: Colors.white),
               onPressed: () => Scaffold.of(ctx).openEndDrawer(),
             ),
           ),
@@ -139,7 +140,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           controller: _tabController,
           indicatorColor: accent,
           labelColor: Colors.white,
-          unselectedLabelColor: Colors.white, 
+          unselectedLabelColor: Colors.white,
           tabs: _tabs.map((label) => Tab(text: label)).toList(),
         ),
       ),
@@ -153,9 +154,27 @@ class _AdminDashboardState extends State<AdminDashboard>
               if (leadController.isLoading.value) {
                 return const Center(child: CircularProgressIndicator());
               }
-
               if (leadController.studentLeads.isEmpty) {
-                return const Center(child: Text('No leads available.'));
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Lottie.asset(
+                        'assets/icons/animation/empty.json',
+                        width: 250,
+                        repeat: true,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'No leads available',
+                        style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.black54,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                );
               }
 
               final leads = leadController.studentLeads;
@@ -171,14 +190,14 @@ class _AdminDashboardState extends State<AdminDashboard>
                     subject: lead.subjectName,
                     classLevel: lead.courseName,
                     location: lead.location,
-                    timing: "NA", // update if timing available
+                    timing: "NA",
                     coins: lead.price,
                     remarks: lead.remark ?? '',
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => LeadDetailsScreen(
+                          builder: (_) => details.LeadDetailsScreen(
                             studentName: lead.studentName,
                             mobile: lead.mobile.toString(),
                             subject: lead.subjectName,
@@ -187,6 +206,11 @@ class _AdminDashboardState extends State<AdminDashboard>
                             timing: "NA",
                             coins: lead.price,
                             remarks: lead.remark ?? '',
+                            name: '',
+                            className: '',
+                            fee: '',
+                            mode: '',
+                            gender: '',
                           ),
                         ),
                       );
@@ -201,8 +225,8 @@ class _AdminDashboardState extends State<AdminDashboard>
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: CustomFAB(
         onPressed: () {
-          Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const CreateLeadScreen()));
+          Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => const create.CreateLeadScreen()));
         },
       ),
       bottomNavigationBar: BottomAppBar(
@@ -215,11 +239,33 @@ class _AdminDashboardState extends State<AdminDashboard>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
-                  icon: Icon(FontAwesomeIcons.house, color: Colors.lightGreen),
-                  onPressed: () {}),
+                icon: Icon(
+                  FontAwesomeIcons.house,
+                  color: _selectedIndex == 2
+                      ? Colors.lightGreen
+                      : const Color(0xFFCACFCC),
+                ),
+                onPressed: () {
+                  setState(() {
+                    _selectedIndex = 2;
+                  });
+                },
+              ),
               IconButton(
-                  icon: Icon(FontAwesomeIcons.clockRotateLeft, color: Colors.lightGreen),
-                  onPressed: () {})
+                icon: Icon(
+                  FontAwesomeIcons.clockRotateLeft,
+                  color: _selectedIndex == 0
+                      ? Colors.lightGreen
+                      : const Color(0xFFCACFCC),
+                ),
+                onPressed: () {
+                  setState(() {
+                    _selectedIndex = 0;
+                  });
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => AdminHistoryScreen()));
+                },
+              ),
             ],
           ),
         ),

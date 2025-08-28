@@ -1,9 +1,10 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-class TokenStorage {
+class StorageService {
   static const String _tokenKey = 'auth_token';
   static const String _roleKey = 'user_role';
   static const String _roleIdKey = 'role_id';
+  static const String _profileIdKey = 'is_profile_done';
 
   /// Save token to local storage
   static Future<void> saveToken(String token) async {
@@ -17,15 +18,24 @@ class TokenStorage {
     await prefs.setString(_roleKey, role);
   }
 
-  static Future<void> saveRoleId(int roleId) async
-  {
+  static Future<void> saveIsProfileActive(String isProfileDone) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_roleIdKey,roleId.toString());
+    await prefs.setString(_profileIdKey, isProfileDone);
+  }
+
+  static Future<void> saveRoleId(int roleId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_roleIdKey, roleId.toString());
   }
 
   static Future<String?> getRoleId() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_roleIdKey);
+  }
+
+  static Future<String?> getIsProfileActive() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_profileIdKey);
   }
 
   static Future<String?> getToken() async {

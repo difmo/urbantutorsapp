@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:urbantutorsapp/screens/auth/login_screen.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/ChatUserListScreen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/HistoryScreen.dart';
@@ -7,9 +6,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/HomeScreen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/SupportScreen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/UpgradeScreen.dart';
+import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart';
 import 'package:urbantutorsapp/screens/student/pdf_courses_screen.dart';
 import 'package:urbantutorsapp/screens/student/pyq_screen.dart';
 import 'package:urbantutorsapp/screens/student/search_tutor_screen.dart';
+
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/CustomStudentNavBar.dart';
 import 'package:urbantutorsapp/widgets/StudentDrawer.dart';
@@ -48,61 +49,83 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           await prefs.remove('user_name');
           await prefs.remove('user_phone');
           await prefs.remove('user_role');
-          await TokenStorage.clearTokenAndRole();
+          await StorageService.clearTokenAndRole();
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Logged out successfully')),
           );
-            Navigator.pushAndRemoveUntil(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (context) => SplashScreen()),
             (route) => false,
-            );
+          );
         } else {
-          // Navigate to respective screen
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Navigating to $label')),
           );
         }
       }),
-      
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.primaryColor,
         elevation: 2,
+        toolbarHeight: 75,
         title: Row(
           children: [
-            CircleAvatar(
-              backgroundColor: primaryColor,
-              child: Text('S', style: TextStyle(color: Colors.white)),
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [primaryColor, accentColor],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              padding: const EdgeInsets.all(2),
+              child: const CircleAvatar(
+                backgroundColor: Colors.transparent,
+                radius: 24,
+                child: Text(
+                  'S',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
             ),
             SizedBox(width: 12),
             Text('Welcome, Student',
                 style: TextStyle(
-                    fontWeight: FontWeight.bold, color: primaryColor)),
+                    fontWeight: FontWeight.bold, color: Colors.white)),
             Spacer(),
-            SizedBox(
-              width: 8,
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-              decoration: BoxDecoration(
-                color: accentColor.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.monetization_on, color: accentColor, size: 10),
-                  const SizedBox(width: 6),
-                  Text(
-                    "200 coins",
-                    style: TextStyle(
-                      color: primaryColor,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
+            SizedBox(width: 8),
+            InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => CoinsStudent()),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.monetization_on, color: accentColor, size: 10),
+                    const SizedBox(width: 6),
+                    Text(
+                      "200 coins",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
@@ -110,7 +133,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         actions: [
           Builder(
             builder: (context) => IconButton(
-              icon: Icon(Icons.menu, color: AppColors.primaryColor),
+              icon: Icon(Icons.menu, color: Colors.white),
               onPressed: () => Scaffold.of(context).openEndDrawer(),
             ),
           ),
@@ -126,28 +149,24 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           _screens[4],
         ],
       ),
-  bottomNavigationBar: Container(
-  decoration: BoxDecoration(
-    color: Colors.white,
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black12,
-        blurRadius: 4,
-        offset: Offset(0, -2),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 4,
+              offset: Offset(0, -2),
+            ),
+          ],
+        ),
+        child: CustomStudentNavBar(
+          currentIndex: _currentIndex,
+          onTap: (index) => setState(() => _currentIndex = index),
+        ),
       ),
-    ],
-  ),
-  child: CustomStudentNavBar(
-    currentIndex: _currentIndex,
-    onTap: (index) => setState(() => _currentIndex = index),
-  ),
-      ),
-    
-
     );
   }
-  
-
 
   Widget _buildDashboardBody(Color primaryColor, Color accentColor) {
     return SingleChildScrollView(
@@ -156,41 +175,42 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Stats Card
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: accentColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: accentColor),
-              ),
-              child: Row(
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Monthly Progress',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      Text('75% completed',
-                          style: TextStyle(color: primaryColor)),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: 150,
-                        child: LinearProgressIndicator(
-                            value: 0.75, color: primaryColor),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  Icon(Icons.bar_chart, color: primaryColor, size: 40),
-                ],
-              ),
-            ),
-          ),
+          // Padding(
+          //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          //   child: Container(
+          //     padding: const EdgeInsets.all(16),
+          //     decoration: BoxDecoration(
+          //       color: accentColor.withOpacity(0.1),
+          //       borderRadius: BorderRadius.circular(12),
+          //       border: Border.all(color: accentColor),
+          //     ),
+          //     child: Row(
+          //       children: [
+          //         Column(
+          //           crossAxisAlignment: CrossAxisAlignment.start,
+          //           children: [
+          //             const Text('Monthly Progress',
+          //                 style: TextStyle(fontWeight: FontWeight.bold)),
+          //             const SizedBox(height: 4),
+          //             Text('75% completed',
+          //                 style: TextStyle(color: primaryColor)),
+          //             const SizedBox(height: 8),
+          //             SizedBox(
+          //               width: 150,
+          //               child: LinearProgressIndicator(
+          //                   value: 0.75, color: primaryColor),
+          //             ),
+          //           ],
+          //         ),
+          //         const Spacer(),
+          //         Icon(Icons.bar_chart, color: primaryColor, size: 40),
+          //       ],
+          //     ),
+          //   ),
+          // ),
 
           // Grid Features
+          const SizedBox(height: 20),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: GridView.count(
@@ -202,8 +222,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               children: [
                 _featureTile('Notes', Icons.note, primaryColor),
                 _featureTile('PYQ’s', Icons.assignment_turned_in, primaryColor),
-                _featureTile('Assignments', Icons.assignment, primaryColor),
-                _featureTile('Schedule', Icons.calendar_today, primaryColor),
               ],
             ),
           ),
@@ -215,13 +233,13 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             child: Column(
               children: [
                 _fullWidthTile(
-                    'Courses (PDF)', Icons.picture_as_pdf, accentColor),
+                    'Courses (PDF)', Icons.picture_as_pdf, accentColor,
+                    height: 130), // 👈 Taller
                 const SizedBox(height: 12),
                 _fullWidthTile(
-                    'Search Private Tutor', Icons.search, primaryColor),
+                    'Search Private Tutor', Icons.search, primaryColor,
+                    height: 130), // 👈 Taller
                 const SizedBox(height: 12),
-                _fullWidthTile(
-                    'Join Live Class', Icons.video_call, primaryColor),
               ],
             ),
           ),
@@ -234,33 +252,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     return GestureDetector(
       onTap: () {
         if (label == 'Notes') {
-          // Navigate to Notes Screen
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => NotesScreen()),
+            MaterialPageRoute(builder: (context) => NotesScreenStudent()),
           );
-        }else if (label == 'PYQ’s') {
-          // Navigate to PYQ's Screen
+        } else if (label == 'PYQ’s') {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => PYQScreen()), // Replace with actual PYQ's screen
-          );
-        } else if (label == 'Assignments') {
-          // Navigate to Assignments Screen
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => NotesScreen()), // Replace with actual Assignments screen
-          );
-        } else if (label == 'Schedule') {
-          // Navigate to Schedule Screen
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => NotesScreen()), // Replace with actual Schedule screen
+            MaterialPageRoute(builder: (context) => PyqScreen()),
           );
         }
-        // Add more conditions for other features if needed
-        // Navigate to respective feature screen
-    
       },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 20),
@@ -281,30 +282,25 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     );
   }
 
-  Widget _fullWidthTile(String label, IconData icon, Color iconColor) {
+  // 🔹 Updated to support custom height
+  Widget _fullWidthTile(String label, IconData icon, Color iconColor,
+      {double? height}) {
     return GestureDetector(
       onTap: () {
         if (label == 'Courses (PDF)') {
-          // Navigate to PDF Courses Screen
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => PDFCoursesScreen()),
           );
         } else if (label == 'Search Private Tutor') {
-          // Navigate to Search Tutor Screen
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => SearchTutorScreen()), // Replace with actual Search Tutor screen
-          );
-        } else if (label == 'Join Live Class') {
-          // Navigate to Live Class Screen
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => NotesScreen()), // Replace with actual Live Class screen
+            MaterialPageRoute(builder: (context) => SearchTutorScreen()),
           );
         }
       },
       child: Container(
+        height: height, // 👈 Apply height only when passed
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
         decoration: BoxDecoration(
@@ -319,7 +315,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
             const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),

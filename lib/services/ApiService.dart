@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:urbantutorsapp/utils/api_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
-
 class ApiService {
   static final Dio _dio = Dio(
     BaseOptions(
@@ -12,7 +11,9 @@ class ApiService {
       sendTimeout: Duration(seconds: 10),
     ),
   );
-
+  // ApiService() {
+  //   _dio = Dio(BaseOptions(baseUrl: 'https://urbantutors.pro/api/', connectTimeout:Duration(seconds: 10), receiveTimeout:Duration(seconds: 10)));
+  // }
 
   static Future<Response> post(
     String path,
@@ -20,17 +21,16 @@ class ApiService {
     String? token,
     bool isJson = false,
   }) async {
-   final token1 =  await TokenStorage.getToken();
-   if(token1 == null)
-   {
-    print("token null hai yaha");
-   }
+    final token1 = await StorageService.getToken();
+    if (token1 == null) {
+      print("token null hai yaha");
+    }
 
-    print('fromapiservice'+token1.toString());
+    print('fromapiservice' + token1.toString());
     try {
       Options options = Options(
         headers: {
-         'Authorization': 'Bearer $token1'
+          'Authorization': 'Bearer $token1'
 
           // 'Content-Type': isJson ? 'application/json' : 'multipart/form-data',
         },
@@ -38,9 +38,9 @@ class ApiService {
       return await _dio.post(path, data: data, options: options);
     } on DioError catch (e) {
       throw Exception(e.response?.data ?? 'Network error: ${e.message}');
-    }catch (e) {
-      print('Pritam'+e.toString());
-      throw(e);
+    } catch (e) {
+      print('Pritam' + e.toString());
+      throw (e);
     }
   }
 
@@ -93,5 +93,4 @@ class ApiService {
       throw Exception(e.response?.data ?? 'Network error: ${e.message}');
     }
   }
-
 }

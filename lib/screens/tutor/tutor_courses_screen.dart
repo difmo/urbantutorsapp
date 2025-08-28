@@ -23,38 +23,36 @@ class CoursesScreen extends StatelessWidget {
         backgroundColor: primaryColor,
         title: const Text('Available Courses'),
       ),
-      body: ListView.builder(
+      body: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: courses.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey.shade100,
-                foregroundColor: primaryColor,
-                padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
-                elevation: 1,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: accentColor.withOpacity(0.2)),
-                ),
-              ),
-              onPressed: () {
-                // You can navigate to course details here
+          return Material(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              splashColor: accentColor.withOpacity(0.1),
+              highlightColor: accentColor.withOpacity(0.05),
+              onTap: () {
+                // Navigate to course details here
               },
-              child: Row(
-                children: [
-                  Icon(Icons.book, color: accentColor),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      courses[index],
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+                child: Row(
+                  children: [
+                    Icon(Icons.book, color: accentColor),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        courses[index],
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      ),
                     ),
-                  ),
-                  Icon(Icons.arrow_forward_ios, size: 16, color: primaryColor),
-                ],
+                    
+                  ],
+                ),
               ),
             ),
           );

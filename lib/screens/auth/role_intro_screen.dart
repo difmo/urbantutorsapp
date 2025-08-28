@@ -5,8 +5,9 @@ import '../../theme/theme_constants.dart';
 
 class RoleIntroScreen extends StatelessWidget {
   final String role;
+  final int roleId;
 
-  const RoleIntroScreen({super.key, required this.role});
+  const RoleIntroScreen({super.key, required this.role, required this.roleId});
 
   IconData getRoleIcon(String role) {
     switch (role.toLowerCase()) {
@@ -71,13 +72,16 @@ class RoleIntroScreen extends StatelessWidget {
                 Row(
                   children: [
                     // Login Button
-               Expanded(
+                    Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => LoginScreen(role: role),
+                              builder: (_) => LoginScreen(
+                                role: role,
+                                roleId: roleId,
+                              ),
                             ),
                           );
                         },
@@ -85,7 +89,8 @@ class RoleIntroScreen extends StatelessWidget {
                         label: const Text('Login'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white,
-                          side: const BorderSide(color: Colors.white),
+                          backgroundColor: AppColors.primaryColor,
+                          side: BorderSide.none, // ✅ No border
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -111,7 +116,8 @@ class RoleIntroScreen extends StatelessWidget {
                         label: const Text('Register'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white,
-                          side: const BorderSide(color: Colors.white),
+                          backgroundColor: AppColors.primaryColor,
+                          side: BorderSide.none, // ✅ No border
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),

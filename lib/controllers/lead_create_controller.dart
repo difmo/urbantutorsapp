@@ -8,25 +8,39 @@ class LeadCreateController extends GetxController {
 
   var isSubmitting = false.obs;
 
-  Future<void> createOrUpdateLead(leadCreateRequest request) async {
+  Future<void> createOrUpdateLead(LeadCreateRequest request) async {
     isSubmitting.value = true;
+
+    print('📤 Submitting Lead with data:');
+      print('name: ${request.name}');
+      print('mobile: ${request.mobile}');
+      print('boardId: ${request.boardId}');
+      print('classId: ${request.classId}');
+      print('subjectId: ${request.subjectId}');
+      print('location: ${request.location}');
+      print('state: ${request.state}');
+      print('mode: ${request.mode}');
+      print('fee: ${request.fee}');
+      print('userId: ${request.userId}');
+      print('leadId: ${request.leadId}');
 
     try {
       print('request from controller try section');
+      print('classId: ${request.classId}');
       final response = await leadCreateService.createOrUpdateLead(
         name: request.name,
         mobile: request.mobile,
-        boardId: request.boardId,
-        classId: request.classId,
+        boardId: '8',
+        classId: '6',
         location: request.location,
         state: request.state,
         mode: request.mode,
         fee: request.fee,
-        leadId: request.leadId,
-        subjectId: request.subjectId,
+        leadId:'1',
+        subjectId:'1',
         userId: request.userId,
       );
-
+print(response);
       if (response.statusCode == 200 && response.data['success'] == true) {
         Get.snackbar('Success', response.data['message'] ?? 'Lead created successfully');
         print("Lead created successfully:");

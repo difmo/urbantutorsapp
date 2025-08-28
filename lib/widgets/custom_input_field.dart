@@ -15,7 +15,7 @@ class CustomInputField extends StatefulWidget {
     required this.icon,
     this.keyboardType = TextInputType.text,
     required this.validator,
-    this.maxLength,
+    this.maxLength, required TextStyle labelStyle,
   });
 
   @override

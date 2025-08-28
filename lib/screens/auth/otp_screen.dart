@@ -1,23 +1,33 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:urbantutorsapp/controllers/AuthController.dart';
 
-import 'package:urbantutorsapp/screens/admin/admin_dashboard..dart';
+import 'package:urbantutorsapp/screens/admin/admin_dashboard.dart';
 import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
+import 'package:urbantutorsapp/screens/student/student_profile_form.dart';
+import 'package:urbantutorsapp/screens/tutor/pending_page.dart';
+import 'package:urbantutorsapp/screens/tutor/profile_form_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
 import 'package:urbantutorsapp/shared/default_dashboard.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 import '../../theme/theme_constants.dart';
 
 class OTPScreen extends StatefulWidget {
   final String phone;
   final String role;
+  final int roleId;
   final String otp;
 
-  const OTPScreen(
-      {super.key, required this.phone, required this.role, required this.otp});
+  OTPScreen({
+    super.key,
+    required this.phone,
+    required this.role,
+    required this.roleId,
+    required this.otp,
+  });
 
   @override
   State<OTPScreen> createState() => _OTPScreenState();
@@ -30,29 +40,47 @@ class _OTPScreenState extends State<OTPScreen> {
   Future<void> _verifyOtp() async {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('reg_name') ?? 'User';
-    final role = widget.role.toLowerCase();
-    final firebaseToken = 'dummy_token'; // Replace with actual FCM token
-    final roleId = role == 'student'
-        ? '3'
-        : role == 'tutor'
-            ? '2'
-            : '1';
+    final role = widget.roleId;
+    final firebaseToken = 'dummy_token';
+    print("otp screen");
+    print(widget.role);
+    // print(r)
+    final bool isTeacherFormFilled = false;
+    final bool isStudentFormFilled = false;
+    final bool isVerified = false;
 
     try {
       final auth = Get.find<AuthController>();
-      print('skdlu');
-      await auth.verifyOtp(widget.phone, otp, name, roleId, firebaseToken);
-      print('mera');
+
+      await auth.verifyOtp(
+          widget.phone, otp, name, widget.roleId.toString(), firebaseToken);
+
+      final userData = {
+        "phone": widget.phone,
+        "role": role,
+        "name": name,
+      };
+      prefs.setString("userData", jsonEncode(userData));
       Widget dashboard;
-      switch (role) {
-        case 'admin':
+      switch (widget.roleId) {
+        case 1:
+          dashboard = isStudentFormFilled
+              ? StudentDashboardScreen()
+              : StudentProfileFormScreen();
+          break;
+        case 2:
+          // isFormFilled ? isVerified ? "main screen" : "pending screen " : ProfileFormScreen()
+          dashboard = isTeacherFormFilled
+              ? isVerified
+                  ? TutorDashboard()
+                  : PendingPage()
+              : ProfileFormScreen();
+          break;
+        // case 2:
+        //   dashboard = const ProfileFormScreen(); // first-time setup
+        //   break;
+        case 3:
           dashboard = const AdminDashboard();
-          break;
-        case 'tutor':
-          dashboard = const TutorDashboard();
-          break;
-        case 'student':
-          dashboard = const StudentDashboardScreen();
           break;
         default:
           dashboard = const DefaultDashboardScreen();
@@ -65,7 +93,7 @@ class _OTPScreenState extends State<OTPScreen> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text("OTP verification failed: $e")),
       );
     }
   }
@@ -112,18 +140,13 @@ class _OTPScreenState extends State<OTPScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    //   TextSpan(
-                    //   text: '+91-${widget.otp}',
-                    //   style: TextStyle(
-                    //     color: primary,
-                    //     fontWeight: FontWeight.bold,
-                    //   ),
-                    // )
                   ],
                 ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
+
+              /// OTP Input
               PinCodeTextField(
                 appContext: context,
                 length: 6,
@@ -147,6 +170,8 @@ class _OTPScreenState extends State<OTPScreen> {
                 ),
               ),
               const SizedBox(height: 30),
+
+              /// Verify Button
               ElevatedButton(
                 onPressed: otp.length == 6 ? _verifyOtp : null,
                 style: ElevatedButton.styleFrom(
@@ -159,6 +184,8 @@ class _OTPScreenState extends State<OTPScreen> {
                 child: const Text('Verify OTP', style: TextStyle(fontSize: 16)),
               ),
               const SizedBox(height: 16),
+
+              /// Resend OTP
               isResending
                   ? const CircularProgressIndicator()
                   : TextButton(

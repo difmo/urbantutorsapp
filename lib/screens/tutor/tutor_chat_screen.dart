@@ -7,50 +7,45 @@ class TutorChatScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // clean white background
-      body: SafeArea(
-        // Ensures space at top and bottom
-        child: Column(
-          children: [
-            _buildAppBar(context),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(12),
-                children: [
-                  _chatBubble(
-                    message: "Hello Tutor, I need help with math.",
-                    isSender: false,
-                    time: "5 min ago",
-                  ),
-                  _chatBubble(
-                    message: "Sure! Let me help you with that.",
-                    isSender: true,
-                    time: "4 min ago",
-                  ),
-                  _chatBubble(
-                    message: "Can we solve algebra equations?",
-                    isSender: false,
-                    time: "2 min ago",
-                  ),
-                ],
-              ),
+      backgroundColor: Colors.white,
+      body: Column(
+        children: [
+          _buildAppBar(context),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(12),
+              children: [
+                _chatBubble(
+                  message: "Hello Tutor, I need help with math.",
+                  isSender: false,
+                  time: "5 min ago",
+                ),
+                _chatBubble(
+                  message: "Sure! Let me help you with that.",
+                  isSender: true,
+                  time: "4 min ago",
+                ),
+                _chatBubble(
+                  message: "Can we solve algebra equations?",
+                  isSender: false,
+                  time: "2 min ago",
+                ),
+              ],
             ),
-            SafeArea(
-              minimum:
-                  const EdgeInsets.only(bottom: 8), // Small gap from bottom
-              child: _messageInputField(),
-            ),
-          ],
-        ),
+          ),
+          SafeArea(
+            minimum: const EdgeInsets.only(bottom: 8),
+            child: _messageInputField(),
+          ),
+        ],
       ),
     );
   }
 
-  // Custom AppBar as a widget
   Widget _buildAppBar(BuildContext context) {
     return Container(
       color: AppColors.primaryColor,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 35),
       child: Row(
         children: [
           GestureDetector(
@@ -137,7 +132,7 @@ class TutorChatScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
                 color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(30), // 👈 Rounded corners
+                borderRadius: BorderRadius.circular(30),
                 border:
                     Border.all(color: AppColors.primaryColor.withOpacity(0.3)),
               ),

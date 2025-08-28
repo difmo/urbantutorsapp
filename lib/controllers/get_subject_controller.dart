@@ -19,7 +19,7 @@ class GetSubjectController extends GetxController {
 
       if (response.success) {
         subjectList.value = response.data;
-        Get.snackbar('Success', response.message);
+        // Get.snackbar('Success', response.message);
         print(response.data);
       } else {
         Get.snackbar('Failed', response.message);
