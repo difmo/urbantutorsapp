@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:urbantutorsapp/screens/admin/admin_dashboard..dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:urbantutorsapp/screens/admin/admin_dashboard.dart';
 import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
 import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';

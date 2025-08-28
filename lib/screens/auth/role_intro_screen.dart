@@ -71,7 +71,7 @@ class RoleIntroScreen extends StatelessWidget {
                 Row(
                   children: [
                     // Login Button
-               Expanded(
+                    Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () {
                           Navigator.push(
@@ -85,7 +85,8 @@ class RoleIntroScreen extends StatelessWidget {
                         label: const Text('Login'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white,
-                          side: const BorderSide(color: Colors.white),
+                          backgroundColor: AppColors.primaryColor,
+                          side: BorderSide.none, // ✅ No border
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -111,7 +112,8 @@ class RoleIntroScreen extends StatelessWidget {
                         label: const Text('Register'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white,
-                          side: const BorderSide(color: Colors.white),
+                          backgroundColor: AppColors.primaryColor,
+                          side: BorderSide.none, // ✅ No border
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),

@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/route_manager.dart';
 import 'package:urbantutorsapp/controllers/get_classes_controller.dart';
 import 'package:urbantutorsapp/controllers/get_subject_controller.dart';
-import 'package:urbantutorsapp/controllers/lead_controller.dart';
 import 'package:urbantutorsapp/controllers/lead_create_controller.dart';
 import 'package:urbantutorsapp/models/get_classes_model.dart';
 import 'package:urbantutorsapp/models/get_subject_model.dart';
 import 'package:urbantutorsapp/models/lead_create_model_request.dart';
+import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/widgets/searchable_location_field.dart.dart';
-import '../../theme/theme_constants.dart';
 
 class CreateLeadScreen extends StatefulWidget {
   const CreateLeadScreen({super.key});
@@ -20,59 +18,35 @@ class CreateLeadScreen extends StatefulWidget {
 
 class _CreateLeadScreenState extends State<CreateLeadScreen> {
   final _formKey = GlobalKey<FormState>();
+  final LeadCreateController leadCreateController = Get.put(LeadCreateController());
+  final GetClassesController getClassesController = Get.put(GetClassesController());
+  final GetSubjectController getSubjectController = Get.put(GetSubjectController());
 
-  final LeadCreateController leadCreateController =
-      Get.put(LeadCreateController());
-  final GetClassesController getClassesController =
-      Get.put(GetClassesController());
+  String? location, phone, name, timing, remarks, coinsRequired, fee, tutorGender;
+  String? teachingMode, selectedState, maxHits, selectedSupportAgent;
 
-  final GetSubjectController getSubjectController =
-      Get.put(GetSubjectController());
-  // String? selectedClass;
+  final Map<String, String> boardLeadMap = {
+    "8": "CBSE",
+    "9": "IB",
+    "10": "IGCSE",
+    "11": "ICSE",
+    "12": "ISC",
+    "13": "NIOS"
+  };
+  String? selectedBoardId;
 
-  String? location;
-  String? phone;
-  String? name;
-  String? timing;
-  String? remarks;
-  String? coinsRequired;
-
-  final List<String> classes = [
-    'Class 6',
-    'Class 7',
-    'Class 8',
-    'Class 9',
-    'Class 10',
-    'Class 11',
-    'Class 12'
+  final List<Map<String, String>> supportAgents = [
+    {'name': 'Raj', 'number': '+91 9123456780'},
+    {'name': 'Neha', 'number': '+91 9876543210'},
   ];
+
   ClassData? selectedClass;
-    SubjectData? selectedSubject;
-
-  final List<String> subjects = [
-    'Math',
-    'Science',
-    'English',
-    'Physics',
-    'Chemistry',
-    'Biology',
-    'Computer Science'
-  ];
+  SubjectData? selectedSubject;
 
   @override
   void initState() {
-    getClassesController.fetchClasses().then((_) {
-      print("Class list loaded:");
-      for (var item in getClassesController.classList) {
-        print(item.className);
-      }
-    });
-      getSubjectController.fetchSubjects().then((_) {
-      print("Subject List Loading:");
-      for (var item in getSubjectController.subjectList) {
-        print(item.subjectName);
-      }
-    });
+    getClassesController.fetchClasses(boardId: 8);
+    getSubjectController.fetchSubjects();
     super.initState();
   }
 
@@ -85,83 +59,147 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
         backgroundColor: primary,
         title: const Text('Create New Lead'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              _sectionTitle("Student Details"),
-              _buildTextField('Student/Parent Name', (val) => name = val),
-              const SizedBox(height: 16),
-              _buildTextField('Mobile Number', (val) => phone = val,
-                  keyboardType: TextInputType.phone),
-              const SizedBox(height: 16),
-              SearchableLocationField(
-                suggestions: [
-                  'Delhi',
-                  'Mumbai',
-                  'Kolkata',
-                  'Bangalore',
-                  'Chennai',
-                  // etc...
-                ],
-                onLocationSelected: (loc) => location = loc,
-              ),
-              const SizedBox(height: 24),
-              _sectionTitle("Class & Subject"),
-              Obx(() {
-                return _buildDropdownField1<ClassData>(
-                  label: 'Select Class',
-                  items: getClassesController.classList,
-                  selectedItem: selectedClass,
-                  itemLabel: (item) => item.className,
-                  onChanged: (val) {
-                    setState(() {
-                      selectedClass = val;
-                    });
-                  },
-                );
-              }),
-              SizedBox(height: 10.0,),
-                Obx(() {
-                return _buildDropdownField1<SubjectData>(
-                  label: 'Select Subject',
-                  items: getSubjectController.subjectList,
-                  selectedItem: selectedSubject,
-                  itemLabel: (item) => item.subjectName,
-                  onChanged: (val) {
-                    setState(() {
-                      selectedSubject = val;
-                    });
-                  },
-                );
-              }),
-              const SizedBox(height: 16),
-          
-              const SizedBox(height: 24),
-              _sectionTitle("Session Info"),
-              _buildTextField('Preferred Timing', (val) => timing = val),
-              const SizedBox(height: 16),
-              _buildTextField('Required Coins', (val) => coinsRequired = val,
-                  keyboardType: TextInputType.number),
-              const SizedBox(height: 16),
-              _buildTextField('Remarks / Notes', (val) => remarks = val,
-                  maxLines: 3),
-              const SizedBox(height: 32),
-              ElevatedButton.icon(
-                onPressed: _submitForm,
-                icon: const Icon(Icons.check),
-                label: const Text('Submit Lead'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primary,
-                  minimumSize: const Size.fromHeight(48),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                _sectionTitle("Student Details"),
+                _buildTextField('Student/Parent Name', (val) => name = val),
+                const SizedBox(height: 16),
+                _buildTextField('Mobile Number', (val) => phone = val, keyboardType: TextInputType.phone, maxLength: 10),
+                const SizedBox(height: 16),
+                SearchableLocationField(
+                  suggestions: ['Delhi', 'Mumbai', 'Kolkata', 'Bangalore', 'Chennai'],
+                  onLocationSelected: (loc) => location = loc,
                 ),
-              ),
-            ],
+                const SizedBox(height: 24),
+                _sectionTitle("Lead Info"),
+                DropdownButtonFormField<String>(
+                  value: selectedBoardId,
+                  hint: const Text('Select Board', style: TextStyle(color: Color(0xFF9B9B9B))),
+                  isExpanded: true,
+                  decoration: _dropdownDecoration(),
+                  items: boardLeadMap.entries.map((entry) {
+                    return DropdownMenuItem<String>(
+                      value: entry.key,
+                      child: Text(entry.value),
+                    );
+                  }).toList(),
+                  onChanged: (val) => setState(() => selectedBoardId = val),
+                  validator: (val) => val == null ? 'Please select Board' : null,
+                ),
+                const SizedBox(height: 16),
+                _dropdownField(
+                  label: 'Tutor Gender',
+                  value: tutorGender,
+                  items: ['Male', 'Female', 'Any'],
+                  onChanged: (val) => setState(() => tutorGender = val),
+                ),
+                const SizedBox(height: 16),
+                _dropdownField(
+                  label: 'Teaching Mode',
+                  value: teachingMode,
+                  items: ['Online', 'Offline', 'Hybrid'],
+                  onChanged: (val) => setState(() => teachingMode = val),
+                ),
+                const SizedBox(height: 16),
+                _dropdownField(
+                  label: 'Select State',
+                  value: selectedState,
+                  items: ['Uttar Pradesh', 'Delhi', 'Maharashtra', 'Bihar', 'Tamil Nadu'],
+                  onChanged: (val) => setState(() => selectedState = val),
+                ),
+                const SizedBox(height: 16),
+                _buildTextField('Max Hits', (val) => maxHits = val, keyboardType: TextInputType.number),
+                const SizedBox(height: 24),
+                _sectionTitle("Class & Subject"),
+                Obx(() {
+                  return _buildDropdownField1<ClassData>(
+                    label: 'Select Class',
+                    items: getClassesController.classList,
+                    selectedItem: selectedClass,
+                    itemLabel: (item) => item.className,
+                    onChanged: (val) => setState(() => selectedClass = val),
+                  );
+                }),
+                const SizedBox(height: 10),
+                Obx(() {
+                  return _buildDropdownField1<SubjectData>(
+                    label: 'Select Subject',
+                    items: getSubjectController.subjectList,
+                    selectedItem: selectedSubject,
+                    itemLabel: (item) => item.subjectName,
+                    onChanged: (val) => setState(() => selectedSubject = val),
+                  );
+                }),
+                const SizedBox(height: 24),
+                _sectionTitle("Session Info"),
+                _buildTextField('Preferred Timing', (val) => timing = val),
+                const SizedBox(height: 16),
+                _buildTextField('Fee (₹/Hrs)', (val) => fee = val, keyboardType: TextInputType.number),
+                const SizedBox(height: 16),
+                _buildTextField('Required Coins', (val) => coinsRequired = val, keyboardType: TextInputType.number),
+                const SizedBox(height: 16),
+                _buildTextField('Remarks / Notes', (val) => remarks = val, maxLines: 3),
+                const SizedBox(height: 32),
+                Text('Select Support Agent', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: primary)),
+                Column(
+                  children: supportAgents.map((agent) {
+                    final display = '${agent['name']} - ${agent['number']}';
+                    return RadioListTile<String>(
+                      title: Text(display),
+                      value: agent['number']!,
+                      groupValue: selectedSupportAgent,
+                      onChanged: (val) => setState(() => selectedSupportAgent = val),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                SafeArea(
+                  bottom: true,
+                  child: ElevatedButton.icon(
+                    onPressed: _submitForm,
+                    
+                    label: const Text('Submit Lead'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primary,
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  InputDecoration _dropdownDecoration() {
+    return InputDecoration(
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      filled: true,
+      fillColor: Colors.grey.shade100,
+    );
+  }
+
+  Widget _dropdownField({
+    required String label,
+    required String? value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      value: value,
+      hint: Text(label, style: const TextStyle(color: Color(0xFF9B9B9B))),
+      isExpanded: true,
+      decoration: _dropdownDecoration(),
+      items: items.map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
+      onChanged: onChanged,
+      validator: (val) => val == null ? 'Please select $label' : null,
     );
   }
 
@@ -169,53 +207,37 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
     required String label,
     required List<T> items,
     required T? selectedItem,
-    required String Function(T) itemLabel, // how to display the item
+    required String Function(T) itemLabel,
     required ValueChanged<T?> onChanged,
   }) {
     return DropdownButtonFormField<T>(
       value: selectedItem,
-      hint: Text(label),
+      hint: Text(label, style: const TextStyle(color: Color(0xFF9B9B9B))),
       isExpanded: true,
-      items: items.map((item) {
-        return DropdownMenuItem<T>(
-          value: item,
-          child: Text(itemLabel(item)), // get display name
-        );
-      }).toList(),
+      items: items.map((item) => DropdownMenuItem<T>(
+        value: item,
+        child: Text(itemLabel(item)),
+      )).toList(),
       onChanged: onChanged,
       validator: (value) => value == null ? 'Please select $label' : null,
-    );
-  }
-
-  Widget _buildDropdownField(
-      String label, List<String> items, Function(String?) onChanged) {
-    return DropdownButtonFormField<String>(
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-        filled: true,
-        fillColor: Colors.grey.shade100,
-      ),
-      items:
-          items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-      validator: (value) => value == null ? 'Please select $label' : null,
-      onChanged: onChanged,
     );
   }
 
   Widget _buildTextField(String label, Function(String) onSaved,
-      {TextInputType keyboardType = TextInputType.text, int maxLines = 1}) {
+      {TextInputType keyboardType = TextInputType.text, int maxLines = 1, int? maxLength}) {
     return TextFormField(
       keyboardType: keyboardType,
+      maxLength: maxLength,
       maxLines: maxLines,
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: const TextStyle(color: Color(0xFF9B9B9B)),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         filled: true,
         fillColor: Colors.grey.shade100,
+        counterText: '',
       ),
-      validator: (value) =>
-          value == null || value.isEmpty ? 'Enter $label' : null,
+      validator: (value) => value == null || value.isEmpty ? 'Enter $label' : null,
       onChanged: onSaved,
     );
   }
@@ -225,12 +247,14 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          Text(title,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: AppColors.primaryColor,
-                fontSize: 16,
-              )),
+          Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: AppColors.primaryColor,
+              fontSize: 16,
+            ),
+          ),
         ],
       ),
     );
@@ -238,24 +262,43 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
 
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
-      final data = leadCreateRequest(
-          name: name ?? "",
-          mobile: phone ?? "",
-          boardId: "8",
-          classId: "6",
-          location: location ?? "Lucknow",
-          state: 'uttar pradesh',
-          mode: "Offline",
-          fee: "552",
-          leadId: "4",
-          subjectId: "9",
-          userId: "7");
+      if (selectedClass == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a Class')),
+        );
+        return;
+      }
+
+      print("==== Submitting Lead Data ====");
+      print("Selected Class ID: ${selectedClass?.classId} (${selectedClass?.classId.runtimeType})");
+      print("Selected Board ID: $selectedBoardId");
+      print("Selected Subject ID: ${selectedSubject?.subjectId}");
+
+      final data = LeadCreateRequest(
+        name: name ?? "",
+        mobile: phone ?? "",
+        boardId: selectedBoardId ?? "",
+        classId: selectedClass?.classId.toString() ?? "",
+        location: location ?? "",
+        state: selectedState ?? "",
+        mode: teachingMode ?? "",
+        fee: fee ?? "",
+        subjectId: selectedSubject?.subjectId.toString() ?? "",
+        userId: "7",
+        tutorGender: tutorGender ?? "",
+        maxHits: maxHits ?? "",
+        supportAgent: selectedSupportAgent ?? "",
+        leadId: '',
+      );
+
+      print("Final classId in data: ${data.classId} (${data.classId.runtimeType})");
 
       leadCreateController.createOrUpdateLead(data);
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Lead submitted successfully')),
       );
-      Navigator.pop(context);
+      Navigator.pop(context, true);
     }
   }
 }
