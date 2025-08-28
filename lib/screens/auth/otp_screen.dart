@@ -67,7 +67,7 @@ class _OTPScreenState extends State<OTPScreen> {
       Widget dashboard;
       switch (widget.roleId) {
         case 1:
-          dashboard = isStudentFormFilled ? StudentProfileFormScreen():StudentDashboardScreen(); 
+          dashboard = isStudentFormFilled ? StudentDashboardScreen():StudentProfileFormScreen(); 
           break;
         case 2:
           // isFormFilled ? isVerified ? "main screen" : "pending screen " : ProfileFormScreen()
