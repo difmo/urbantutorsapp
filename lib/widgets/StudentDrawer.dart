@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:urbantutorsapp/screens/student/childs_screens/feedback_student.dart';
+import 'package:urbantutorsapp/screens/student/childs_screens/notification_student.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/student_profile.dart';
+import 'package:urbantutorsapp/screens/student/childs_screens/term_condition_student.dart';
+import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 import '../theme/theme_constants.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 
 class StudentDrawer extends StatefulWidget {
   final Function(String label) onMenuTap;
@@ -16,11 +23,84 @@ class StudentDrawer extends StatefulWidget {
 class _StudentDrawerState extends State<StudentDrawer> {
   String selectedLabel = 'Term and Conditions'; // Default selected menu
 
-  void handleTap(String label) {
+  void handleTap(String label, {VoidCallback? onTap}) {
     setState(() {
       selectedLabel = label;
     });
-    widget.onMenuTap(label);
+
+    // ✅ Close the drawer first
+    Navigator.pop(context);
+
+    // ✅ Perform the action (navigation, share, etc.)
+    if (onTap != null) onTap();
+  }
+
+  Widget _drawerItem(
+    IconData icon,
+    String label, {
+    Color? color,
+    VoidCallback? onTap,
+  }) {
+    final bool isSelected = selectedLabel == label;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primaryColor.withOpacity(0.08)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: ListTile(
+          leading: Icon(icon, color: color ?? Colors.grey.shade800),
+          title: Text(
+            label,
+            style: TextStyle(
+              fontSize: 15,
+              color: color ?? Colors.black87,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          onTap: () => handleTap(label, onTap: onTap),
+        ),
+      ),
+    );
+  }
+
+  void _shareApp() {
+    const playStoreLink =
+        'https://play.google.com/store/apps/details?id=pro.urbantutors.app&pcampaignid=web_share';
+    Share.share('Check out Urban Tutors App: $playStoreLink');
+  }
+
+  void _showDeleteDialog(BuildContext context) {
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Delete Account'),
+            content: const Text('Are you sure you want to delete your?'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primaryColor),
+                child: const Text('CANCEL'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primaryColor),
+                child: const Text('CONFIRM'),
+              ),
+            ],
+          );
+        });
   }
 
   @override
@@ -30,12 +110,13 @@ class _StudentDrawerState extends State<StudentDrawer> {
     return Drawer(
       backgroundColor: Colors.white,
       child: SafeArea(
-        child: SingleChildScrollView( // 💡 Add this in case of overflow
+        child: SingleChildScrollView(
           child: Column(
             children: [
               // Profile Header
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   boxShadow: [
@@ -122,42 +203,66 @@ class _StudentDrawerState extends State<StudentDrawer> {
 
               const SizedBox(height: 12),
 
-              // Updated Navigation Items based on image
-              _drawerItem(Icons.description, 'Term and Conditions'),
-              _drawerItem(Icons.language, 'Connected Websites & Apps'),
-              _drawerItem(Icons.feedback, 'Feedback'),
-              _drawerItem(Icons.notifications, 'Notifications'),
-              _drawerItem(Icons.share, 'Share app'),
-              _drawerItem(Icons.delete_forever, 'Delete Account'),
-              _drawerItem(Icons.logout, 'Logout', color: Colors.red),
+              // Menu Items
+              _drawerItem(
+                Icons.description,
+                'Term and Conditions',
+                onTap: () {
+                  Get.to(() => const TermConditionStudent());
+                },
+              ),
+              _drawerItem(
+                Icons.language,
+                'Connected Websites & Apps',
+                onTap: () async {
+                  final Uri url = Uri.parse('https://www.urbantutors.pro/');
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  } else {
+                    throw 'Could not launch $url';
+                  }
+                },
+              ),
+              _drawerItem(
+                Icons.feedback,
+                'Feedback',
+                onTap: () {
+                  Get.to(() => FeedbackStudent());
+                },
+              ),
+              _drawerItem(
+                Icons.notifications,
+                'Notifications',
+                onTap: () {
+                  Get.to(() => NotificationStudent());
+                },
+              ),
+              _drawerItem(
+                Icons.share,
+                'Share app',
+                onTap: () {
+                  _shareApp();
+                },
+              ),
+              _drawerItem(
+                Icons.delete_forever,
+                'Delete Account',
+                onTap: () {
+                  _showDeleteDialog(context);
+                },
+              ),
+              _drawerItem(
+                Icons.logout,
+                'Logout',
+                color: Colors.red,
+                onTap: () {
+                  TokenStorage.clearTokenAndRole();
+                  Get.to(WelcomeScreen());
+                  // Add logout logic here
+                },
+              ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _drawerItem(IconData icon, String label, {Color? color}) {
-    final bool isSelected = selectedLabel == label;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryColor.withOpacity(0.08) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: ListTile(
-          leading: Icon(icon, color: color ?? Colors.grey.shade800),
-          title: Text(
-            label,
-            style: TextStyle(
-              fontSize: 15,
-              color: color ?? Colors.black87,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          onTap: () => handleTap(label),
         ),
       ),
     );

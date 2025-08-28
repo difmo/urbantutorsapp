@@ -1,26 +1,42 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:urbantutorsapp/screens/tutor/profile_form_tutor.dart';
+import 'package:urbantutorsapp/screens/auth/role_intro_screen.dart';
+import 'package:urbantutorsapp/screens/auth/login_screen.dart'; // ✅ FIXED: Import LoginScreen
 import 'package:url_launcher/url_launcher.dart';
-import '../auth/role_intro_screen.dart';
 import '../../theme/theme_constants.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
-  void navigateToNext(BuildContext context, String role) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => RoleIntroScreen(role: role)),
-    );
+  /// Navigate logic based on role
+  void navigateToNext(BuildContext context, String role, int roleId) async {
+    print("roll print ho jaa bhai maan bhi jaa bhai");
+    if (role == "Private Tutor") {
+      // 👉 First navigate to login screen
+      final isLoggedIn = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(builder: (_) =>  RoleIntroScreen(role: "Private Tutor",roleId: roleId,)),
+      );
+
+
+    } else {
+      // Default flow for other roles
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => RoleIntroScreen(role: role,roleId: roleId,)),
+      );
+    }
   }
 
+  /// Reusable Role Button
   Widget _roleButton(
-      BuildContext context, String label, IconData icon, Color color) {
+      BuildContext context, String label,int roleId, IconData icon, Color color) {
     return Container(
       width: double.infinity,
       child: GestureDetector(
-        onTap: () => navigateToNext(context, label),
+        onTap: () => navigateToNext(context, label,roleId),
         child: Container(
           width: MediaQuery.of(context).size.width * 0.26,
           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -29,9 +45,10 @@ class WelcomeScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                  color: color.withOpacity(0.4),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4)),
+                color: color.withOpacity(0.4),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
             ],
           ),
           child: Column(
@@ -42,9 +59,10 @@ class WelcomeScreen extends StatelessWidget {
               Text(
                 label.toUpperCase(),
                 style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold),
+                  fontSize: 14,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
@@ -61,23 +79,6 @@ class WelcomeScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // Background splash
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment.center,
-                  radius: 1.0,
-                  colors: [
-                    Color.fromRGBO(96, 199, 87, 1), // #60C757 at 16%
-                    Color.fromRGBO(237, 221, 83, 1), // #EDDD53 at 100%
-                  ],
-                  stops: [0.16, 1.0],
-                ),
-              ),
-            ),
-          ),
-          // Main content
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -85,11 +86,12 @@ class WelcomeScreen extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
                 child: Column(
                   children: [
-                    // Animated logo
+                    // Logo animation
                     TweenAnimationBuilder<double>(
                       tween: Tween(begin: 0, end: 1),
                       duration: const Duration(milliseconds: 1000),
-                      builder: (_, op, ch) => Opacity(opacity: op, child: ch),
+                      builder: (_, op, ch) =>
+                          Opacity(opacity: op, child: ch),
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -102,119 +104,136 @@ class WelcomeScreen extends StatelessWidget {
                           child: ClipOval(
                             child: Image.asset(
                               'assets/icons/urban.png',
-                              width: 80, // same as diameter
+                              width: 80,
                               height: 80,
-                              fit: BoxFit
-                                  .cover, // ensures the image fills the circle
+                              fit: BoxFit.cover,
                             ),
                           ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 32),
-                    // Title with shimmer
+                    // Title
                     TweenAnimationBuilder<Offset>(
                       tween:
                           Tween(begin: const Offset(0, 0.3), end: Offset.zero),
                       duration: const Duration(milliseconds: 800),
-                      builder: (_, offset, child) => Transform.translate(
-                          offset: offset * 60, child: child),
-                      child: Text(
+                      builder: (_, offset, child) =>
+                          Transform.translate(offset: offset * 60, child: child),
+                      child: const Text(
                         'Welcome to Urban Tutors',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          shadows: [
-                            Shadow(
-                                color: Colors.black26,
-                                blurRadius: 6,
-                                offset: const Offset(0, 2)),
-                          ],
+                          color: Colors.black,
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Text(
+                    const Text(
                       'Are you a?',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold),
+                        color: Colors.black,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 40),
-                    // Role buttons in a vertical column with staggered animation
+                    // Buttons
                     Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _roleButton(context, 'Admin',
-                            FontAwesomeIcons.userShield, primary),
+                        _roleButton(
+                          context,
+                          'Student/Parent',
+                          1,
+                          FontAwesomeIcons.userGraduate,
+                          Colors.deepPurpleAccent,
+                        ),
                         const SizedBox(height: 16),
                         _roleButton(
-                            context, 'Tutor', FontAwesomeIcons.userTie, accent),
+                          context,
+                          'Private Tutor',
+                          2,
+                          FontAwesomeIcons.userTie,
+                          accent,
+                        ),
                         const SizedBox(height: 16),
                         _roleButton(
-                            context,
-                            'Student',
-                            FontAwesomeIcons.userGraduate,
-                            Colors.deepPurpleAccent),
+                          context,
+                          'Tutors Bureau',
+                          3,
+                          FontAwesomeIcons.userShield,
+                          primary,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 48),
                     GestureDetector(
-                        onTap: () async {
-                          const url =
-                              'https://www.urbantutors.pro/terms-and-conditions';
-                          // if (await canLaunchUrl(Uri.parse(url))) {
-                          await launchUrl(Uri.parse(url),
-                              mode: LaunchMode.externalApplication);
-                          // } else {
-                          //   throw 'Could not launch $url';
-                          // }
-                        },
-                        child: RichText(
-                          textAlign: TextAlign.center,
-                          text: TextSpan(
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                            ),
-                            children: [
-                              const TextSpan(
-                                  text: 'By continuing, you agree to our '),
-                              TextSpan(
-                                text: 'Terms',
-                                style: const TextStyle(
-                                  color: Color(0xFF1E88E5),
-                                  decoration: TextDecoration.underline,
-                                ),
-                                recognizer: TapGestureRecognizer()
-                                  ..onTap = () {
-                                    // TODO: navigate to Terms page
-                                  },
-                              ),
-                              const TextSpan(text: ' & '),
-                              TextSpan(
-                                text: 'Privacy Policy',
-                                style: const TextStyle(
-                                  color: Color(0xFF1E88E5),
-                                  decoration: TextDecoration.underline,
-                                ),
-                                recognizer: TapGestureRecognizer()
-                                  ..onTap = () async {
-                                    const url =
-                                        'https://www.urbantutors.pro/terms-and-conditions';
-                                    await launchUrl(Uri.parse(url),
-                                        mode: LaunchMode.externalApplication);
-                                    // TODO: navigate to Privacy Policy page
-                                  },
-                              ),
-                              const TextSpan(text: '.'),
-                            ],
+                      onTap: () async {
+                        const url =
+                            'https://www.urbantutors.pro/terms-and-conditions';
+                        if (await canLaunchUrl(Uri.parse(url))) {
+                          await launchUrl(
+                            Uri.parse(url),
+                            mode: LaunchMode.externalApplication,
+                          );
+                        }
+                      },
+                      child: RichText(
+                        textAlign: TextAlign.center,
+                        text: TextSpan(
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.black,
                           ),
-                        )),
+                          children: [
+                            const TextSpan(
+                                text: 'By continuing, you agree to our '),
+                            TextSpan(
+                              text: 'Terms',
+                              style: const TextStyle(
+                                color: Color(0xFF1E88E5),
+                                decoration: TextDecoration.underline,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () async {
+                                  const url =
+                                      'https://www.urbantutors.pro/terms-and-conditions';
+                                  if (await canLaunchUrl(Uri.parse(url))) {
+                                    await launchUrl(
+                                      Uri.parse(url),
+                                      mode: LaunchMode.externalApplication,
+                                    );
+                                  }
+                                },
+                            ),
+                            const TextSpan(text: ' & '),
+                            TextSpan(
+                              text: 'Privacy Policy',
+                              style: const TextStyle(
+                                color: Color(0xFF1E88E5),
+                                decoration: TextDecoration.underline,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () async {
+                                  const url =
+                                      'https://www.urbantutors.pro/privacy-policy';
+                                  if (await canLaunchUrl(Uri.parse(url))) {
+                                    await launchUrl(
+                                      Uri.parse(url),
+                                      mode: LaunchMode.externalApplication,
+                                    );
+                                  }
+                                },
+                            ),
+                            const TextSpan(text: '.'),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),

@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
+import 'package:urbantutorsapp/controllers/user_profile_response_controller.dart';
 import 'package:urbantutorsapp/screens/admin/admin_dashboard.dart';
+import 'package:urbantutorsapp/screens/controllers/profile_controller.dart';
 import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
+import 'package:urbantutorsapp/screens/tutor/pending_page.dart';
+import 'package:urbantutorsapp/screens/tutor/profile_form_tutor%20copy.dart';
+import 'package:urbantutorsapp/screens/tutor/profile_form_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
 import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
+import 'package:urbantutorsapp/services/lead_service.dart';
 import 'package:urbantutorsapp/shared/default_dashboard.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import '../theme/theme_constants.dart';
@@ -19,7 +28,8 @@ class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
   late AnimationController _logoController;
   late Animation<double> _logoAnimation;
-
+  final ProfileUpdateController _profileUpdateController =
+      Get.put(ProfileUpdateController());
   @override
   void initState() {
     super.initState();
@@ -33,6 +43,16 @@ class _SplashScreenState extends State<SplashScreen>
     _navigateAfterDelay();
   }
 
+  // Future<bool> isProfileDone() async {
+  //   _profileUpdateController.fetchProfileUpdate();
+
+  //   if (_profileUpdateController.profileData.value!.status == "Active") {
+  //     return true;
+  //   } else {
+  //     return false;
+  //   }
+  // }
+
   Future<void> _navigateAfterDelay() async {
     await Future.delayed(const Duration(seconds: 5));
 
@@ -44,17 +64,25 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
 
     Widget target;
+    final String? profileStatus = await TokenStorage.getIsProfileActive();
 
+    print("profilstatuse");
+    print(profileStatus);
     if (token != null) {
       switch (roleId) {
         case '1':
-          target = const AdminDashboard();
+          target = const StudentDashboardScreen();
           break;
+        // case '2':
+        //   target = false ? TutorDashboard() : profileStatus == "pending" || profileStatus == null
+        //       ? ProfileFormScreen()
+        //       : TutorDashboard();
+        //   break;
         case '2':
           target = const TutorDashboard();
           break;
         case '3':
-          target = const StudentDashboardScreen();
+          target = const AdminDashboard();
           break;
         default:
           target = const DefaultDashboardScreen();

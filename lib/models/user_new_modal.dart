@@ -16,6 +16,19 @@ class LoginResponse {
       data: LoginData.fromJson(json['data']),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'success': success,
+      'message': message,
+      'data': data.toJson(),
+    };
+  }
+
+  @override
+  String toString() {
+    return 'LoginResponse(success: $success, message: $message, data: $data)';
+  }
 }
 
 class LoginData {
@@ -35,6 +48,19 @@ class LoginData {
       fairbasetoken: json['fairbasetoken'],
       userData: UserData.fromJson(json['user_data']),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'token': token,
+      'fairbasetoken': fairbasetoken,
+      'user_data': userData.toJson(),
+    };
+  }
+
+  @override
+  String toString() {
+    return 'LoginData(token: $token, fairbasetoken: $fairbasetoken, userData: $userData)';
   }
 }
 
@@ -69,6 +95,22 @@ class UserData {
       roles: rolesList,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'mobile': mobile,
+      'created_at': createdAt,
+      'updated_at': updatedAt,
+      'roles': roles.map((role) => role.toJson()).toList(),
+    };
+  }
+
+  @override
+  String toString() {
+    return 'UserData(id: $id, name: $name, mobile: $mobile, createdAt: $createdAt, updatedAt: $updatedAt, roles: $roles)';
+  }
 }
 
 class Role {
@@ -85,5 +127,17 @@ class Role {
       roleId: json['role_id'],
       roleName: json['role_name'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'role_id': roleId,
+      'role_name': roleName,
+    };
+  }
+
+  @override
+  String toString() {
+    return 'Role(roleId: $roleId, roleName: $roleName)';
   }
 }

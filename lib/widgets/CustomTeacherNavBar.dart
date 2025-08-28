@@ -40,11 +40,14 @@ class CustomTeacherNavBar extends StatelessWidget {
         showUnselectedLabels: true,
         onTap: onTap,
         items: [
-          _buildItem(FontAwesomeIcons.noteSticky, 'Notes', 0, currentIndex),
-          _buildItem(FontAwesomeIcons.userTie, 'Profile', 1, currentIndex),
-          _buildItem(FontAwesomeIcons.bookOpenReader, 'Courses', 2, currentIndex),
-          _buildItem(FontAwesomeIcons.comments, 'Chats', 3, currentIndex),
-          _buildItem(FontAwesomeIcons.circleQuestion, 'Support', 4, currentIndex),
+            _buildItem(FontAwesomeIcons.home, 'Home', 0, currentIndex),
+          _buildItem(FontAwesomeIcons.noteSticky, 'Notes', 1, currentIndex),
+          _buildItem(FontAwesomeIcons.book, 'PYQs', 2, currentIndex),
+          _buildItem(
+              FontAwesomeIcons.bookOpenReader, 'Courses', 3, currentIndex),
+          _buildItem(FontAwesomeIcons.comments, 'Chats', 4, currentIndex),
+          _buildItem(
+              FontAwesomeIcons.circleQuestion, 'Support', 5, currentIndex),
         ],
       ),
     );

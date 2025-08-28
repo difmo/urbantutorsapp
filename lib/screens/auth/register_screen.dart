@@ -50,6 +50,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               builder: (_) => OTPScreen(
                 role: widget.role,
                 phone: _phoneController.text.trim(),
+                roleId:1,
                 otp: otp,
               ),
             ),

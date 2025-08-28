@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 
-class FeedbackTutor extends StatefulWidget {
-  const FeedbackTutor({super.key});
+class FeedbackStudent extends StatefulWidget {
+  const FeedbackStudent({super.key});
 
   @override
-  State<FeedbackTutor> createState() => _FeedbackTutorState();
+  State<FeedbackStudent> createState() => _FeedbackStudentState();
 }
 
-class _FeedbackTutorState extends State<FeedbackTutor> {
+class _FeedbackStudentState extends State<FeedbackStudent> {
   // This is the function that gets called when you press the button
   void _submitFeedback() {
     // For now, just show a Snackbar
