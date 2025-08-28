@@ -3,8 +3,6 @@ import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/controllers/AuthController.dart';
-import 'package:urbantutorsapp/services/auth_service.dart';
-import 'package:urbantutorsapp/services/profile_services.dart';
 import 'package:urbantutorsapp/widgets/custom_button.dart';
 import 'package:urbantutorsapp/widgets/custom_input_field.dart';
 import '../../theme/theme_constants.dart';
@@ -24,43 +22,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final AuthController auth = Get.find<AuthController>();
-  
+
 // inside _sendOtp method
-Future<void> _sendOtp() async {
-  print("fhfg");
-   print(_phoneController.text);
-  if (_formKey.currentState!.validate()) {
+  Future<void> _sendOtp() async {
+    print("fhfg");
     print(_phoneController.text);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('reg_name', _nameController.text.trim());
-    await prefs.setString('reg_phone', _phoneController.text.trim());
+    if (_formKey.currentState!.validate()) {
+      print(_phoneController.text);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('reg_name', _nameController.text.trim());
+      await prefs.setString('reg_phone', _phoneController.text.trim());
 
-    try {
-print(_phoneController.text);
-      final otp = await auth.sendOtp(_phoneController.text.trim());
-print(_phoneController.text);
-      if (otp != null) {
-        debugPrint('🔐 OTP for testing: $otp');
+      try {
+        print(_phoneController.text);
+        final otp = await auth.sendOtp(_phoneController.text.trim());
+        print(_phoneController.text);
+        if (otp != null) {
+          debugPrint('🔐 OTP for testing: $otp');
 
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => OTPScreen(
-              role: widget.role,
-              phone: _phoneController.text.trim(),
-              otp: otp, // Pass to OTPScreen for dev
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => OTPScreen(
+                role: widget.role,
+                phone: _phoneController.text.trim(),
+                otp: otp, // Pass to OTPScreen for dev
+              ),
             ),
-          ),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
         );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
     }
   }
-}
-
 
   @override
   void dispose() {

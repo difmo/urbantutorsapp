@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:urbantutorsapp/screens/admin/admin_dashboard..dart';
 import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
@@ -46,7 +45,6 @@ class _SplashScreenState extends State<SplashScreen>
     Widget target;
 
     if (token != null) {
-     
       switch (roleId) {
         case '1':
           target = const AdminDashboard();
@@ -107,18 +105,18 @@ class _SplashScreenState extends State<SplashScreen>
                       radius: 58,
                       backgroundColor: Colors.white,
                       child: CircleAvatar(
-                            radius: 40,
-                            backgroundColor: Colors.transparent,
-                            child: ClipOval(
-                              child: Image.asset(
-                                'assets/icons/urban.png',
-                                width: 80, // same as diameter
-                                height: 80,
-                                fit: BoxFit
-                                    .cover, // ensures the image fills the circle
-                              ),
-                            ),
+                        radius: 40,
+                        backgroundColor: Colors.transparent,
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/icons/urban.png',
+                            width: 80, // same as diameter
+                            height: 80,
+                            fit: BoxFit
+                                .cover, // ensures the image fills the circle
                           ),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 28),
