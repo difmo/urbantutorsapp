@@ -11,4 +11,5 @@ class ApiConstants {
   static const PROFILE_SERVICE = '/user_profile';
   static const PROFILE_UPDATE = '/profileupdate';
   static const USER_PROFIEL_FETCH = '/user_profile';
+  static const STUDENT_PROFILE_UPDATE = '/student_profile_update';
 }

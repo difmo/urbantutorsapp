@@ -7,6 +7,7 @@ import 'package:urbantutorsapp/controllers/AuthController.dart';
 
 import 'package:urbantutorsapp/screens/admin/admin_dashboard.dart';
 import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
+import 'package:urbantutorsapp/screens/student/student_profile_form.dart';
 import 'package:urbantutorsapp/screens/tutor/pending_page.dart';
 import 'package:urbantutorsapp/screens/tutor/profile_form_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
@@ -43,7 +44,8 @@ class _OTPScreenState extends State<OTPScreen> {
     print("otp screen");
     print(widget.role);
     // print(r)
-    final bool isFormFilled = false;
+    final bool isTeacherFormFilled = false;
+    final bool isStudentFormFilled = false;
     final bool isVerified = false;
 
     try {
@@ -65,11 +67,11 @@ class _OTPScreenState extends State<OTPScreen> {
       Widget dashboard;
       switch (widget.roleId) {
         case 1:
-          dashboard = StudentDashboardScreen();
+          dashboard = isStudentFormFilled ? StudentProfileFormScreen():StudentDashboardScreen(); 
           break;
         case 2:
           // isFormFilled ? isVerified ? "main screen" : "pending screen " : ProfileFormScreen()
-          dashboard = isFormFilled
+          dashboard = isTeacherFormFilled
               ? isVerified
                   ? TutorDashboard()
                   : PendingPage()
