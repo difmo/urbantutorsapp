@@ -18,7 +18,7 @@ class StudentProfileController extends GetxController {
       isLoading.value = true;
       errorMessage.value = "";
 
-      final response = await _service.fetchStudentProfile(userId);
+      final response = await _service.fetchProfile();
 
       if (response.success && response.data != null) {
         profile.value = response.data;
@@ -42,7 +42,7 @@ class StudentProfileController extends GetxController {
       isLoading.value = true;
       errorMessage.value = "";
 
-      final response = await _service.updateStudentProfile(request.toJson());
+      final response = await _service.updateStudentProfile(request);
 
       if (response.success && response.data != null) {
         profile.value = response.data; // Update local data

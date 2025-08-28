@@ -1,53 +1,48 @@
 import 'dart:convert';
+import 'package:get/get_connect.dart';
 import 'package:http/http.dart' as http;
+import 'package:urbantutorsapp/models/profile_update_response_model.dart';
 import 'package:urbantutorsapp/models/student_update_profile_model.dart';
+import 'package:urbantutorsapp/services/ApiService.dart';
+import 'package:urbantutorsapp/utils/api_constants.dart';
 
 class StudentProfileService {
-  final String baseUrl = "STUDENT_PROFILE_UPDATE"; // Replace with your actual API base URL
-
-  /// Fetch Student Profile
-  Future<StudentProfileResponse> fetchStudentProfile(int userId) async {
+  Future<StudentProfileResponse> fetchProfile() async {
     try {
-      final response = await http.get(
-        Uri.parse("$baseUrl/student-profile/$userId"),
-        headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/json",
-        },
+      final response = await ApiService.post(
+        ApiConstants.STUDENT_PROFILE_UPDATE,
+        null, // no body for fetching
       );
 
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        return StudentProfileResponse.fromJson(jsonData);
-      } else {
-        throw Exception("Failed to load profile. Code: ${response.statusCode}");
-      }
+      print("✅ Response from getProfileUpdate: ${response.data}");
+
+      return StudentProfileResponse.fromJson(response.data);
     } catch (e) {
-      throw Exception("Error fetching profile: $e");
+      print("❌ Error in getProfileUpdate (from ProfileUpdateService):");
+      print(e.toString());
+      throw e;
+    }
+  }
+
+  Future<StudentProfileResponse> updateStudentProfile(
+      StudentProfileUpdateRequest data) async {
+    print(data.toJson());
+    print("coming from student update profile service");
+    try {
+      final response = await ApiService.post(
+          ApiConstants.STUDENT_PROFILE_UPDATE, data.toJson()
+          //  data, // no body for fetching
+          );
+
+      print("✅ Response from getProfileUpdate: ${response.data}");
+
+      return StudentProfileResponse.fromJson(response.data);
+    } catch (e) {
+      print("❌ Error in getProfileUpdate (from ProfileUpdateService):");
+      print(e.toString());
+      throw e;
     }
   }
 
   /// Update Student Profile
-  Future<StudentProfileResponse> updateStudentProfile(
-   Map<String, dynamic> updateData) async {
-    try {
-      final response = await http.post(
-        Uri.parse("$baseUrl/student-profile/update"),
-        headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/json",
-        },
-        body: json.encode(updateData),
-      );
-
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        return StudentProfileResponse.fromJson(jsonData);
-      } else {
-        throw Exception("Failed to update profile. Code: ${response.statusCode}");
-      }
-    } catch (e) {
-      throw Exception("Error updating profile: $e");
-    }
-  }
 }
