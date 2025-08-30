@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:urbantutorsapp/controllers/auth_controller.dart';
+import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
+import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
 
@@ -9,7 +11,9 @@ import 'theme/app_theme.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   Get.put(AuthController(), permanent: true); // ✅
-  Get.put(MasterDataController());
+  Get.put(MasterDataController(),permanent: true);
+  Get.put(LeadMetaController(),permanent: true);
+  Get.put(LocationController(),permanent: true);
 
   runApp(const UrbanTutorsProApp());
 }
