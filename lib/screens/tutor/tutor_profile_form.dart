@@ -16,14 +16,14 @@ import 'dart:developer' as dev;
 import 'package:urbantutorsapp/utils/app_log.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
-class ProfileFormScreen extends StatefulWidget {
-  const ProfileFormScreen({super.key});
+class TutorProfileFormScreen extends StatefulWidget {
+  const TutorProfileFormScreen({super.key});
 
   @override
-  State<ProfileFormScreen> createState() => _ProfileFormScreenState();
+  State<TutorProfileFormScreen> createState() => _TutorProfileFormScreenState();
 }
 
-class _ProfileFormScreenState extends State<ProfileFormScreen> {
+class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController localityController = TextEditingController();
@@ -137,50 +137,56 @@ class _ProfileFormScreenState extends State<ProfileFormScreen> {
     );
   }
 
-  // Convert File to Base64
   Future<String?> _fileToBase64(XFile? file) async {
     if (file == null) return null;
     final bytes = await File(file.path).readAsBytes();
     return "data:image/${file.path.split('.').last};base64,${base64Encode(bytes)}";
   }
 
-  // Save / Update pressed
-  Future<void> onUpdatePressed() async {
-    final profileBase64 = await _fileToBase64(_profileImage);
-    final frontBase64 = await _fileToBase64(_frontIdImage);
-    final backBase64 = await _fileToBase64(_backIdImage);
+  Future<void> onSavePressed() async {
+    // Basic guard
+    if (selectedBoardId == null) {
+      Get.snackbar('Missing info', 'Please select a Board');
+      return;
+    }
+    if (selectedClassId == null) {
+      Get.snackbar('Missing info', 'Please select a Class');
+      return;
+    }
+    if (selectedSubjectId == null) {
+      Get.snackbar('Missing info', 'Please select a Subject');
+      return;
+    }
 
-    final request = TutorProfileUpdateRequest(
-      userId: 149,
-      location: localityController.text,
-      state: selectedState ?? "",
-      idType: selectedIdType ?? "",
-      remark: "Experienced Teacher",
-      profilePicture: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQABAAD...",
-      frontId: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQABAAD...",
-      mostExperienSubjectsId: 1,
-      price: 400,
-      frontBack: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQABAAD...",
-    );
-
+    setState(() => _overlayLoading = true);
     try {
-      await profileUpdateController.updateProfileForTutor(request);
-      print('Error from Profile form tutor');
-      await profileUpdateController.fetchProfileForTutor();
+      final profileBase64 = await _fileToBase64(_profileImage) ?? '';
+      final frontBase64 = await _fileToBase64(_frontIdImage) ?? '';
+      final backBase64 = await _fileToBase64(_backIdImage) ?? '';
 
-      // if (profileUpdateController
-      //         .tutorprofileData.value!.mostExperienceSubjectName !=
-      //     null) {
-      if (false) {
-        // StorageService.saveIsProfileStatus("completed");
-        // Get.offAll(() => const AdminDashboard());
-      } else {
-        StorageService.saveIsProfileStatus("pending");
-        Get.offAll(() => const PendingPage());
-      }
+      final request = StudentProfileUpdateRequest(
+        userId: 146, // TODO: replace with actual logged-in user id
+        boardId: selectedBoardId!,
+        courseId: selectedClassId!, // mapping "Class" -> courseId
+        subjectId: selectedSubjectId!,
+        price: double.tryParse(priceController.text.trim())
+                ?.clamp(0, double.infinity) ??
+            0.0,
+        location: localityController.text.trim(),
+        state: selectedState ?? "",
+        idType: selectedIdType ?? "",
+        remark: remarkController.text.trim(),
+        profilePicture: profileBase64,
+        frontId: frontBase64,
+        frontBack: backBase64,
+      );
+
+      await profileUpdateController.updateProfileForStudent(request);
+      Get.snackbar('Success', 'Profile updated successfully');
     } catch (e) {
-      print('Error from catch e in profile from tutor');
-      print("Other error: $e");
+      Get.snackbar('Error', e.toString());
+    } finally {
+      if (mounted) setState(() => _overlayLoading = false);
     }
   }
 
@@ -190,12 +196,11 @@ class _ProfileFormScreenState extends State<ProfileFormScreen> {
         _masterDataController.masterData.value?.data?.boardLead ?? [];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Profile"),
-        backgroundColor: Theme.of(context).primaryColor,
-      ),
-      body: Stack(
-        children: [
+        appBar: AppBar(
+          title: const Text("Student Profile"),
+          backgroundColor: Theme.of(context).primaryColor,
+        ),
+        body: Stack(children: [
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
@@ -554,30 +559,18 @@ class _ProfileFormScreenState extends State<ProfileFormScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  TextField(
-                      controller: remarkController,
-                      decoration: const InputDecoration(labelText: "Remarks")),
                   const SizedBox(height: 24),
-
-                  Center(
-                    child: ElevatedButton(
-                        onPressed: onUpdatePressed,
-                        child: const Text("Save Profile")),
-                  ),
+                  // Center(
+                  //   child: ElevatedButton(
+                  //     onPressed: onUpdatePressed,
+                  //     child: const Text("Save and Proceed"),
+                  //   ),
+                  // ),
                 ],
               ),
             ),
           ),
-
-          // Loader Overlay
-          if (_overlayLoading)
-            Container(
-              color: Colors.black.withOpacity(0.25),
-              child: const Center(child: CircularProgressIndicator()),
-            ),
-        ],
-      ),
-    );
+        ]));
   }
 
   Widget _idUploadBox(String label, XFile? file, String type) {

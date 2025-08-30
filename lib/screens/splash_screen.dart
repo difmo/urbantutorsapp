@@ -94,7 +94,7 @@ class _SplashScreenState extends State<SplashScreen>
           target = profileStatus == null || profileStatus == "pending"
               ? profileStatus == "pending"
                   ? PendingPage()
-                  : ProfileFormScreen()
+                  : TutorProfileFormScreen()
               : TutorDashboard();
           break;
         case '5':

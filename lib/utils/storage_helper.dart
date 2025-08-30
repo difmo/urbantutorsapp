@@ -5,11 +5,17 @@ class StorageService {
   static const String _roleKey = 'user_role';
   static const String _roleIdKey = 'role_id';
   static const String _profileIdKey = 'is_profile_done';
+  static const String _saveUserID = 'user_id';
 
   /// Save token to local storage
   static Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_tokenKey, token);
+  }
+
+  static Future<void> saveUserId(int userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_saveUserID, userId.toString());
   }
 
   /// Save user role to local storage
@@ -31,6 +37,11 @@ class StorageService {
   static Future<String?> getRoleId() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_roleIdKey);
+  }
+
+  static Future<String?> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_saveUserID);
   }
 
   static Future<String?> getIsProfileStatus() async {

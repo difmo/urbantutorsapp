@@ -12,6 +12,7 @@ import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
 import 'dart:developer' as dev;
 
 import 'package:urbantutorsapp/utils/app_log.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class StudentProfileFormScreen extends StatefulWidget {
   const StudentProfileFormScreen({super.key});
@@ -48,6 +49,8 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
   final MasterDataController _masterDataController =
       Get.put(MasterDataController());
   final LeadMetaController _leadMetaController = Get.put(LeadMetaController());
+  String? userId;
+
   bool _overlayLoading = false;
 
   @override
@@ -142,6 +145,7 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
   }
 
   Future<void> onSavePressed() async {
+    String? userIdd = await StorageService.getUserId();
     // Basic guard
     if (selectedBoardId == null) {
       Get.snackbar('Missing info', 'Please select a Board');
@@ -163,7 +167,8 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
       final backBase64 = await _fileToBase64(_backIdImage) ?? '';
 
       final request = StudentProfileUpdateRequest(
-        userId: 146, 
+        userId:
+            int.parse(userIdd!), // TODO: replace with actual logged-in user id
         boardId: selectedBoardId!,
         courseId: selectedClassId!, // mapping "Class" -> courseId
         subjectId: selectedSubjectId!,

@@ -12,10 +12,10 @@ import 'theme/app_theme.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   Get.put(AuthController(), permanent: true); // ✅
-  Get.put(MasterDataController(),permanent: true);
-  Get.put(LeadMetaController(),permanent: true);
-  Get.put(LocationController(),permanent: true);
-  Get.put(PayCourseController(),permanent: true);
+  Get.put(MasterDataController(), permanent: true);
+  Get.put(LeadMetaController(), permanent: true);
+  Get.put(LocationController(), permanent: true);
+  Get.put(PayCourseController(), permanent: true);
 
   runApp(const UrbanTutorsProApp());
 }

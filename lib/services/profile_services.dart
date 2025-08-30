@@ -5,23 +5,22 @@ import 'package:urbantutorsapp/utils/api_constants.dart';
 
 class ProfileService {
   Future<StudentProfileModel> getUserProfile(String token) async {
-     print('whynotrunnig');
-     print('tokenfromwhynotrunnig'+token);
-    try{
+    print('whynotrunnig');
+    print('tokenfromwhynotrunnig' + token);
+    try {
       print('tryerrocomes');
       final response = await ApiService.post(
-      ApiConstants.PROFILE_SERVICE, 
-      null,
-      token: token,
-    );
+        ApiConstants.PROFILE_SERVICE,
+        null,
+        token: token,
+      );
 
-    print('ResponsefromProfileservices'+response.data);
-    return StudentProfileModel.fromJson(response.data);
-    }catch (e){
-      print('thsiscomefromprofileservices'+e.toString());
-      throw(e);
+      print('ResponsefromProfileservices' + response.data);
+      return StudentProfileModel.fromJson(response.data);
+    } catch (e) {
+      print('thsiscomefromprofileservices' + e.toString());
+      throw (e);
     }
-    
   }
 
   Future<Response> updateProfile(

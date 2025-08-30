@@ -86,8 +86,12 @@ class _OTPScreenState extends State<OTPScreen> {
         _initProfile();
       }
       prefs.setString("userData", jsonEncode(userData));
+
       final String? profileStatus = await StorageService.getIsProfileStatus();
+
       Widget dashboard;
+      print("rolieddddddd otp time $roleId");
+      print("profilestatusssss otp time $profileStatus");
 
       switch (roleId) {
         case 3:
@@ -100,7 +104,7 @@ class _OTPScreenState extends State<OTPScreen> {
           dashboard = profileStatus == null || profileStatus == "pending"
               ? profileStatus == "pending"
                   ? PendingPage()
-                  : ProfileFormScreen()
+                  : TutorProfileFormScreen()
               : TutorDashboard();
           break;
 
