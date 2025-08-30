@@ -90,13 +90,13 @@ class _OTPScreenState extends State<OTPScreen> {
       Widget dashboard;
 
       switch (roleId) {
-        case 3||2||5:
-          // dashboard =
-          //     profileStatus == "completed" || isProfiledataEmpty() == false
-          //         ? StudentDashboardScreen()
-          //         : StudentProfileFormScreen();
-          // break;
-        // case 2:
+        case 3:
+          dashboard =
+              profileStatus == "completed" || isProfiledataEmpty() == false
+                  ? StudentDashboardScreen()
+                  : StudentProfileFormScreen();
+          break;
+        case 2:
           dashboard = profileStatus == null || profileStatus == "pending"
               ? profileStatus == "pending"
                   ? PendingPage()
@@ -104,9 +104,9 @@ class _OTPScreenState extends State<OTPScreen> {
               : TutorDashboard();
           break;
 
-        // case 5:
-        //   dashboard = const AdminDashboard();
-        //   break;
+        case 5:
+          dashboard = const AdminDashboard();
+          break;
         default:
           dashboard = const DefaultDashboardScreen();
       }

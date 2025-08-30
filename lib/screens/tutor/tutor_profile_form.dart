@@ -1,13 +1,19 @@
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
+import 'package:urbantutorsapp/models/profile_modals/student_profile_request_modal.dart';
 import 'package:urbantutorsapp/models/profile_modals/tutor_profile_request_modal.dart';
-import 'package:urbantutorsapp/models/profile_update_request_model.dart';
-import 'package:urbantutorsapp/screens/admin/admin_dashboard.dart';
+import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart'
+    show LeadMetaController;
+import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
+import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
 import 'package:urbantutorsapp/screens/tutor/pending_page.dart';
+import 'dart:developer' as dev;
+
+import 'package:urbantutorsapp/utils/app_log.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class ProfileFormScreen extends StatefulWidget {
@@ -21,89 +27,113 @@ class _ProfileFormScreenState extends State<ProfileFormScreen> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController localityController = TextEditingController();
-  final TextEditingController qualificationController = TextEditingController();
+  final TextEditingController remarkController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
+  final LocationController _locationController = Get.find<LocationController>();
 
-  String? selectedGender;
+  // IDs kept as int? for API
+  int? selectedBoardId;
+  int? selectedClassId;
+  int? selectedSubjectId;
+
   String? selectedState;
-  String? selectedClass;
-  String? selectedMode;
-  String? selectedSubject;
-  String? selectedExperience;
   String? selectedIdType;
-  String? selectedBoard;
 
   final ImagePicker _picker = ImagePicker();
   XFile? _profileImage;
   XFile? _frontIdImage;
   XFile? _backIdImage;
 
+  // Controllers
+  final ProfileUpdateController profileUpdateController =
+      Get.put(ProfileUpdateController());
+  final MasterDataController _masterDataController =
+      Get.put(MasterDataController());
+  final LeadMetaController _leadMetaController = Get.put(LeadMetaController());
+
+  bool _overlayLoading = false;
+
   @override
   void initState() {
     super.initState();
-
-    // Fetch data
-    profileUpdateController.fetchProfileForTutor();
-
-    // Update fields when tutor data changes
-    ever(profileUpdateController.tutorprofileData, (tutor) {
-      if (tutor != null) {
-        nameController.text = tutor.studentName ?? '';
-        emailController.text = tutor.mobile?.toString() ?? '';
-        localityController.text = tutor.location ?? '';
-        priceController.text = tutor.price?.toString() ?? '';
-        selectedState = tutor.state;
-        selectedIdType = tutor.idType;
+    print("dinesh");
+    ever(profileUpdateController.studentprofileData, (student) {
+      AppLog.i('[UI] studentprofileData changed');
+      if (student != null) {
+        nameController.text = student.studentName ?? '';
+        emailController.text = student.mobile?.toString() ?? '';
+        priceController.text = student.price?.toString() ?? '';
         setState(() {});
       }
     });
+
+    ever(profileUpdateController.masterData, (masterData) {
+      AppLog.i('[UI] masterData changed');
+      if (masterData != null) {
+        // Update any relevant fields in the UI with masterData
+      }
+      setState(() {});
+    });
+
+// Also log when master data flips loading:
+    ever(_masterDataController.masterData, (val) {
+      final boards = val?.data?.boardLead ?? [];
+      AppLog.i('[UI] Board list: ${boards.map((b) => b.boardLabel).toList()}');
+    });
+
+// Optional: log when master data object itself updates
+    ever(_masterDataController.masterData, (val) {
+      final n = val?.data?.boardLead?.length ?? 0;
+      AppLog.i('[UI] masterData updated, boards=$n');
+    });
+    _masterDataController.fetchMasterData();
+    profileUpdateController
+        .fetchProfileForStudent(); // TODO: replace with actual logged-in user id
+
+    // Log changes to lead meta controller states
+    ever(_leadMetaController.isFetchingClasses, (val) {
+      AppLog.i('[UI] isFetchingClasses=$val');
+      setState(() {}); // to refresh UI loading indicators
+    });
+    ever(_leadMetaController.isFetchingSubjects, (val) {
+      AppLog.i('[UI] isFetchingSubjects=$val');
+      setState(() {}); // to refresh UI loading indicators
+    });
   }
 
-  final ProfileUpdateController profileUpdateController =
-      Get.put(ProfileUpdateController());
-
-  // Pick image from camera/gallery
   Future<void> _pickImage(ImageSource source, String type) async {
-    final pickedFile = await _picker.pickImage(source: source);
-    if (pickedFile != null) {
+    final picked = await _picker.pickImage(source: source);
+    if (picked != null) {
       setState(() {
-        if (type == "profile") {
-          _profileImage = pickedFile;
-        } else if (type == "front") {
-          _frontIdImage = pickedFile;
-        } else if (type == "back") {
-          _backIdImage = pickedFile;
-        }
+        if (type == "profile") _profileImage = picked;
+        if (type == "front") _frontIdImage = picked;
+        if (type == "back") _backIdImage = picked;
       });
     }
-    Navigator.pop(context);
+    if (mounted) Navigator.pop(context);
   }
 
-  // Bottom sheet for image picker
   void _showPickerOptions(String type) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text("Camera"),
+              onTap: () => _pickImage(ImageSource.camera, type),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo),
+              title: const Text("Gallery"),
+              onTap: () => _pickImage(ImageSource.gallery, type),
+            ),
+          ],
+        ),
       ),
-      builder: (context) {
-        return SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text("Camera"),
-                onTap: () => _pickImage(ImageSource.camera, type),
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo),
-                title: const Text("Gallery"),
-                onTap: () => _pickImage(ImageSource.gallery, type),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -156,199 +186,404 @@ class _ProfileFormScreenState extends State<ProfileFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final boards =
+        _masterDataController.masterData.value?.data?.boardLead ?? [];
+
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text("Profile"),
         backgroundColor: Theme.of(context).primaryColor,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete, color: Colors.white),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: const Text('Account Delete?'),
-                    content: const Text('This will delete your account'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('CANCEL'),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          print("Account Deleted");
-                        },
-                        child: const Text('ACCEPT'),
-                      ),
-                    ],
-                  );
-                },
-              );
-            },
-          ),
-        ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              /// Profile Image + Name
-              Row(
+      body: Stack(
+        children: [
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Stack(
+                  // Profile image + name
+                  Row(
                     children: [
-                      CircleAvatar(
-                        radius: 40,
-                        backgroundColor: Colors.grey.shade300,
-                        backgroundImage: _profileImage != null
-                            ? FileImage(File(_profileImage!.path))
-                            : null,
-                        child: _profileImage == null
-                            ? const Icon(Icons.person,
-                                size: 50, color: Colors.white)
-                            : null,
+                      Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 40,
+                            backgroundImage: _profileImage != null
+                                ? FileImage(File(_profileImage!.path))
+                                : null,
+                            backgroundColor: Colors.grey.shade300,
+                            child: _profileImage == null
+                                ? const Icon(Icons.person,
+                                    size: 50, color: Colors.white)
+                                : null,
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: InkWell(
+                              onTap: () => _showPickerOptions("profile"),
+                              child: const CircleAvatar(
+                                radius: 14,
+                                backgroundColor: Colors.blue,
+                                child: Icon(Icons.camera_alt,
+                                    size: 16, color: Colors.white),
+                              ),
+                            ),
+                          )
+                        ],
                       ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          width: 28,
-                          height: 28,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.blue,
-                          ),
-                          child: IconButton(
-                            padding: EdgeInsets.zero,
-                            icon: const Icon(Icons.camera_alt,
-                                color: Colors.white, size: 18),
-                            onPressed: () => _showPickerOptions("profile"),
-                          ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: nameController,
+                          decoration:
+                              const InputDecoration(labelText: "Full Name"),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      controller: nameController,
-                      decoration: const InputDecoration(labelText: "Full Name"),
-                    ),
+                  const SizedBox(height: 16),
+
+                  TextField(
+                      controller: emailController,
+                      decoration:
+                          const InputDecoration(labelText: "Email / Mobile")),
+                  const SizedBox(height: 16),
+// LOCALITY (Autocomplete with POST search)
+                  Obx(() {
+                    final loading = _locationController.isSearching.value;
+                    final opts =
+                        _locationController.suggestions; // RxList<String>
+
+                    return Autocomplete<String>(
+                      optionsBuilder: (TextEditingValue tev) {
+                        // Return the latest suggestions as-is (already filtered by server)
+                        final q = tev.text.trim();
+                        if (q.isEmpty) return const Iterable<String>.empty();
+                        return opts; // show what controller fetched
+                      },
+                      onSelected: (val) {
+                        AppLog.i('[UI] Locality selected → $val');
+                        localityController.text = val;
+                        _locationController
+                            .onQueryChanged(''); // clear suggestion list
+                      },
+                      fieldViewBuilder:
+                          (context, textCtrl, focusNode, onFieldSubmitted) {
+                        // Keep autocomplete's controller in sync with your own
+                        if (textCtrl.text != localityController.text) {
+                          textCtrl.text = localityController.text;
+                          textCtrl.selection = TextSelection.fromPosition(
+                            TextPosition(offset: textCtrl.text.length),
+                          );
+                        }
+                        textCtrl.addListener(() {
+                          final q = textCtrl.text;
+                          if (localityController.text != q) {
+                            localityController.text = q;
+                          }
+                          _locationController
+                              .onQueryChanged(q); // triggers debounced POST
+                        });
+
+                        return TextField(
+                          controller: textCtrl,
+                          focusNode: focusNode,
+                          decoration: InputDecoration(
+                            labelText: 'Locality',
+                            hintText: 'Type city/area (e.g., lko)…',
+                            suffixIcon: loading
+                                ? const Padding(
+                                    padding: EdgeInsets.all(10),
+                                    child: SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2)),
+                                  )
+                                : const Icon(Icons.location_on_outlined),
+                          ),
+                          onSubmitted: (_) => onFieldSubmitted(),
+                        );
+                      },
+                      optionsViewBuilder: (context, onSelected, options) {
+                        final list = options.toList();
+                        return Align(
+                          alignment: Alignment.topLeft,
+                          child: Material(
+                            elevation: 4,
+                            borderRadius: BorderRadius.circular(8),
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxHeight: 280,
+                                maxWidth:
+                                    MediaQuery.of(context).size.width - 32,
+                              ),
+                              child: ListView.separated(
+                                padding: EdgeInsets.zero,
+                                itemCount: list.length,
+                                separatorBuilder: (_, __) =>
+                                    const Divider(height: 1),
+                                itemBuilder: (context, i) {
+                                  final item = list[i];
+                                  return ListTile(
+                                    dense: true,
+                                    title: Text(item),
+                                    onTap: () => onSelected(item),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  }),
+                  const SizedBox(height: 16),
+
+// (Optional) debugging readouts
+                  Obx(() => Text(
+                      'Location results: ${_locationController.suggestions.length}',
+                      style:
+                          const TextStyle(fontSize: 12, color: Colors.grey))),
+                  Obx(() => _locationController.error.isNotEmpty
+                      ? Text(
+                          'Location error: ${_locationController.error.value}',
+                          style:
+                              const TextStyle(fontSize: 12, color: Colors.red))
+                      : const SizedBox.shrink()),
+
+                  // imports at top of file
+
+// inside build():
+                  Obx(() {
+                    final boards = _masterDataController
+                            .masterData.value?.data?.boardLead ??
+                        [];
+                    dev.log('[UI] Boards count: ${boards.length}',
+                        name: 'StudentProfile');
+
+                    return DropdownButtonFormField<int>(
+                      decoration: InputDecoration(
+                        labelText: "Board",
+                        suffixIcon: Obx(
+                            () => _leadMetaController.isFetchingClasses.value
+                                ? const Padding(
+                                    padding: EdgeInsets.all(12.0),
+                                    child: SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2)),
+                                  )
+                                : const SizedBox.shrink()),
+                      ),
+                      value: selectedBoardId,
+                      items: boards
+                          .map((b) => DropdownMenuItem<int>(
+                                value: b.boardId,
+                                child: Text(b.boardLabel?.toString() ?? ''),
+                              ))
+                          .toList(),
+                      onChanged: (val) {
+                        dev.log('[UI] Board changed → $val',
+                            name: 'StudentProfile');
+                        setState(() {
+                          selectedBoardId = val;
+                          selectedClassId = null;
+                          selectedSubjectId = null;
+                        });
+                        if (val != null) {
+                          _leadMetaController.loadClasses(val);
+                        }
+                      },
+                    );
+                  }),
+                  const SizedBox(height: 16),
+
+                  const SizedBox(height: 16),
+
+                  // CLASS
+                  Obx(() {
+                    final classItems = _leadMetaController.classes;
+                    dev.log('[UI] Classes count: ${classItems.length}',
+                        name: 'StudentProfile');
+
+                    return DropdownButtonFormField<int>(
+                      decoration: InputDecoration(
+                        labelText: "Class",
+                        suffixIcon: _leadMetaController.isFetchingClasses.value
+                            ? const Padding(
+                                padding: EdgeInsets.all(12.0),
+                                child: SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2)),
+                              )
+                            : null,
+                      ),
+                      value: selectedClassId,
+                      items: classItems
+                          .map((c) => DropdownMenuItem(
+                              value: c.courseId, child: Text(c.courseName)))
+                          .toList(),
+                      onChanged: (selectedBoardId == null)
+                          ? null
+                          : (val) {
+                              dev.log('[UI] Class changed → $val',
+                                  name: 'StudentProfile');
+                              setState(() {
+                                selectedClassId = val;
+                                selectedSubjectId = null;
+                              });
+                              if (val != null && selectedBoardId != null) {
+                                _leadMetaController.loadSubjects(
+                                    classId: val, boardId: selectedBoardId!);
+                              }
+                            },
+                    );
+                  }),
+                  const SizedBox(height: 16),
+
+                  // SUBJECT
+                  Obx(() {
+                    final subjectItems = _leadMetaController.subjects;
+                    dev.log('[UI] Subjects count: ${subjectItems.length}',
+                        name: 'StudentProfile');
+                    return DropdownButtonFormField<int>(
+                      decoration: InputDecoration(
+                        labelText: "Subject",
+                        suffixIcon: _leadMetaController.isFetchingSubjects.value
+                            ? const Padding(
+                                padding: EdgeInsets.all(12.0),
+                                child: SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2)),
+                              )
+                            : null,
+                      ),
+                      value: selectedSubjectId,
+                      items: subjectItems
+                          .map((s) => DropdownMenuItem(
+                              value: s.subjectId, child: Text(s.subjectName)))
+                          .toList(),
+                      onChanged:
+                          (selectedClassId == null || selectedBoardId == null)
+                              ? null
+                              : (val) {
+                                  dev.log('[UI] Subject changed → $val',
+                                      name: 'StudentProfile');
+                                  setState(() => selectedSubjectId = val);
+                                },
+                    );
+                  }),
+
+                  const SizedBox(height: 16),
+
+                  // State
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(labelText: "State"),
+                    value: selectedState,
+                    items: const [
+                      "Andhra Pradesh",
+                      "Arunachal Pradesh",
+                      "Assam",
+                      "Bihar",
+                      "Chhattisgarh",
+                      "Goa",
+                      "Gujarat",
+                      "Haryana",
+                      "Himachal Pradesh",
+                      "Jharkhand",
+                      "Karnataka",
+                      "Kerala",
+                      "Madhya Pradesh",
+                      "Maharashtra",
+                      "Manipur",
+                      "Meghalaya",
+                      "Mizoram",
+                      "Nagaland",
+                      "Odisha",
+                      "Punjab",
+                      "Rajasthan",
+                      "Sikkim",
+                      "Tamil Nadu",
+                      "Telangana",
+                      "Tripura",
+                      "Uttar Pradesh",
+                      "Uttarakhand",
+                      "West Bengal",
+                      "Delhi"
+                    ]
+                        .map((st) =>
+                            DropdownMenuItem(value: st, child: Text(st)))
+                        .toList(),
+                    onChanged: (val) => setState(() => selectedState = val),
+                  ),
+                  const SizedBox(height: 16),
+
+                  TextField(
+                    controller: priceController,
+                    decoration:
+                        const InputDecoration(labelText: "Budget (Price)"),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 16),
+
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(labelText: "ID Type"),
+                    value: selectedIdType,
+                    items: const ["Aadhar", "PAN", "Voter ID"]
+                        .map((id) =>
+                            DropdownMenuItem(value: id, child: Text(id)))
+                        .toList(),
+                    onChanged: (val) => setState(() => selectedIdType = val),
+                  ),
+                  const SizedBox(height: 16),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _idUploadBox("Front ID", _frontIdImage, "front"),
+                      _idUploadBox("Back ID", _backIdImage, "back"),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  TextField(
+                      controller: remarkController,
+                      decoration: const InputDecoration(labelText: "Remarks")),
+                  const SizedBox(height: 24),
+
+                  Center(
+                    child: ElevatedButton(
+                        onPressed: onUpdatePressed,
+                        child: const Text("Save Profile")),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-
-              /// Email
-              TextField(
-                controller: emailController,
-                decoration: const InputDecoration(labelText: "Email"),
-              ),
-              const SizedBox(height: 16),
-
-              /// Locality
-              TextField(
-                controller: localityController,
-                decoration: const InputDecoration(labelText: "Locality"),
-              ),
-              const SizedBox(height: 16),
-
-              /// Select Class
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: "Select Class"),
-                value: selectedClass,
-                items: ["Class 6", "Class 7", "Class 8", "Class 9", "Class 10"]
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
-                onChanged: (val) => setState(() => selectedClass = val),
-              ),
-              const SizedBox(height: 16),
-
-              /// Subject
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: "Select Subject"),
-                value: selectedSubject,
-                items: ["Maths", "Science", "Drawing"]
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
-                onChanged: (val) => setState(() => selectedSubject = val),
-              ),
-              const SizedBox(height: 16),
-
-              /// Board Name ✅ FIXED
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: "Board Name"),
-                value: selectedBoard,
-                items: ["CBSE", "ICSE", "STATE BOARD"]
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
-                onChanged: (val) => setState(() => selectedBoard = val),
-              ),
-              const SizedBox(height: 16),
-
-              /// State
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: "Select State"),
-                value: selectedState,
-                items: ["Delhi", "UP", "Haryana"]
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
-                onChanged: (val) => setState(() => selectedState = val),
-              ),
-              const SizedBox(height: 16),
-
-              /// Price
-              TextField(
-                controller: priceController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: "Price"),
-              ),
-              const SizedBox(height: 16),
-
-              /// ID Type
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: "ID Proof Type"),
-                value: selectedIdType,
-                items: ["Aadhar", "PAN", "Voter ID", "Passport"]
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
-                onChanged: (val) => setState(() => selectedIdType = val),
-              ),
-              const SizedBox(height: 16),
-
-              /// ID Upload
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _idUploadBox("Front side", _frontIdImage, "front"),
-                  _idUploadBox("Back side", _backIdImage, "back"),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-              Center(
-                child: ElevatedButton(
-                  onPressed: onUpdatePressed,
-                  child: const Text("Save and Proceed"),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+
+          // Loader Overlay
+          if (_overlayLoading)
+            Container(
+              color: Colors.black.withOpacity(0.25),
+              child: const Center(child: CircularProgressIndicator()),
+            ),
+        ],
       ),
     );
   }
 
-  Widget _idUploadBox(String label, XFile? imageFile, String type) {
+  Widget _idUploadBox(String label, XFile? file, String type) {
     return Column(
       children: [
-        Text(label, style: const TextStyle(fontSize: 14)),
+        Text(label),
         const SizedBox(height: 6),
         GestureDetector(
           onTap: () => _showPickerOptions(type),
@@ -359,12 +594,11 @@ class _ProfileFormScreenState extends State<ProfileFormScreen> {
               border: Border.all(color: Colors.grey),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: imageFile == null
+            child: file == null
                 ? const Icon(Icons.image, size: 40, color: Colors.black54)
                 : ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.file(File(imageFile.path),
-                        fit: BoxFit.cover, width: 120, height: 100),
+                    child: Image.file(File(file.path), fit: BoxFit.cover),
                   ),
           ),
         ),

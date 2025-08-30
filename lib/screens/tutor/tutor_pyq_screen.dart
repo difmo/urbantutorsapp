@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../theme/theme_constants.dart';
+import 'package:get/get.dart';
+
+import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
+import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
+import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
+import 'package:urbantutorsapp/utils/app_log.dart';
 
 class TutorPYQScreen extends StatefulWidget {
   const TutorPYQScreen({super.key});
@@ -9,136 +14,298 @@ class TutorPYQScreen extends StatefulWidget {
 }
 
 class _TutorPYQScreenState extends State<TutorPYQScreen> {
-  final List<Map<String, String>> _pyqs = [];
+  final _formKey = GlobalKey<FormState>();
 
-  void _addPYQDialog() {
-    final TextEditingController questionController = TextEditingController();
-    final TextEditingController descController = TextEditingController();
+  // Text controllers
+  final nameCtrl = TextEditingController();
+  final mobileCtrl = TextEditingController();
+  final localityCtrl = TextEditingController();
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text("Add New PYQ"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: questionController,
-                decoration: const InputDecoration(
-                  labelText: "Question",
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: descController,
-                decoration: const InputDecoration(
-                  labelText: "Description (optional)",
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryColor,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              onPressed: () {
-                if (questionController.text.trim().isNotEmpty) {
-                  setState(() {
-                    _pyqs.add({
-                      "question": questionController.text.trim(),
-                      "desc": descController.text.trim(),
-                    });
-                  });
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text("Save"),
-            ),
-          ],
-        );
-      },
+  // Selections
+  int? boardId;
+  int? classId;
+  int? subjectId;
+  String? stateVal;
+  String? modeVal;
+
+  double _fee = 700;
+
+  // GetX controllers (already registered in main/initialBinding)
+  final MasterDataController _md = Get.find<MasterDataController>();
+  final LeadMetaController _lead = Get.find<LeadMetaController>();
+  final LocationController _loc = Get.find<LocationController>();
+
+  static const _states = <String>[
+    'Delhi',
+    'Uttar Pradesh',
+    'Haryana',
+    'Maharashtra',
+    'Karnataka',
+    'Tamil Nadu'
+  ];
+  static const _modes = <String>['Online', 'Offline', 'Hybrid'];
+
+  @override
+  void dispose() {
+    nameCtrl.dispose();
+    mobileCtrl.dispose();
+    localityCtrl.dispose();
+    super.dispose();
+  }
+
+  InputDecoration _fieldDec(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFF4A90E2), width: 1.2),
+      ),
     );
+  }
+
+  Widget _dropdownDec(Widget child) => Theme(
+        data: Theme.of(context).copyWith(
+          canvasColor: Colors.white,
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+        ),
+        child: child,
+      );
+
+  Future<void> _onGetOtp() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    AppLog.i('[FORM] Submit → '
+        'name=${nameCtrl.text}, '
+        'mobile=${mobileCtrl.text}, '
+        'board=$boardId, class=$classId, subject=$subjectId, '
+        'locality=${localityCtrl.text}, state=$stateVal, mode=$modeVal, '
+        'fee=$_fee');
+
+    // TODO: call your OTP API here
+    Get.snackbar('OTP', 'We just sent an OTP to ${mobileCtrl.text}');
   }
 
   @override
   Widget build(BuildContext context) {
-    final themeColor = AppColors.primaryColor;
-
+    const blue = Color(0xFF4A90E2);
+    const cardPadH = 16.0;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
-        backgroundColor: themeColor,
-        title: const Text(
-          "Previous Year Questions",
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-        centerTitle: true,
+        title: const Text('PYQ Papers'),
+        backgroundColor: blue,
+        elevation: 0,
       ),
-      body: _pyqs.isEmpty
-          ? const Center(
-              child: Text(
-                "No PYQs added yet.\nClick + to add one!",
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16),
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _pyqs.length,
-              itemBuilder: (context, index) {
-                final item = _pyqs[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 6,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.description, color: themeColor, size: 28),
-                    title: Text(
-                      item["question"] ?? "",
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Container(
+            padding: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            child: Form(
+              key: _formKey,
+              child: LayoutBuilder(
+                builder: (context, _) => Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Header line (exact look)
+                    SizedBox(
+                      height: 16,
                     ),
-                    subtitle: item["desc"]!.isNotEmpty
-                        ? Text(item["desc"]!)
-                        : null,
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () {
-                        setState(() {
-                          _pyqs.removeAt(index);
-                        });
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
 
-      // ➕ Floating Add Button
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: themeColor,
-        onPressed: _addPYQDialog,
-        child: const Icon(Icons.add, color: Colors.white),
+                    // Board
+                    Obx(() {
+                      final boards =
+                          _md.masterData.value?.data?.boardLead ?? [];
+                      return _dropdownDec(
+                        DropdownButtonFormField<int>(
+                          isExpanded: true,
+                          value: boardId,
+                          icon: const Icon(Icons.expand_more_rounded,
+                              color: Color(0xFF9CA3AF)),
+                          decoration: _fieldDec('Select Board'),
+                          items: boards
+                              .map((b) => DropdownMenuItem<int>(
+                                    value: (b.boardId is int)
+                                        ? b.boardId
+                                        : int.tryParse('${b.boardId}'),
+                                    child: Text(b.boardLabel?.toString() ?? '',
+                                        overflow: TextOverflow.ellipsis),
+                                  ))
+                              .toList(),
+                          onChanged: (val) {
+                            AppLog.i('[UI] Board changed → $val');
+                            setState(() {
+                              boardId = val;
+                              classId = null;
+                              subjectId = null;
+                            });
+                            if (val != null) _lead.loadClasses(val);
+                          },
+                          validator: (v) => v == null ? 'Required' : null,
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 10),
+
+                    // Class
+                    Obx(() {
+                      final classes = _lead.classes;
+                      final fetching = _lead.isFetchingClasses.value;
+                      return _dropdownDec(
+                        DropdownButtonFormField<int>(
+                          isExpanded: true,
+                          value: classId,
+                          icon: const Icon(Icons.expand_more_rounded,
+                              color: Color(0xFF9CA3AF)),
+                          decoration: _fieldDec('Select Class').copyWith(
+                            suffixIcon: fetching
+                                ? const Padding(
+                                    padding: EdgeInsets.all(10),
+                                    child: SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2)),
+                                  )
+                                : null,
+                          ),
+                          items: classes
+                              .map((c) => DropdownMenuItem<int>(
+                                    value: c.courseId,
+                                    child: Text(c.courseName,
+                                        overflow: TextOverflow.ellipsis),
+                                  ))
+                              .toList(),
+                          onChanged: (boardId == null)
+                              ? null
+                              : (val) {
+                                  AppLog.i('[UI] Class changed → $val');
+                                  setState(() {
+                                    classId = val;
+                                    subjectId = null;
+                                  });
+                                  if (val != null && boardId != null) {
+                                    _lead.loadSubjects(
+                                        classId: val, boardId: boardId!);
+                                  }
+                                },
+                          validator: (v) => v == null ? 'Required' : null,
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 10),
+
+                    // Subject
+                    Obx(() {
+                      final subjects = _lead.subjects;
+                      final fetching = _lead.isFetchingSubjects.value;
+                      return _dropdownDec(
+                        DropdownButtonFormField<int>(
+                          isExpanded: true,
+                          value: subjectId,
+                          icon: const Icon(Icons.expand_more_rounded,
+                              color: Color(0xFF9CA3AF)),
+                          decoration: _fieldDec('Select Subject').copyWith(
+                            suffixIcon: fetching
+                                ? const Padding(
+                                    padding: EdgeInsets.all(10),
+                                    child: SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2)),
+                                  )
+                                : null,
+                          ),
+                          items: subjects
+                              .map((s) => DropdownMenuItem<int>(
+                                    value: s.subjectId,
+                                    child: Text(s.subjectName,
+                                        overflow: TextOverflow.ellipsis),
+                                  ))
+                              .toList(),
+                          onChanged: (classId == null || boardId == null)
+                              ? null
+                              : (val) {
+                                  AppLog.i('[UI] Subject changed → $val');
+                                  setState(() => subjectId = val);
+                                },
+                          validator: (v) => v == null ? 'Required' : null,
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 10),
+                    // Subject
+                    Obx(() {
+                      final chapters = _lead.chapters;
+                      final fetching = _lead.isFetchingChapters.value;
+                      return _dropdownDec(
+                        DropdownButtonFormField<int>(
+                          isExpanded: true,
+                          value: subjectId,
+                          icon: const Icon(Icons.expand_more_rounded,
+                              color: Color(0xFF9CA3AF)),
+                          decoration: _fieldDec('Select chapter').copyWith(
+                            suffixIcon: fetching
+                                ? const Padding(
+                                    padding: EdgeInsets.all(10),
+                                    child: SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2)),
+                                  )
+                                : null,
+                          ),
+                          items: chapters
+                              .map((c) => DropdownMenuItem<int>(
+                                    value: c.chapterId,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        // Open chapter details
+                                        // Navigator.push(
+                                        //   context,
+                                        //   MaterialPageRoute(
+                                        //   builder: (_) => ChapterDetailsScreen(chapter: c),
+                                        //   ),
+                                        // );
+                                      },
+                                      child: Text(c.chapterName,
+                                          overflow: TextOverflow.ellipsis),
+                                    ),
+                                  ))
+                              .toList(),
+                          onChanged: (classId == null || boardId == null)
+                              ? null
+                              : (val) {
+                                  AppLog.i('[UI] Chapter changed → $val');
+                                  setState(() => subjectId = val);
+                                },
+                          validator: (v) => v == null ? 'Required' : null,
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 10),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
