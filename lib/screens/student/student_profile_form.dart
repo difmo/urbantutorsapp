@@ -523,9 +523,9 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
                       "West Bengal",
                       "Delhi"
                     ]
-                      .map((st) =>
-                        DropdownMenuItem(value: st, child: Text(st)))
-                      .toList(),
+                        .map((st) =>
+                            DropdownMenuItem(value: st, child: Text(st)))
+                        .toList(),
                     onChanged: (val) => setState(() => selectedState = val),
                   ),
                   const SizedBox(height: 16),
