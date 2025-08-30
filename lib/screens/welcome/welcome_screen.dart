@@ -148,7 +148,7 @@ class WelcomeScreen extends StatelessWidget {
                         _roleButton(
                           context,
                           'Student/Parent',
-                          1,
+                          3,
                           FontAwesomeIcons.userGraduate,
                           Colors.deepPurpleAccent,
                         ),
@@ -164,7 +164,7 @@ class WelcomeScreen extends StatelessWidget {
                         _roleButton(
                           context,
                           'Tutors Bureau',
-                          3,
+                          5,
                           FontAwesomeIcons.userShield,
                           primary,
                         ),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
+import 'package:urbantutorsapp/models/profile_modals/tutor_profile_request_modal.dart';
 import 'package:urbantutorsapp/models/profile_update_request_model.dart';
 import 'package:urbantutorsapp/screens/admin/admin_dashboard.dart';
 import 'package:urbantutorsapp/screens/tutor/pending_page.dart';
@@ -30,12 +31,33 @@ class _ProfileFormScreenState extends State<ProfileFormScreen> {
   String? selectedSubject;
   String? selectedExperience;
   String? selectedIdType;
-  String? selectedBoard; // ✅ Added missing variable
+  String? selectedBoard;
 
   final ImagePicker _picker = ImagePicker();
   XFile? _profileImage;
   XFile? _frontIdImage;
   XFile? _backIdImage;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Fetch data
+    profileUpdateController.fetchProfileForTutor();
+
+    // Update fields when tutor data changes
+    ever(profileUpdateController.tutorprofileData, (tutor) {
+      if (tutor != null) {
+        nameController.text = tutor.studentName ?? '';
+        emailController.text = tutor.mobile?.toString() ?? '';
+        localityController.text = tutor.location ?? '';
+        priceController.text = tutor.price?.toString() ?? '';
+        selectedState = tutor.state;
+        selectedIdType = tutor.idType;
+        setState(() {});
+      }
+    });
+  }
 
   final ProfileUpdateController profileUpdateController =
       Get.put(ProfileUpdateController());
@@ -98,38 +120,33 @@ class _ProfileFormScreenState extends State<ProfileFormScreen> {
     final frontBase64 = await _fileToBase64(_frontIdImage);
     final backBase64 = await _fileToBase64(_backIdImage);
 
-    final request = ProfileUpdateRequest(
-      userId: 1, // TODO: replace with logged-in user ID
-      boardId: 6, // TODO: map dynamically
-      courseId: 8,
-      subjectId: 9,
-      price: int.tryParse(priceController.text) ?? 0,
+    final request = TutorProfileUpdateRequest(
+      userId: 149,
       location: localityController.text,
       state: selectedState ?? "",
       idType: selectedIdType ?? "",
       remark: "Experienced Teacher",
-      profilePicture: profileBase64,
-      frontId: frontBase64,
-      backId: backBase64,
+      profilePicture: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQABAAD...",
+      frontId: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQABAAD...",
+      mostExperienSubjectsId: 1,
+      price: 400,
+      frontBack: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQABAAD...",
     );
 
     try {
-      final bool success = await profileUpdateController.updateProfile(request);
+      await profileUpdateController.updateProfileForTutor(request);
       print('Error from Profile form tutor');
+      await profileUpdateController.fetchProfileForTutor();
 
-      if (success) {
-        profileUpdateController.fetchProfileUpdate();
-
-        if (profileUpdateController.profileData.value?.status == "Active") {
-          StorageService.saveIsProfileActive("done");
-          Get.offAll(() => const AdminDashboard());
-        } else {
-          StorageService.saveIsProfileActive("pending");
-          Get.offAll(() => const PendingPage());
-        }
+      // if (profileUpdateController
+      //         .tutorprofileData.value!.mostExperienceSubjectName !=
+      //     null) {
+      if (false) {
+        // StorageService.saveIsProfileStatus("completed");
+        // Get.offAll(() => const AdminDashboard());
       } else {
-        Get.snackbar("Error", "Failed to update profile",
-            snackPosition: SnackPosition.BOTTOM);
+        StorageService.saveIsProfileStatus("pending");
+        Get.offAll(() => const PendingPage());
       }
     } catch (e) {
       print('Error from catch e in profile from tutor');

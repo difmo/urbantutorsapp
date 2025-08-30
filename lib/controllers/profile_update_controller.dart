@@ -1,22 +1,55 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:urbantutorsapp/models/profile_update_request_model.dart';
+import 'package:urbantutorsapp/models/profile_modals/student_profile_request_modal.dart';
+import 'package:urbantutorsapp/models/profile_modals/student_profile_response_modal.dart';
+import 'package:urbantutorsapp/models/profile_modals/tutor_profile_request_modal.dart';
 import 'package:urbantutorsapp/models/profile_update_response_model.dart';
+import 'package:urbantutorsapp/models/profile_modals/tutor_response_modal.dart';
+import 'package:urbantutorsapp/models/student_update_profile_model.dart';
+import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
 import 'package:urbantutorsapp/services/profile_update_service.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class ProfileUpdateController extends GetxController {
   final ProfileUpdateService _profileUpdateService = ProfileUpdateService();
 
   var isLoading = false.obs;
-  var profileData = Rxn<ProfileData>(); // single profile object
+  var studentprofileData = Rxn<StudentProfileDataNew>();
+  var tutorprofileData = Rxn<TutorProfileData>();
 
-  /// ✅ Fetch profile details
-  Future<void> fetchProfileUpdate() async {
+  Future<void> fetchProfileForStudent() async {
     isLoading.value = true;
 
     try {
-      final response = await _profileUpdateService.getProfileUpdate();
-      profileData.value = response.data;
+      final response = await _profileUpdateService.getProfileForStudent();
+      studentprofileData.value = response.data;
+
+      debugPrint("✅ Profile fetched successfully:");
+    } catch (e) {
+      debugPrint("❌ Error in fetchProfileUpdate: $e");
+      Get.snackbar(
+        'Error',
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> fetchProfileForTutor() async {
+    isLoading.value = true;
+
+    try {
+      final response = await _profileUpdateService.getProfileForTutor();
+      tutorprofileData.value = response.data;
+      if (tutorprofileData.value?.mostExperienceSubjectName != null) {
+        // StorageService.saveIsProfileStatus("completed");
+      } else {
+        // StorageService.saveIsProfileStatus("pending");
+      }
 
       debugPrint("✅ Profile fetched successfully:");
     } catch (e) {
@@ -34,14 +67,57 @@ class ProfileUpdateController extends GetxController {
   }
 
   /// ✅ Update profile with given data
-  Future<bool> updateProfile(ProfileUpdateRequest updateData) async {
+  Future<bool> updateProfileForTutor(
+      TutorProfileUpdateRequest updateData) async {
     isLoading.value = true;
 
     try {
-      final response = await _profileUpdateService.updateProfile(updateData);
-      profileData.value = response.data;
+      final response =
+          await _profileUpdateService.updateProfileForTutor(updateData);
+      // studentprofileData.value = response.data;
 
       debugPrint("✅ Profile updated successfully");
+      Get.snackbar(
+        'Success',
+        response.message,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+      return true;
+    } catch (e) {
+      debugPrint("❌ Error in updateProfile: $e");
+      Get.snackbar(
+        'Error',
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      isLoading.value = false;
+      return false;
+    }
+  }
+
+  Future<bool> updateProfileForStudent(
+      StudentProfileUpdateRequest updateData) async {
+    isLoading.value = true;
+
+    try {
+      final response =
+          await _profileUpdateService.updateProfileForStudent(updateData);
+      // studentprofileData.value = response.data;
+
+      debugPrint("✅ Profile updated successfully");
+      StorageService.saveIsProfileStatus("completed");
+
+      final String? profileStatus = await StorageService.getIsProfileStatus();
+
+      print("profilstatuse");
+      print(profileStatus);
+      Get.offAll(() => const StudentDashboardScreen());
       Get.snackbar(
         'Success',
         response.message,

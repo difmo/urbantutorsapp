@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
-import 'package:urbantutorsapp/controllers/AuthController.dart';
+import 'package:urbantutorsapp/controllers/auth_controller.dart';
+import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 
 import 'package:urbantutorsapp/screens/admin/admin_dashboard.dart';
 import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
 import 'package:urbantutorsapp/screens/student/student_profile_form.dart';
 import 'package:urbantutorsapp/screens/tutor/pending_page.dart';
-import 'package:urbantutorsapp/screens/tutor/profile_form_tutor.dart';
+import 'package:urbantutorsapp/screens/tutor/tutor_profile_form.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
 import 'package:urbantutorsapp/shared/default_dashboard.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
@@ -36,6 +37,27 @@ class OTPScreen extends StatefulWidget {
 class _OTPScreenState extends State<OTPScreen> {
   String otp = '';
   bool isResending = false;
+  final ProfileUpdateController _profileUpdateController =
+      Get.put(ProfileUpdateController());
+
+  Future<void> _initProfile() async {
+    await _profileUpdateController.fetchProfileForTutor();
+
+    if (_profileUpdateController
+            .tutorprofileData.value?.mostExperienceSubjectName !=
+        null) {
+      StorageService.saveIsProfileStatus("completed");
+    }
+  }
+
+  Future<bool> isProfiledataEmpty() async {
+    await _profileUpdateController.fetchProfileForStudent();
+    if (_profileUpdateController.studentprofileData.value!.boardName!.isEmpty) {
+      return true;
+    } else {
+      return false;
+    }
+  }
 
   Future<void> _verifyOtp() async {
     final prefs = await SharedPreferences.getInstance();
@@ -52,7 +74,7 @@ class _OTPScreenState extends State<OTPScreen> {
     try {
       final auth = Get.find<AuthController>();
 
-      await auth.verifyOtp(
+      int roleId = await auth.verifyOtp(
           widget.phone, otp, name, widget.roleId.toString(), firebaseToken);
 
       final userData = {
@@ -60,26 +82,29 @@ class _OTPScreenState extends State<OTPScreen> {
         "role": role,
         "name": name,
       };
+      if (roleId == 2) {
+        _initProfile();
+      }
       prefs.setString("userData", jsonEncode(userData));
+      final String? profileStatus = await StorageService.getIsProfileStatus();
       Widget dashboard;
-      switch (widget.roleId) {
-        case 1:
-          dashboard = isStudentFormFilled
-              ? StudentDashboardScreen()
-              : StudentProfileFormScreen();
+
+      switch (roleId) {
+        case 3:
+          dashboard =
+              profileStatus == "completed" || isProfiledataEmpty() == false
+                  ? StudentDashboardScreen()
+                  : StudentProfileFormScreen();
           break;
         case 2:
-          // isFormFilled ? isVerified ? "main screen" : "pending screen " : ProfileFormScreen()
-          dashboard = isTeacherFormFilled
-              ? isVerified
-                  ? TutorDashboard()
-                  : PendingPage()
-              : ProfileFormScreen();
+          dashboard = profileStatus == null || profileStatus == "pending"
+              ? profileStatus == "pending"
+                  ? PendingPage()
+                  : ProfileFormScreen()
+              : TutorDashboard();
           break;
-        // case 2:
-        //   dashboard = const ProfileFormScreen(); // first-time setup
-        //   break;
-        case 3:
+
+        case 5:
           dashboard = const AdminDashboard();
           break;
         default:

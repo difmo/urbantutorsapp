@@ -49,7 +49,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           await prefs.remove('user_name');
           await prefs.remove('user_phone');
           await prefs.remove('user_role');
+
           await StorageService.clearTokenAndRole();
+          await StorageService.clear();
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Logged out successfully')),

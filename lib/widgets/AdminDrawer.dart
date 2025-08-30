@@ -7,6 +7,7 @@ import 'package:urbantutorsapp/screens/admin/notification_admin.dart';
 import 'package:urbantutorsapp/screens/admin/parents_student_admin.dart';
 import 'package:urbantutorsapp/screens/admin/transaction_admin.dart';
 import 'package:urbantutorsapp/screens/admin/wallet_hits_admin.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:urbantutorsapp/screens/admin/admit_profile.dart';
@@ -23,8 +24,6 @@ class AdminDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = AppColors.primaryColor;
-
     return Drawer(
       backgroundColor: Colors.white,
       child: SafeArea(
@@ -106,9 +105,13 @@ class AdminDrawer extends StatelessWidget {
               const SizedBox(height: 16),
 
               // Drawer Items
-              _drawerItem(Icons.people_alt, 'Tutors',onTap: () {
-                Get.to(() => AdminTutorPage());
-              },),
+              _drawerItem(
+                Icons.people_alt,
+                'Tutors',
+                onTap: () {
+                  Get.to(() => AdminTutorPage());
+                },
+              ),
               _drawerItem(
                 Icons.person,
                 'Parents / Students',
@@ -203,7 +206,10 @@ class AdminDrawer extends StatelessWidget {
                 );
               }),
 
-              _drawerItem(Icons.logout, 'Logout', color: Colors.red),
+              GestureDetector(
+                onTap: () => {StorageService.clear()},
+                child: _drawerItem(Icons.logout, 'Logout', color: Colors.red),
+              )
             ],
           ),
         ),

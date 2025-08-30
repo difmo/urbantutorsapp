@@ -256,6 +256,7 @@ class _StudentDrawerState extends State<StudentDrawer> {
                 color: Colors.red,
                 onTap: () {
                   StorageService.clearTokenAndRole();
+                  StorageService.clear();
                   Get.to(WelcomeScreen());
                   // Add logout logic here
                 },

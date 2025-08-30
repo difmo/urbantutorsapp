@@ -36,7 +36,6 @@ class HistoryScreen extends StatelessWidget {
     final primaryColor = Theme.of(context).primaryColor;
 
     return Scaffold(
-   
       body: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: historyItems.length,

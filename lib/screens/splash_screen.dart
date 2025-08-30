@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/admin/admin_dashboard.dart';
+import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
 import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
+import 'package:urbantutorsapp/screens/student/student_profile_form.dart';
+import 'package:urbantutorsapp/screens/tutor/pending_page.dart';
+import 'package:urbantutorsapp/screens/tutor/tutor_profile_form.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
 import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
 import 'package:urbantutorsapp/shared/default_dashboard.dart';
@@ -19,58 +26,78 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _logoController;
   late Animation<double> _logoAnimation;
 
+  final ProfileUpdateController _profileUpdateController =
+      Get.put(ProfileUpdateController());
+  final MasterDataController _masterDataController =
+      Get.put(MasterDataController());
   @override
   void initState() {
     super.initState();
-
+    _masterDataController.fetchMasterData();
     _logoController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1000));
-    _logoAnimation =
-        CurvedAnimation(parent: _logoController, curve: Curves.easeOut);
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    _logoAnimation = CurvedAnimation(
+      parent: _logoController,
+      curve: Curves.easeOut,
+    );
 
     _logoController.forward();
     _navigateAfterDelay();
   }
 
-  // Future<bool> isProfileDone() async {
-  //   _profileUpdateController.fetchProfileUpdate();
+  Future<void> _initProfile() async {
+    await _profileUpdateController.fetchProfileForTutor();
 
-  //   if (_profileUpdateController.profileData.value!.status == "Active") {
-  //     return true;
-  //   } else {
-  //     return false;
-  //   }
-  // }
+    if (_profileUpdateController
+            .tutorprofileData.value?.mostExperienceSubjectName !=
+        null) {
+      print("running init profile ");
+      StorageService.saveIsProfileStatus("completed");
+    }
+  }
+
+  Future<bool> isProfiledataEmpty() async {
+    await _profileUpdateController.fetchProfileForStudent();
+    if (_profileUpdateController.studentprofileData.value!.boardName!.isEmpty) {
+      return true;
+    } else {
+      return false;
+    }
+  }
 
   Future<void> _navigateAfterDelay() async {
     await Future.delayed(const Duration(seconds: 2));
-
-    final token = await StorageService.getToken(); // Get token
-    // final role = await StorageService.getRole();
+    final token = await StorageService.getToken();
     final roleId = await StorageService.getRoleId();
     print("Role Id from splash screen  $roleId");
     print("Comes from splash screen");
     if (!mounted) return;
+    if (roleId == 2) {
+      _initProfile();
+    }
 
     Widget target;
-    final String? profileStatus = await StorageService.getIsProfileActive();
+    final String? profileStatus = await StorageService.getIsProfileStatus();
 
     print("profilstatuse");
     print(profileStatus);
     if (token != null) {
       switch (roleId) {
-        case '1':
-          target = const StudentDashboardScreen();
-          break;
-        // case '2':
-        //   target = false ? TutorDashboard() : profileStatus == "pending" || profileStatus == null
-        //       ? ProfileFormScreen()
-        //       : TutorDashboard();
-        //   break;
-        case '2':
-          target = const TutorDashboard();
-          break;
         case '3':
+          target = isProfiledataEmpty() == true || profileStatus == "completed"
+              ? StudentDashboardScreen()
+              : StudentProfileFormScreen();
+          break;
+        case '2':
+          target = profileStatus == null || profileStatus == "pending"
+              ? profileStatus == "pending"
+                  ? PendingPage()
+                  : ProfileFormScreen()
+              : TutorDashboard();
+          break;
+        case '5':
           target = const AdminDashboard();
           break;
         default:

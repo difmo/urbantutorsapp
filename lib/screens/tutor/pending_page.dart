@@ -1,8 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
+import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class PendingPage extends StatelessWidget {
   const PendingPage({Key? key}) : super(key: key);
+
+  Future<void> _refreshProfile(BuildContext context) async {
+    final controller = Get.find<ProfileUpdateController>();
+    await controller.fetchProfileForTutor();
+
+    final status = controller.tutorprofileData.value?.mostExperienceSubjectName;
+    if (status != null) {
+      await StorageService.saveIsProfileStatus("completed");
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => TutorDashboard()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Your profile is still under verification."),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +74,23 @@ class PendingPage extends StatelessWidget {
                   fontSize: 14,
                   color: AppColors.textColor.withOpacity(0.7),
                   height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 40),
+
+              // ✅ Refresh Button
+              ElevatedButton.icon(
+                onPressed: () => _refreshProfile(context),
+                icon: const Icon(Icons.refresh),
+                label: const Text("Refresh Status"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ],

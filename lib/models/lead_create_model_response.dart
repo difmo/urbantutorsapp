@@ -1,5 +1,3 @@
-import 'package:urbantutorsapp/models/lead__model.dart';
-
 class StudentLeadResponse {
   final bool success;
   final StudentLead data;
@@ -11,10 +9,15 @@ class StudentLeadResponse {
     required this.message,
   });
 
-  factory StudentLeadResponse.fromJson(Map<String, dynamic> json){
-    return StudentLeadResponse(success: json['success'] ?? false, data: StudentLead.fromJson(json['data']), message: json['message'] ?? '',);
+  factory StudentLeadResponse.fromJson(Map<String, dynamic> json) {
+    return StudentLeadResponse(
+      success: json['success'] ?? false,
+      data: StudentLead.fromJson(json['data']),
+      message: json['message'] ?? '',
+    );
   }
 }
+
 class StudentLead {
   final int? id;
   final int? userId;
@@ -59,7 +62,8 @@ class StudentLead {
   });
 
   factory StudentLead.fromJson(Map<String, dynamic> json) {
-    return StudentLead( id: json['id'],
+    return StudentLead(
+      id: json['id'],
       userId: int.tryParse(json['user_id'].toString()),
       studentId: json['student_id'],
       studentName: json['student_name'] ?? '',
@@ -82,6 +86,6 @@ class StudentLead {
       updatedAt: json['updated_at'] != null
           ? DateTime.tryParse(json['updated_at'])
           : null,
-          );
+    );
   }
 }

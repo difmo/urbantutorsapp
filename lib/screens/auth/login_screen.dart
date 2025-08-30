@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
+import 'package:urbantutorsapp/controllers/auth_controller.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:urbantutorsapp/controllers/AuthController.dart' as controllers;
+
 import 'otp_screen.dart'; // ✅ FIX: Import your OTP screen here
 import '../../theme/theme_constants.dart';
 
@@ -19,7 +20,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _phoneController = TextEditingController();
 
-  final controllers.AuthController auth = Get.put(controllers.AuthController());
+  final AuthController auth = Get.put(AuthController());
 
   bool _isChecked = false;
 

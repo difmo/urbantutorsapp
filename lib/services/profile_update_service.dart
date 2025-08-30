@@ -1,21 +1,40 @@
-import 'package:dio/dio.dart';
-import 'package:urbantutorsapp/models/profile_update_request_model.dart';
-import 'package:urbantutorsapp/models/profile_update_response_model.dart';
+import 'package:urbantutorsapp/models/profile_modals/student_profile_request_modal.dart';
+import 'package:urbantutorsapp/models/profile_modals/student_profile_response_modal.dart';
+import 'package:urbantutorsapp/models/profile_modals/student_update_response.dart';
+import 'package:urbantutorsapp/models/profile_modals/tutor_profile_request_modal.dart';
+import 'package:urbantutorsapp/models/profile_modals/tutor_response_modal.dart';
 import 'package:urbantutorsapp/services/ApiService.dart';
 import 'package:urbantutorsapp/utils/api_constants.dart';
 
 class ProfileUpdateService {
-  /// ✅ Fetch profile (GET/POST depending on API design)
-  Future<UserProfileResponse> getProfileUpdate() async {
+  Future<StudentProfileResponsdModal> getProfileForStudent() async {
     try {
       final response = await ApiService.post(
-        ApiConstants.PROFILE_UPDATE,
-        null, // no body for fetching
+        ApiConstants.USER_PROFIEL_FETCH,
+        null,
       );
 
       print("✅ Response from getProfileUpdate: ${response.data}");
 
-      return UserProfileResponse.fromJson(response.data);
+      return StudentProfileResponsdModal.fromJson(response.data);
+    } catch (e) {
+      print("❌ Error in getProfileUpdate (from ProfileUpdateService):");
+      print(e.toString());
+      throw e;
+    }
+  }
+
+  Future<TutorProfileResponse> getProfileForTutor() async {
+    print("Comes to get profile for tutor");
+    try {
+      final response = await ApiService.post(
+        ApiConstants.USER_PROFIEL_FETCH,
+        null,
+      );
+
+      print("✅ Response from getProfileUpdate: ${response.data}");
+
+      return TutorProfileResponse.fromJson(response.data);
     } catch (e) {
       print("❌ Error in getProfileUpdate (from ProfileUpdateService):");
       print(e.toString());
@@ -24,17 +43,36 @@ class ProfileUpdateService {
   }
 
   /// ✅ Update profile (send data as FormData or JSON depending on API)
-  Future<UserProfileResponse> updateProfile(ProfileUpdateRequest updateData) async {
+  Future<StudentUpdateResponse> updateProfileForStudent(
+      StudentProfileUpdateRequest updateData) async {
     try {
-
       final response = await ApiService.post(
-        ApiConstants.PROFILE_UPDATE,
+        "/student_profile_update",
         updateData.toJson(),
       );
 
       print("✅ Response from updateProfile: ${response.data}");
 
-      return UserProfileResponse.fromJson(response.data);
+      return StudentUpdateResponse.fromJson(response.data);
+    } catch (e) {
+      print("❌ Error in updateProfile (from ProfileUpdateService):");
+      print(e.toString());
+      throw e;
+    }
+  }
+
+  Future<TutorProfileResponse> updateProfileForTutor(
+      TutorProfileUpdateRequest updateData) async {
+    print("update profile called for tutor ");
+    try {
+      final response = await ApiService.post(
+        "/teacher_profile_update",
+        updateData.toJson(),
+      );
+
+      print("✅ Response from updateProfile: ${response.data}");
+
+      return TutorProfileResponse.fromJson(response.data);
     } catch (e) {
       print("❌ Error in updateProfile (from ProfileUpdateService):");
       print(e.toString());

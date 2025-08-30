@@ -2,10 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:urbantutorsapp/models/user_new_modal.dart';
 import 'package:urbantutorsapp/services/ApiService.dart';
 import 'package:urbantutorsapp/services/auth_service.dart';
-import 'package:urbantutorsapp/services/profile_services.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class AuthController extends GetxController {
@@ -13,14 +11,14 @@ class AuthController extends GetxController {
 
   var isLoading = false.obs;
   var token = ''.obs;
-  var roleId = ''.obs;
+  var roleId = 0.obs;
+
   Future<String?> sendOtp(String mobile) async {
     isLoading.value = true;
     try {
       final res = await _authService.sendOtp(mobile);
       final otp = res.data?['data']?['otp_data']?['mobile_otp']?.toString();
       debugPrint('OTP sent: $otp');
-
       return otp;
     } catch (e) {
       Get.snackbar('Error', e.toString());
@@ -36,10 +34,9 @@ class AuthController extends GetxController {
     print(prettyJson);
   }
 
-  Future<void> verifyOtp(String mobile, String otp, String name, String roleId,
+  Future<int> verifyOtp(String mobile, String otp, String name, String roleId,
       String fbToken) async {
     print("verifyotpfunction from verifyotp $roleId");
-    print(roleId);
     isLoading.value = true;
     try {
       final res = await _authService.verifyOtp(
@@ -49,35 +46,43 @@ class AuthController extends GetxController {
         roleId: roleId,
         firebaseToken: fbToken,
       );
+
       token.value = res.data.token;
+
       print(res.data.userData.roles);
+
       printJson(res.data);
       print("Tokenvalue");
       print(token.value);
-      //  roleId. = res.data.userData.roles[0].roleId;
-      await StorageService.saveToken(token.value);
-      await StorageService.saveRoleId(res.data.userData.roles[0].roleId);
 
-      print("roleidfromotp");
-      print(res.data.userData.roles[0].roleId);
+      await StorageService.saveToken(token.value);
+
+      // 👇 Backend gives int, store it in RxInt
+      int roleIdd = res.data.userData.roles[0].roleId;
+
+      await StorageService.saveRoleId(roleIdd);
+
+      // print("roleidfromotp: ${roleId.value}");
 
       await StorageService.saveRole("Admin");
+      return roleIdd;
     } catch (e) {
-      print("Error while otp verification");
-      print(e.toString());
+      print("Error while otp verification: $e");
       Get.snackbar('Error', e.toString());
+      return 0;
     } finally {
       isLoading.value = false;
     }
   }
 
-  /// ✅ Add this logout method
+  /// ✅ Logout clears everything
   Future<void> logout() async {
     try {
       token.value = '';
-      await StorageService
-          .clear(); // or use TokenStorage.removeToken() if available
-      Get.offAllNamed('/role-intro'); // or your login screen
+      roleId.value = 0; // reset to default
+      await StorageService.clear();
+      Get.offAllNamed('/role-intro');
+      Get.snackbar("sdlkfjdsf", "Logout Successfully");
     } catch (e) {
       Get.snackbar('Logout Error', e.toString());
     }

@@ -18,7 +18,7 @@ class StorageService {
     await prefs.setString(_roleKey, role);
   }
 
-  static Future<void> saveIsProfileActive(String isProfileDone) async {
+  static Future<void> saveIsProfileStatus(String isProfileDone) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_profileIdKey, isProfileDone);
   }
@@ -33,7 +33,7 @@ class StorageService {
     return prefs.getString(_roleIdKey);
   }
 
-  static Future<String?> getIsProfileActive() async {
+  static Future<String?> getIsProfileStatus() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_profileIdKey);
   }
@@ -54,5 +54,8 @@ class StorageService {
     await prefs.remove(_roleKey);
   }
 
-  static Future<void> clear() async {}
+  static Future<void> clear() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+  }
 }

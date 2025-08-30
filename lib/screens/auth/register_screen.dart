@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart'; // ⬅️ Added for opening link
-import 'package:urbantutorsapp/controllers/AuthController.dart';
+import 'package:urbantutorsapp/controllers/auth_controller.dart';
 import 'package:urbantutorsapp/widgets/custom_button.dart';
 import 'package:urbantutorsapp/widgets/custom_input_field.dart';
 import '../../theme/theme_constants.dart';

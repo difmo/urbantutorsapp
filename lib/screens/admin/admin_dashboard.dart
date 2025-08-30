@@ -47,7 +47,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     if (label == 'Logout') {
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
-      await StorageService.clearTokenAndRole();
+      await StorageService.clear();
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

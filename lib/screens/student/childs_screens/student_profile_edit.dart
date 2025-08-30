@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 
@@ -8,7 +7,8 @@ class StudentProfileScreenEdit extends StatefulWidget {
   const StudentProfileScreenEdit({Key? key}) : super(key: key);
 
   @override
-  State<StudentProfileScreenEdit> createState() => _StudentProfileScreenEditState();
+  State<StudentProfileScreenEdit> createState() =>
+      _StudentProfileScreenEditState();
 }
 
 class _StudentProfileScreenEditState extends State<StudentProfileScreenEdit> {
@@ -161,10 +161,12 @@ class _StudentProfileScreenEditState extends State<StudentProfileScreenEdit> {
     );
   }
 
-  Widget _buildField(String label, TextEditingController controller,
-      bool editable, {
-        TextInputType keyboardType = TextInputType.text,
-      }) {
+  Widget _buildField(
+    String label,
+    TextEditingController controller,
+    bool editable, {
+    TextInputType keyboardType = TextInputType.text,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
       child: Column(
