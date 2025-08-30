@@ -5,8 +5,12 @@ class NotesClass {
 
   factory NotesClass.fromJson(Map<String, dynamic> j) {
     int _id(dynamic v) => (v is num) ? v.toInt() : int.tryParse('$v') ?? 0;
-    String _name(Map<String, dynamic> m) =>
-        (m['class_name'] ?? m['course_name'] ?? m['boardclass_name'] ?? m['name'] ?? '').toString();
+    String _name(Map<String, dynamic> m) => (m['class_name'] ??
+            m['course_name'] ??
+            m['boardclass_name'] ??
+            m['name'] ??
+            '')
+        .toString();
 
     return NotesClass(
       id: _id(j['class_id'] ?? j['boardclass_id'] ?? j['id']),
@@ -22,8 +26,12 @@ class NotesSubject {
 
   factory NotesSubject.fromJson(Map<String, dynamic> j) {
     int _id(dynamic v) => (v is num) ? v.toInt() : int.tryParse('$v') ?? 0;
-    String _name(Map<String, dynamic> m) =>
-        (m['subject_name'] ?? m['subjectName'] ?? m['boardsubject_name'] ?? m['name'] ?? '').toString();
+    String _name(Map<String, dynamic> m) => (m['subject_name'] ??
+            m['subjectName'] ??
+            m['boardsubject_name'] ??
+            m['name'] ??
+            '')
+        .toString();
 
     return NotesSubject(
       id: _id(j['subject_id'] ?? j['boardsubject_id'] ?? j['id']),
@@ -41,7 +49,8 @@ class NotesChapter {
     int _id(dynamic v) => (v is num) ? v.toInt() : int.tryParse('$v') ?? 0;
     return NotesChapter(
       id: _id(j['chapter_id'] ?? j['id']),
-      name: (j['ChapterName'] ?? j['chapter_name'] ?? j['name'] ?? '').toString(),
+      name:
+          (j['ChapterName'] ?? j['chapter_name'] ?? j['name'] ?? '').toString(),
     );
   }
 }
@@ -49,9 +58,13 @@ class NotesChapter {
 class ChapterDetailItem {
   final int id;
   final String heading; // heding_name
-  final String image;   // filename
+  final String image; // filename
   final String content;
-  ChapterDetailItem({required this.id, required this.heading, required this.image, required this.content});
+  ChapterDetailItem(
+      {required this.id,
+      required this.heading,
+      required this.image,
+      required this.content});
 
   factory ChapterDetailItem.fromJson(Map<String, dynamic> j) {
     int _id(dynamic v) => (v is num) ? v.toInt() : int.tryParse('$v') ?? 0;

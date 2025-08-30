@@ -63,7 +63,6 @@ class AuthController extends GetxController {
 
       await StorageService.saveRoleId(roleIdd);
       await StorageService.saveUserId(userId);
-
       print(await StorageService.getUserId());
       return roleIdd;
     } catch (e) {
