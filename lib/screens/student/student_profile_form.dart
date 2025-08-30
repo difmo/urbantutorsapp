@@ -50,10 +50,10 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
   @override
   void initState() {
     super.initState();
-    //Fetch data
+
+    // Fetch data
     profileUpdateController.fetchProfileForStudent();
     _masterDataController.fetchMasterData();
-
     // Update fields when tutor data changes
     ever(profileUpdateController.studentprofileData, (student) {
       if (student != null) {
@@ -207,15 +207,9 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(labelText: "Board"),
                     value: selectedBoard,
-                    items:
-                        _masterDataController.masterData.value?.data?.boardLead
-                            ?.map((board) => DropdownMenuItem<String>(
-                                  value: board.boardId
-                                      .toString(), // or board.name, depending on your field
-                                  child: Text(board.boardLabel.toString() ??
-                                      ""), // show label
-                                ))
-                            .toList(),
+                    items: ["CBSE", "ICSE", "STATE BOARD"]
+                        .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                        .toList(),
                     onChanged: (val) => setState(() => selectedBoard = val),
                   ),
                   const SizedBox(height: 16),
