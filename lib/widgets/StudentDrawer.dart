@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/feedback_student.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/notification_student.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/student_profile.dart';
@@ -20,7 +23,9 @@ class StudentDrawer extends StatefulWidget {
 }
 
 class _StudentDrawerState extends State<StudentDrawer> {
-  String selectedLabel = 'Term and Conditions'; // Default selected menu
+  String selectedLabel = 'Term and Conditions';
+  final ProfileUpdateController _profileUpdateController =
+      Get.put(ProfileUpdateController());
 
   void handleTap(String label, {VoidCallback? onTap}) {
     setState(() {
@@ -148,7 +153,7 @@ class _StudentDrawerState extends State<StudentDrawer> {
                           right: -2,
                           child: GestureDetector(
                             onTap: () {
-                              Get.to(() => const StudentProfileScreen());
+                              Get.to(() => StudentProfileScreen());
                             },
                             child: Container(
                               padding: const EdgeInsets.all(4),
@@ -172,22 +177,32 @@ class _StudentDrawerState extends State<StudentDrawer> {
                         ),
                       ],
                     ),
-                    const SizedBox(width: 12),
-                    const Expanded(
+                    SizedBox(width: 12),
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Shaurabh Kumar',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primaryColor,
+                          Obx(
+                            () => Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(_profileUpdateController.studentprofileData
+                                        .value!.studentName ??
+                                    "Unknown User"),
+                                SizedBox(height: 4),
+                                Text(
+                                  "Another text here",
+                                  style: TextStyle(
+                                      fontSize: 14, color: Colors.black),
+                                ),
+                              ],
                             ),
                           ),
                           SizedBox(height: 4),
                           Text(
-                            'shaurabh@email.com',
+                            _profileUpdateController
+                                    .studentprofileData.value!.courseName ??
+                                "Unknown User",
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.black54,

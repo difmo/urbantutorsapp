@@ -1,84 +1,96 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/student_profile_edit.dart';
-
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 
 class StudentProfileScreen extends StatelessWidget {
-  const StudentProfileScreen({super.key});
+  StudentProfileScreen({super.key});
+  final ProfileUpdateController _profileController =
+      Get.put(ProfileUpdateController());
 
   @override
   Widget build(BuildContext context) {
     final themeColor = AppColors.primaryColor;
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // Top wave
-          ClipPath(
-            clipper: TopWaveClipper(),
-            child: Container(
-              height: 260,
-              color: themeColor.withOpacity(0.2),
-            ),
-          ),
-
-          // Back Button
-          Positioned(
-            top: 50,
-            left: 20,
-            child: GestureDetector(
-              onTap: () => Get.back(),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
-                  boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+        backgroundColor: Colors.white,
+        body: Obx(
+          () => Stack(
+            children: [
+              // Top wave
+              ClipPath(
+                clipper: TopWaveClipper(),
+                child: Container(
+                  height: 260,
+                  color: themeColor.withOpacity(0.2),
                 ),
-                child: Icon(Icons.arrow_back, color: themeColor),
               ),
-            ),
-          ),
-
-          // Edit Button
-          Positioned(
-            top: 50,
-            right: 20,
-            child: GestureDetector(
-              onTap: () => Get.to(() => const StudentProfileScreenEdit()),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
-                  boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+              Positioned(
+                top: 50,
+                left: 20,
+                child: GestureDetector(
+                  onTap: () => Get.back(),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(color: Colors.black26, blurRadius: 4)
+                      ],
+                    ),
+                    child: Icon(Icons.arrow_back, color: themeColor),
+                  ),
                 ),
-                child: Icon(Icons.edit, color: themeColor),
               ),
-            ),
-          ),
-
-          // Profile content
-          Padding(
-            padding: const EdgeInsets.only(top: 160),
-            child: Column(
-              children: [
-                const CircleAvatar(
-                  radius: 60,
-                  backgroundImage: AssetImage('assets/icons/profile.jpg'),
+              Positioned(
+                top: 50,
+                right: 20,
+                child: GestureDetector(
+                  onTap: () => Get.to(() => const StudentProfileScreenEdit()),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(color: Colors.black26, blurRadius: 4)
+                      ],
+                    ),
+                    child: Icon(Icons.edit, color: themeColor),
+                  ),
                 ),
-                const SizedBox(height: 20),
-                _infoTile(Icons.person, "Name", "John Doe"),
-                _infoTile(Icons.email, "Email", "john.doe@email.com"),
-                _infoTile(Icons.phone, "Phone", "9876543210"),
-              ],
-            ),
+              ),
+
+              // Profile content
+              Padding(
+                padding: const EdgeInsets.only(top: 160),
+                child: Column(
+                  children: [
+                    const CircleAvatar(
+                      radius: 60,
+                      backgroundImage: AssetImage('assets/icons/profile.jpg'),
+                    ),
+                    const SizedBox(height: 20),
+                    _infoTile(
+                        Icons.person,
+                        "Name",
+                        _profileController
+                                .studentprofileData.value!.studentName ??
+                            ""),
+                    _infoTile(Icons.email, "Email", "john.doe@email.com"),
+                    _infoTile(
+                        Icons.phone,
+                        "Phone",
+                        _profileController.studentprofileData.value!.mobile ??
+                            ""),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+        ));
   }
 
   Widget _infoTile(IconData icon, String title, String subtitle) {
