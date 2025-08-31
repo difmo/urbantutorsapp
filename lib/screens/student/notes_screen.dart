@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
+import 'package:urbantutorsapp/controllers/notes_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
-import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
-import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
 import 'package:urbantutorsapp/utils/app_log.dart';
 
 class NotesScreen extends StatefulWidget {
@@ -25,15 +23,15 @@ class _NotesScreenState extends State<NotesScreen> {
   int? boardId;
   int? classId;
   int? subjectId;
+  int? chapterId;
   String? stateVal;
   String? modeVal;
 
   double _fee = 700;
 
-  // GetX controllers (already registered in main/initialBinding)
+  // GetX controllers
   final MasterDataController _md = Get.find<MasterDataController>();
-  final LeadMetaController _lead = Get.find<LeadMetaController>();
-  final LocationController _loc = Get.find<LocationController>();
+  final NotesController _notesController = Get.put(NotesController());
 
   static const _states = <String>[
     'Delhi',
@@ -91,18 +89,16 @@ class _NotesScreenState extends State<NotesScreen> {
     AppLog.i('[FORM] Submit → '
         'name=${nameCtrl.text}, '
         'mobile=${mobileCtrl.text}, '
-        'board=$boardId, class=$classId, subject=$subjectId, '
+        'board=$boardId, class=$classId, subject=$subjectId, chapter=$chapterId, '
         'locality=${localityCtrl.text}, state=$stateVal, mode=$modeVal, '
         'fee=$_fee');
 
-    // TODO: call your OTP API here
     Get.snackbar('OTP', 'We just sent an OTP to ${mobileCtrl.text}');
   }
 
   @override
   Widget build(BuildContext context) {
     const blue = Color(0xFF4A90E2);
-    const cardPadH = 16.0;
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
@@ -113,195 +109,186 @@ class _NotesScreenState extends State<NotesScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           child: Container(
-            padding: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
             child: Form(
               key: _formKey,
-              child: LayoutBuilder(
-                builder: (context, _) => Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Header line (exact look)
-                    SizedBox(
-                      height: 16,
-                    ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 16),
 
-                    // Board
-                    Obx(() {
-                      final boards =
-                          _md.masterData.value?.data?.boardLead ?? [];
-                      return _dropdownDec(
-                        DropdownButtonFormField<int>(
-                          isExpanded: true,
-                          value: boardId,
-                          icon: const Icon(Icons.expand_more_rounded,
-                              color: Color(0xFF9CA3AF)),
-                          decoration: _fieldDec('Select Board'),
-                          items: boards
-                              .map((b) => DropdownMenuItem<int>(
-                                    value: (b.boardId is int)
-                                        ? b.boardId
-                                        : int.tryParse('${b.boardId}'),
-                                    child: Text(b.boardLabel?.toString() ?? '',
-                                        overflow: TextOverflow.ellipsis),
-                                  ))
-                              .toList(),
-                          onChanged: (val) {
-                            AppLog.i('[UI] Board changed → $val');
-                            setState(() {
-                              boardId = val;
-                              classId = null;
-                              subjectId = null;
-                            });
-                            if (val != null) _lead.loadClasses(val);
-                          },
-                          validator: (v) => v == null ? 'Required' : null,
-                        ),
-                      );
-                    }),
-                    const SizedBox(height: 10),
+                  /// Board
+                  Obx(() {
+                    final boards = _md.masterData.value?.data?.boardLead ?? [];
+                    return _dropdownDec(
+                      DropdownButtonFormField<int>(
+                        isExpanded: true,
+                        value: boardId,
+                        decoration: _fieldDec('Select Board'),
+                        items: boards
+                            .map((b) => DropdownMenuItem<int>(
+                                  value: (b.boardId is int)
+                                      ? b.boardId
+                                      : int.tryParse('${b.boardId}'),
+                                  child: Text(b.boardLabel?.toString() ?? '',
+                                      overflow: TextOverflow.ellipsis),
+                                ))
+                            .toList(),
+                        onChanged: (val) {
+                          AppLog.i('[UI] Board changed → $val');
+                          setState(() {
+                            boardId = val;
+                            classId = null;
+                            subjectId = null;
+                            chapterId = null;
+                          });
+                          if (val != null) {
+                            _notesController.fetchClasses(boardId: val);
+                          }
+                        },
+                        validator: (v) => v == null ? 'Required' : null,
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 10),
 
-                    // Class
-                    Obx(() {
-                      final classes = _lead.classes;
-                      final fetching = _lead.isFetchingClasses.value;
-                      return _dropdownDec(
-                        DropdownButtonFormField<int>(
-                          isExpanded: true,
-                          value: classId,
-                          icon: const Icon(Icons.expand_more_rounded,
-                              color: Color(0xFF9CA3AF)),
-                          decoration: _fieldDec('Select Class').copyWith(
-                            suffixIcon: fetching
-                                ? const Padding(
-                                    padding: EdgeInsets.all(10),
-                                    child: SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2)),
-                                  )
-                                : null,
-                          ),
-                          items: classes
-                              .map((c) => DropdownMenuItem<int>(
-                                    value: c.courseId,
-                                    child: Text(c.courseName,
-                                        overflow: TextOverflow.ellipsis),
-                                  ))
-                              .toList(),
-                          onChanged: (boardId == null)
-                              ? null
-                              : (val) {
-                                  AppLog.i('[UI] Class changed → $val');
-                                  setState(() {
-                                    classId = val;
-                                    subjectId = null;
-                                  });
-                                  if (val != null && boardId != null) {
-                                    _lead.loadSubjects(
-                                        classId: val, boardId: boardId!);
-                                  }
-                                },
-                          validator: (v) => v == null ? 'Required' : null,
+                  /// Class
+                  Obx(() {
+                    final classes = _notesController.classes;
+                    final fetching = _notesController.loadingClasses.value;
+                    return _dropdownDec(
+                      DropdownButtonFormField<int>(
+                        isExpanded: true,
+                        value: classId,
+                        decoration: _fieldDec('Select Class').copyWith(
+                          suffixIcon: fetching
+                              ? const Padding(
+                                  padding: EdgeInsets.all(10),
+                                  child: SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  ),
+                                )
+                              : null,
                         ),
-                      );
-                    }),
-                    const SizedBox(height: 10),
+                        items: classes
+                            .map((c) => DropdownMenuItem<int>(
+                                  value: c.id,
+                                  child: Text(c.name,
+                                      overflow: TextOverflow.ellipsis),
+                                ))
+                            .toList(),
+                        onChanged: (boardId == null)
+                            ? null
+                            : (val) {
+                                AppLog.i('[UI] Class changed → $val');
+                                setState(() {
+                                  classId = val;
+                                  subjectId = null;
+                                  chapterId = null;
+                                });
+                                if (val != null && boardId != null) {
+                                  _notesController.fetchSubjects(
+                                    boardId: boardId!,
+                                    classId: val,
+                                  );
+                                }
+                              },
+                        validator: (v) => v == null ? 'Required' : null,
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 10),
 
-                    // Subject
-                    Obx(() {
-                      final subjects = _lead.subjects;
-                      final fetching = _lead.isFetchingSubjects.value;
-                      return _dropdownDec(
-                        DropdownButtonFormField<int>(
-                          isExpanded: true,
-                          value: subjectId,
-                          icon: const Icon(Icons.expand_more_rounded,
-                              color: Color(0xFF9CA3AF)),
-                          decoration: _fieldDec('Select Subject').copyWith(
-                            suffixIcon: fetching
-                                ? const Padding(
-                                    padding: EdgeInsets.all(10),
-                                    child: SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2)),
-                                  )
-                                : null,
-                          ),
-                          items: subjects
-                              .map((s) => DropdownMenuItem<int>(
-                                    value: s.subjectId,
-                                    child: Text(s.subjectName,
-                                        overflow: TextOverflow.ellipsis),
-                                  ))
-                              .toList(),
-                          onChanged: (classId == null || boardId == null)
-                              ? null
-                              : (val) {
-                                  AppLog.i('[UI] Subject changed → $val');
-                                  setState(() => subjectId = val);
-                                },
-                          validator: (v) => v == null ? 'Required' : null,
+                  /// Subject
+                  Obx(() {
+                    final subjects = _notesController.subjects;
+                    final fetching = _notesController.loadingSubjects.value;
+                    return _dropdownDec(
+                      DropdownButtonFormField<int>(
+                        isExpanded: true,
+                        value: subjectId,
+                        decoration: _fieldDec('Select Subject').copyWith(
+                          suffixIcon: fetching
+                              ? const Padding(
+                                  padding: EdgeInsets.all(10),
+                                  child: SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  ),
+                                )
+                              : null,
                         ),
-                      );
-                    }),
-                    const SizedBox(height: 10),
-                    // Subject
-                    Obx(() {
-                      final chapters = _lead.chapters;
-                      final fetching = _lead.isFetchingChapters.value;
-                      return _dropdownDec(
-                        DropdownButtonFormField<int>(
-                          isExpanded: true,
-                          value: subjectId,
-                          icon: const Icon(Icons.expand_more_rounded,
-                              color: Color(0xFF9CA3AF)),
-                          decoration: _fieldDec('Select chapter').copyWith(
-                            suffixIcon: fetching
-                                ? const Padding(
-                                    padding: EdgeInsets.all(10),
-                                    child: SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2)),
-                                  )
-                                : null,
-                          ),
-                          items: chapters
-                              .map((c) => DropdownMenuItem<int>(
-                                    value: c.chapterId,
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        // Open chapter details
-                                        // Navigator.push(
-                                        //   context,
-                                        //   MaterialPageRoute(
-                                        //   builder: (_) => ChapterDetailsScreen(chapter: c),
-                                        //   ),
-                                        // );
-                                      },
-                                      child: Text(c.chapterName,
-                                          overflow: TextOverflow.ellipsis),
-                                    ),
-                                  ))
-                              .toList(),
-                          onChanged: (classId == null || boardId == null)
-                              ? null
-                              : (val) {
-                                  AppLog.i('[UI] Chapter changed → $val');
-                                  setState(() => subjectId = val);
-                                },
-                          validator: (v) => v == null ? 'Required' : null,
+                        items: subjects
+                            .map((s) => DropdownMenuItem<int>(
+                                  value: s.id,
+                                  child: Text(s.name,
+                                      overflow: TextOverflow.ellipsis),
+                                ))
+                            .toList(),
+                        onChanged: (classId == null)
+                            ? null
+                            : (val) {
+                                AppLog.i('[UI] Subject changed → $val');
+                                setState(() {
+                                  subjectId = val;
+                                  chapterId = null;
+                                });
+                                if (val != null) {
+                                  _notesController.fetchChapters(
+                                      subjectId: val);
+                                }
+                              },
+                        validator: (v) => v == null ? 'Required' : null,
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 10),
+
+                  /// Chapter
+                  Obx(() {
+                    final chapters = _notesController.chapters;
+                    final fetching = _notesController.loadingChapters.value;
+                    return _dropdownDec(
+                      DropdownButtonFormField<int>(
+                        isExpanded: true,
+                        value: chapterId,
+                        decoration: _fieldDec('Select Chapter').copyWith(
+                          suffixIcon: fetching
+                              ? const Padding(
+                                  padding: EdgeInsets.all(10),
+                                  child: SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  ),
+                                )
+                              : null,
                         ),
-                      );
-                    }),
-                    const SizedBox(height: 10),
-                  ],
-                ),
+                        items: chapters
+                            .map((c) => DropdownMenuItem<int>(
+                                  value: c.id,
+                                  child: Text(c.name,
+                                      overflow: TextOverflow.ellipsis),
+                                ))
+                            .toList(),
+                        onChanged: (subjectId == null)
+                            ? null
+                            : (val) {
+                                AppLog.i('[UI] Chapter changed → $val');
+                                setState(() => chapterId = val);
+                              },
+                        validator: (v) => v == null ? 'Required' : null,
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 10),
+                ],
               ),
             ),
           ),
