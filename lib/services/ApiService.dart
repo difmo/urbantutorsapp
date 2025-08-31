@@ -54,7 +54,7 @@ class ApiService {
           'Authorization': token != null ? 'Bearer $token' : null,
         },
       );
-      return await _dio.get(path, options: options);
+      return await _dio.get(path,);
     } on DioError catch (e) {
       throw Exception(e.response?.data ?? 'Network error: ${e.message}');
     }

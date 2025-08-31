@@ -37,7 +37,7 @@ class _TutorDashboardState extends State<TutorDashboard> {
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
-      body: _screens[_currentIndex], // ✅ show selected screen
+      body: _screens[_currentIndex],
       bottomNavigationBar: CustomTeacherNavBar(
         currentIndex: _currentIndex,
         onTap: (index) {
@@ -50,7 +50,6 @@ class _TutorDashboardState extends State<TutorDashboard> {
   }
 }
 
-/// ✅ Extracted Dashboard main tab (Nearby / Enquiry / Contacted)
 class DashboardHomeTab extends StatefulWidget {
   const DashboardHomeTab({super.key});
 
@@ -77,6 +76,7 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
             await prefs.remove('user_phone');
             await prefs.remove('user_role');
             await StorageService.clearTokenAndRole();
+            await StorageService.clear();
 
             if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(

@@ -3,10 +3,30 @@ import 'package:urbantutorsapp/models/profile_modals/student_profile_response_mo
 import 'package:urbantutorsapp/models/profile_modals/student_update_response.dart';
 import 'package:urbantutorsapp/models/profile_modals/tutor_profile_request_modal.dart';
 import 'package:urbantutorsapp/models/profile_modals/tutor_response_modal.dart';
+import 'package:urbantutorsapp/screens/controllers/masterdata_modal.dart';
 import 'package:urbantutorsapp/services/ApiService.dart';
 import 'package:urbantutorsapp/utils/api_constants.dart';
 
 class ProfileUpdateService {
+
+  Future<MasterData> getMaterData() async {
+    try {
+      final response = await ApiService.get(
+        ApiConstants.MASTERDATE,
+      );
+
+      print("✅ Response from get master data: ${response.data}");
+
+      return MasterData.fromJson(response.data);
+    } catch (e) {
+      print("❌ Error in getMasterData (from ProfileUpdateService):");
+      print(e.toString());
+      throw e;
+    }
+  }
+
+
+
   Future<StudentProfileResponsdModal> getProfileForStudent() async {
     try {
       final response = await ApiService.post(
@@ -14,7 +34,7 @@ class ProfileUpdateService {
         null,
       );
 
-      print("✅ Response from getProfileUpdate: ${response.data}");
+      print("✅ Response from getProfileUpdate ser: ${response.data}");
 
       return StudentProfileResponsdModal.fromJson(response.data);
     } catch (e) {

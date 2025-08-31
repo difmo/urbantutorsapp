@@ -6,6 +6,7 @@ import 'package:urbantutorsapp/models/profile_modals/tutor_profile_request_modal
 import 'package:urbantutorsapp/models/profile_update_response_model.dart';
 import 'package:urbantutorsapp/models/profile_modals/tutor_response_modal.dart';
 import 'package:urbantutorsapp/models/student_update_profile_model.dart';
+import 'package:urbantutorsapp/screens/controllers/masterdata_modal.dart';
 import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
 import 'package:urbantutorsapp/services/profile_update_service.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
@@ -15,7 +16,29 @@ class ProfileUpdateController extends GetxController {
 
   var isLoading = false.obs;
   var studentprofileData = Rxn<StudentProfileDataNew>();
+  var masterData = Rxn<MasterData>();
   var tutorprofileData = Rxn<TutorProfileData>();
+
+  Future<void> fetchMasterData() async {
+    isLoading.value = true;
+    try {
+      final response = await _profileUpdateService.getMaterData();
+      masterData.value = response;
+
+      debugPrint("✅ Master data fetched successfully:");
+    } catch (e) {
+      debugPrint("❌ Error in fetchMasterData: $e");
+      Get.snackbar(
+        'Error',
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
 
   Future<void> fetchProfileForStudent() async {
     isLoading.value = true;

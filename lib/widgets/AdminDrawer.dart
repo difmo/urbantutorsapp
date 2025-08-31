@@ -207,7 +207,7 @@ class AdminDrawer extends StatelessWidget {
               }),
 
               GestureDetector(
-                onTap: () => {StorageService.clear()},
+                onTap: () => StorageService.clear(),
                 child: _drawerItem(Icons.logout, 'Logout', color: Colors.red),
               )
             ],

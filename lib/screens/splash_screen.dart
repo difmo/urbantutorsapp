@@ -94,7 +94,7 @@ class _SplashScreenState extends State<SplashScreen>
           target = profileStatus == null || profileStatus == "pending"
               ? profileStatus == "pending"
                   ? PendingPage()
-                  : ProfileFormScreen()
+                  : TutorProfileFormScreen()
               : TutorDashboard();
           break;
         case '5':
@@ -105,7 +105,7 @@ class _SplashScreenState extends State<SplashScreen>
       }
     } else {
       // No token → go to welcome screen
-      target = const WelcomeScreen();
+      target = const TutorDashboard();
     }
 
     Navigator.pushReplacement(
