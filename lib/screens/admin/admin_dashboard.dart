@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:lottie/lottie.dart';
+
 import 'package:urbantutorsapp/controllers/lead_controller.dart';
 import 'package:urbantutorsapp/screens/admin/CreateLeadScreen.dart' as create;
 import 'package:urbantutorsapp/screens/admin/LeadDetailsScreen.dart' as details;
@@ -12,7 +14,6 @@ import 'package:urbantutorsapp/widgets/AdminDrawer.dart';
 import 'package:urbantutorsapp/widgets/CustomFAB.dart';
 import 'package:urbantutorsapp/widgets/LeadCardWidget.dart';
 import '../../theme/theme_constants.dart';
-import 'package:lottie/lottie.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -25,7 +26,8 @@ class _AdminDashboardState extends State<AdminDashboard>
     with TickerProviderStateMixin {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late final TabController _tabController;
-  final List<String> _tabs = ['All Leads', 'Grabbed', 'Declined'];
+  final List<String> _tabs = const ['All Leads', 'Grabbed', 'Declined'];
+
   final LeadController leadController = Get.put(LeadController());
   int _selectedIndex = -1;
 
@@ -42,28 +44,24 @@ class _AdminDashboardState extends State<AdminDashboard>
     super.dispose();
   }
 
-  void _handleMenuTap(String label) async {
-    print("EHLSDJFSLDF");
+  Future<void> _handleMenuTap(String label) async {
     Navigator.of(context).pop();
     if (label == 'Logout') {
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
       await StorageService.clear();
-
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Logged out successfully')),
-      );
+          const SnackBar(content: Text('Logged out successfully')));
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => SplashScreen()),
-        (route) => false,
+        MaterialPageRoute(builder: (context) => const SplashScreen()),
+        (_) => false,
       );
     } else {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Navigating to $label')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Navigating to $label')));
     }
   }
 
@@ -90,14 +88,12 @@ class _AdminDashboardState extends State<AdminDashboard>
                 ),
               ),
               padding: const EdgeInsets.all(2),
-              child: CircleAvatar(
+              child: const CircleAvatar(
                 backgroundColor: Colors.transparent,
                 radius: 24,
-                child: const Text(
-                  'A',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
-                ),
+                child: Text('A',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ),
             const SizedBox(width: 12),
@@ -118,11 +114,13 @@ class _AdminDashboardState extends State<AdminDashboard>
                   children: [
                     Icon(Icons.analytics, color: accent, size: 16),
                     const SizedBox(width: 4),
-                    const Text('Stats',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600)),
+                    const Text(
+                      "200 coins",
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600),
+                    ),
                   ],
                 ),
               ),
@@ -141,7 +139,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           controller: _tabController,
           indicatorColor: accent,
           labelColor: Colors.white,
-          unselectedLabelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
           tabs: _tabs.map((label) => Tab(text: label)).toList(),
         ),
       ),
@@ -155,20 +153,42 @@ class _AdminDashboardState extends State<AdminDashboard>
               if (leadController.isLoading.value) {
                 return const Center(child: CircularProgressIndicator());
               }
-              if (leadController.studentLeads.isEmpty) {
+
+              final all = leadController.studentLeads;
+
+              // -------- filter per tab (works with numeric or text status) -----
+              List filtered;
+              if (label == 'Grabbed') {
+                filtered = all.where((l) {
+                  final s = (l.status ?? '').toString().toLowerCase();
+                  return s == 'grabbed' || s == '2';
+                }).toList();
+              } else if (label == 'Declined') {
+                filtered = all.where((l) {
+                  final s = (l.status ?? '').toString().toLowerCase();
+                  return s == 'declined' || s == '3';
+                }).toList();
+              } else {
+                filtered = all; // All Leads
+              }
+              // ------------------------------------------------------------------
+
+              if (filtered.isEmpty) {
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Lottie.asset(
                         'assets/icons/animation/empty.json',
-                        width: 250,
+                        width: 220,
                         repeat: true,
                       ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'No leads available',
-                        style: TextStyle(
+                      const SizedBox(height: 12),
+                      Text(
+                        label == 'All Leads'
+                            ? 'No leads available'
+                            : 'No $label yet',
+                        style: const TextStyle(
                             fontSize: 16,
                             color: Colors.black54,
                             fontWeight: FontWeight.bold),
@@ -178,41 +198,25 @@ class _AdminDashboardState extends State<AdminDashboard>
                 );
               }
 
-              final leads = leadController.studentLeads;
-
               return ListView.builder(
                 padding: const EdgeInsets.all(16),
-                itemCount: leads.length,
+                itemCount: filtered.length,
                 itemBuilder: (context, index) {
-                  final lead = leads[index];
+                  final lead = filtered[index];
                   return LeadCardWidget(
-                    studentName: lead.studentName,
-                    mobile: lead.mobile.toString(),
-                    subject: lead.subjectName,
-                    classLevel: lead.courseName,
-                    location: lead.location,
+                    studentName: lead.studentName ?? '—',
+                    mobile: (lead.mobile ?? '').toString(),
+                    subject: lead.subjectName ?? '—',
+                    classLevel: lead.courseName ?? '—',
+                    location: lead.location ?? '—',
                     timing: "NA",
-                    coins: lead.price,
+                    coins: lead.price ?? '0',
                     remarks: lead.remark ?? '',
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => details.LeadDetailsScreen(
-                            studentName: lead.studentName,
-                            mobile: lead.mobile.toString(),
-                            subject: lead.subjectName,
-                            classLevel: lead.courseName,
-                            location: lead.location,
-                            timing: "NA",
-                            coins: lead.price,
-                            remarks: lead.remark ?? '',
-                            name: '',
-                            className: '',
-                            fee: '',
-                            mode: '',
-                            gender: '',
-                          ),
+                          builder: (_) => details.LeadDetailsScreen(lead: lead),
                         ),
                       );
                     },
@@ -226,8 +230,9 @@ class _AdminDashboardState extends State<AdminDashboard>
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: CustomFAB(
         onPressed: () {
-          Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => const create.CreateLeadScreen()));
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const create.CreateLeadScreen()),
+          );
         },
       ),
       bottomNavigationBar: BottomAppBar(
@@ -246,11 +251,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                       ? Colors.lightGreen
                       : const Color(0xFFCACFCC),
                 ),
-                onPressed: () {
-                  setState(() {
-                    _selectedIndex = 2;
-                  });
-                },
+                onPressed: () => setState(() => _selectedIndex = 2),
               ),
               IconButton(
                 icon: Icon(
@@ -260,11 +261,11 @@ class _AdminDashboardState extends State<AdminDashboard>
                       : const Color(0xFFCACFCC),
                 ),
                 onPressed: () {
-                  setState(() {
-                    _selectedIndex = 0;
-                  });
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => AdminHistoryScreen()));
+                  setState(() => _selectedIndex = 0);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => AdminHistoryScreen()),
+                  );
                 },
               ),
             ],

@@ -30,14 +30,14 @@ class LeadCreateController extends GetxController {
       final response = await leadCreateService.createOrUpdateLead(
         name: request.name,
         mobile: request.mobile,
-        boardId: '8',
-        classId: '6',
+        boardId: request.boardId,
+        classId: request.classId,
         location: request.location,
         state: request.state,
         mode: request.mode,
         fee: request.fee,
-        leadId:'1',
-        subjectId:'1',
+        leadId: request.leadId,
+        subjectId: request.subjectId,
         userId: request.userId,
       );
 print(response);

@@ -1,16 +1,19 @@
+// lib/screens/tutor/create_lead_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:urbantutorsapp/controllers/get_classes_controller.dart';
-import 'package:urbantutorsapp/controllers/get_subject_controller.dart';
+
 import 'package:urbantutorsapp/controllers/lead_create_controller.dart';
-import 'package:urbantutorsapp/models/get_classes_model.dart';
-import 'package:urbantutorsapp/models/get_subject_model.dart';
-import 'package:urbantutorsapp/models/lead_create_model_request.dart';
+import 'package:urbantutorsapp/models/lead__model.dart';
+import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
+import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
+import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
-import 'package:urbantutorsapp/widgets/searchable_location_field.dart.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
+import 'package:urbantutorsapp/models/lead_create_model_request.dart';
 
 class CreateLeadScreen extends StatefulWidget {
-  const CreateLeadScreen({super.key});
+  final StudentLead? lead; // <-- if not null, we're editing
+  const CreateLeadScreen({super.key, this.lead});
 
   @override
   State<CreateLeadScreen> createState() => _CreateLeadScreenState();
@@ -18,37 +21,237 @@ class CreateLeadScreen extends StatefulWidget {
 
 class _CreateLeadScreenState extends State<CreateLeadScreen> {
   final _formKey = GlobalKey<FormState>();
-  final LeadCreateController leadCreateController = Get.put(LeadCreateController());
-  final GetClassesController getClassesController = Get.put(GetClassesController());
-  final GetSubjectController getSubjectController = Get.put(GetSubjectController());
 
-  String? location, phone, name, timing, remarks, coinsRequired, fee, tutorGender;
-  String? teachingMode, selectedState, maxHits, selectedSupportAgent;
+  // Controllers (use existing instances if registered)
+  final LeadCreateController _leadCreate =
+      Get.isRegistered<LeadCreateController>()
+          ? Get.find<LeadCreateController>()
+          : Get.put(LeadCreateController());
+  final MasterDataController _md =
+      Get.isRegistered<MasterDataController>()
+          ? Get.find<MasterDataController>()
+          : Get.put(MasterDataController());
+  final LeadMetaController _lead =
+      Get.isRegistered<LeadMetaController>()
+          ? Get.find<LeadMetaController>()
+          : Get.put(LeadMetaController());
+  final LocationController _loc =
+      Get.isRegistered<LocationController>()
+          ? Get.find<LocationController>()
+          : Get.put(LocationController());
 
-  final Map<String, String> boardLeadMap = {
-    "8": "CBSE",
-    "9": "IB",
-    "10": "IGCSE",
-    "11": "ICSE",
-    "12": "ISC",
-    "13": "NIOS"
-  };
-  String? selectedBoardId;
+  // Text fields
+  final nameCtrl = TextEditingController();
+  final phoneCtrl = TextEditingController();
+  final localityCtrl = TextEditingController();
+  final timingCtrl = TextEditingController();
+  final feeCtrl = TextEditingController();
+  final coinsCtrl = TextEditingController();
+  final remarksCtrl = TextEditingController();
+  final maxHitsCtrl = TextEditingController();
 
-  final List<Map<String, String>> supportAgents = [
+  // Dropdown values
+  int? boardId;
+  int? classId;
+  int? subjectId;
+  String? tutorGender;
+  String? teachingMode;
+  String? selectedState;
+  String? selectedSupportAgent;
+
+  bool _submitting = false;
+
+  static const _modes = <String>['Online', 'Offline', 'Hybrid'];
+  static const _genders = <String>['Male', 'Female', 'Any'];
+  static const _states = <String>[
+    "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana",
+    "Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur",
+    "Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu",
+    "Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Delhi"
+  ];
+  final List<Map<String, String>> _supportAgents = const [
     {'name': 'Raj', 'number': '+91 9123456780'},
     {'name': 'Neha', 'number': '+91 9876543210'},
   ];
 
-  ClassData? selectedClass;
-  SubjectData? selectedSubject;
-
   @override
   void initState() {
-    getClassesController.fetchClasses(boardId: 8);
-    getSubjectController.fetchSubjects();
     super.initState();
+    // Ensure master data is present, then hydrate form from lead (if editing).
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (_md.masterData.value == null) {
+        await _md.fetchMasterData();
+      }
+      await _hydrateFromLeadIfEditing();
+    });
   }
+
+  @override
+  void dispose() {
+    nameCtrl.dispose();
+    phoneCtrl.dispose();
+    localityCtrl.dispose();
+    timingCtrl.dispose();
+    feeCtrl.dispose();
+    coinsCtrl.dispose();
+    remarksCtrl.dispose();
+    maxHitsCtrl.dispose();
+    super.dispose();
+  }
+
+  // ---------- Helpers for prefill ----------
+
+  String _norm(String? s) => (s ?? '').trim().toLowerCase();
+
+  T? _firstWhereOrNull<T>(Iterable<T> it, bool Function(T) test) {
+    for (final e in it) {
+      if (test(e)) return e;
+    }
+    return null;
+  }
+
+  Future<void> _hydrateFromLeadIfEditing() async {
+    final l = widget.lead;
+    if (l == null) return;
+
+    // 1) Simple text fields
+    nameCtrl.text     = l.studentName ?? '';
+    phoneCtrl.text    = (l.mobile ?? '').toString();
+    localityCtrl.text = l.location ?? '';
+    remarksCtrl.text  = l.remark ?? '';
+    coinsCtrl.text    = (l.price ?? '').toString();
+    // If you get timing / fee in your model, prefill here:
+    // timingCtrl.text = l.timing ?? '';
+    // feeCtrl.text    = l.fee ?? '';
+    selectedState  = l.state;
+    teachingMode   = l.mode; // "Online" / "Offline" / "Hybrid"
+    // Some payloads use "type_of_teacher" — your model likely mapped to camelCase:
+    // fallback to 'Any' if empty
+    final g = (l.typeOfTeacher?.trim().isNotEmpty ?? false) ? l.typeOfTeacher!.trim() : 'Any';
+    tutorGender = _genders.contains(g) ? g : 'Any';
+
+    setState(() {});
+
+    // 2) Resolve Board → Class → Subject by **name**, then set their ids.
+    final boards = _md.masterData.value?.data?.boardLead ?? [];
+
+    final boardMatch = _firstWhereOrNull(
+      boards,
+      (b) => _norm(b.boardLabel?.toString()) == _norm(l.boardName),
+    );
+
+    if (boardMatch != null) {
+      boardId = boardMatch.boardId;
+      setState(() {});
+      await _lead.loadClasses(boardId!);
+
+      final classMatch = _firstWhereOrNull(
+        _lead.classes,
+        (c) => _norm(c.courseName) == _norm(l.courseName),
+      );
+
+      if (classMatch != null) {
+        classId = classMatch.courseId;
+        setState(() {});
+        await _lead.loadSubjects(classId: classId!, boardId: boardId!);
+
+        final subjectMatch = _firstWhereOrNull(
+          _lead.subjects,
+          (s) => _norm(s.subjectName) == _norm(l.subjectName),
+        );
+
+        if (subjectMatch != null) {
+          subjectId = subjectMatch.subjectId;
+          setState(() {});
+        }
+      }
+    }
+  }
+
+  // ---------- UI helpers ----------
+
+  InputDecoration _dec(String label) => InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        filled: true,
+        fillColor: Colors.grey.shade100,
+      );
+
+  void _toast(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  // ---------- Submit ----------
+
+  Future<void> _submitForm() async {
+    FocusScope.of(context).unfocus();
+
+    if (!_formKey.currentState!.validate()) return;
+
+    if (boardId == null) return _toast('Please select a Board');
+    if (classId == null) return _toast('Please select a Class');
+    if (subjectId == null) return _toast('Please select a Subject');
+
+    final subjectValid = _lead.subjects.any((s) => s.subjectId == subjectId);
+    if (!subjectValid) {
+      return _toast('Selected subject is not valid for the chosen Board/Class');
+    }
+
+    final locText = localityCtrl.text.trim();
+    if (locText.isEmpty) return _toast('Please enter your Locality');
+
+    if (teachingMode == null) return _toast('Please select Teaching Mode');
+    if (selectedState == null) return _toast('Please select State');
+
+    final phoneOk = RegExp(r'^\d{10}$').hasMatch(phoneCtrl.text.trim());
+    if (!phoneOk) return _toast('Enter a valid 10-digit mobile number');
+
+    final userId = await StorageService.getUserId();
+    if (userId == null) return _toast('User not found. Please login again.');
+
+    final req = LeadCreateRequest(
+      name: nameCtrl.text.trim(),
+      mobile: phoneCtrl.text.trim(),
+      boardId: boardId!.toString(),
+      classId: classId!.toString(),
+      subjectId: subjectId!.toString(),
+      location: locText,
+      state: selectedState ?? '',
+      mode: teachingMode ?? '',
+      fee: feeCtrl.text.trim(),
+      userId: userId,
+      tutorGender: tutorGender ?? 'Any',
+      maxHits: maxHitsCtrl.text.trim(),
+      supportAgent: selectedSupportAgent ?? '',
+      // IMPORTANT: pass leadId when editing so backend updates the same lead
+      leadId: widget.lead?.id?.toString() ?? '',
+    );
+
+    if (_submitting) return;
+    setState(() => _submitting = true);
+
+    try {
+      await _leadCreate.createOrUpdateLead(req);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(widget.lead == null
+              ? 'Lead submitted successfully'
+              : 'Lead updated successfully'),
+        ),
+      );
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  // ---------- Build ----------
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +260,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: primary,
-        title: const Text('Create New Lead'),
+        title: Text(widget.lead == null ? 'Create New Lead' : 'Edit Lead'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -66,107 +269,320 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
             key: _formKey,
             child: Column(
               children: [
-                _sectionTitle("Student Details"),
-                _buildTextField('Student/Parent Name', (val) => name = val),
-                const SizedBox(height: 16),
-                _buildTextField('Mobile Number', (val) => phone = val, keyboardType: TextInputType.phone, maxLength: 10),
-                const SizedBox(height: 16),
-                SearchableLocationField(
-                  suggestions: ['Delhi', 'Mumbai', 'Kolkata', 'Bangalore', 'Chennai'],
-                  onLocationSelected: (loc) => location = loc,
+                _sectionTitle('Student Details'),
+
+                TextFormField(
+                  controller: nameCtrl,
+                  decoration: _dec('Student/Parent Name'),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: phoneCtrl,
+                  decoration: _dec('Mobile Number'),
+                  keyboardType: TextInputType.phone,
+                  maxLength: 10,
+                  validator: (v) =>
+                      (v == null || !RegExp(r'^\d{10}$').hasMatch(v))
+                          ? 'Enter 10-digit number'
+                          : null,
+                ),
+                const SizedBox(height: 16),
+
+                // Locality with server-backed autocomplete
+                Obx(() {
+                  final isLoading = _loc.isSearching.value;
+                  final opts = _loc.suggestions;
+
+                  return Autocomplete<String>(
+                    optionsBuilder: (TextEditingValue tev) {
+                      final q = tev.text.trim();
+                      if (q.isEmpty) return const Iterable<String>.empty();
+                      return opts;
+                    },
+                    onSelected: (val) {
+                      localityCtrl.text = val;
+                      _loc.onQueryChanged('');
+                    },
+                    fieldViewBuilder:
+                        (context, textCtrl, focusNode, onFieldSubmitted) {
+                      if (textCtrl.text != localityCtrl.text) {
+                        textCtrl.text = localityCtrl.text;
+                        textCtrl.selection = TextSelection.fromPosition(
+                          TextPosition(offset: textCtrl.text.length),
+                        );
+                      }
+                      textCtrl.addListener(() {
+                        final q = textCtrl.text;
+                        if (localityCtrl.text != q) {
+                          localityCtrl.text = q;
+                        }
+                        _loc.onQueryChanged(q);
+                      });
+
+                      return TextFormField(
+                        controller: textCtrl,
+                        focusNode: focusNode,
+                        decoration: _dec('Locality').copyWith(
+                          hintText: 'Type city/area (e.g., lko)…',
+                          suffixIcon: isLoading
+                              ? const Padding(
+                                  padding: EdgeInsets.all(10),
+                                  child: SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                )
+                              : const Icon(Icons.location_on_outlined),
+                        ),
+                        validator: (v) =>
+                            (v == null || v.trim().isEmpty) ? 'Required' : null,
+                        onFieldSubmitted: (_) => onFieldSubmitted(),
+                      );
+                    },
+                    optionsViewBuilder: (context, onSelected, options) {
+                      final list = options.toList();
+                      return Align(
+                        alignment: Alignment.topLeft,
+                        child: Material(
+                          elevation: 4,
+                          borderRadius: BorderRadius.circular(8),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: 280,
+                              maxWidth:
+                                  MediaQuery.of(context).size.width - 32,
+                            ),
+                            child: ListView.separated(
+                              padding: EdgeInsets.zero,
+                              itemCount: list.length,
+                              separatorBuilder: (_, __) =>
+                                  const Divider(height: 1),
+                              itemBuilder: (_, i) => ListTile(
+                                dense: true,
+                                title: Text(list[i]),
+                                onTap: () => onSelected(list[i]),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                }),
                 const SizedBox(height: 24),
-                _sectionTitle("Lead Info"),
+
+                _sectionTitle('Lead Info'),
+
+                // BOARD
+                Obx(() {
+                  final boards =
+                      _md.masterData.value?.data?.boardLead ?? [];
+                  return DropdownButtonFormField<int>(
+                    isExpanded: true,
+                    value: boardId,
+                    decoration: _dec('Board'),
+                    items: boards
+                        .map((b) => DropdownMenuItem<int>(
+                              value: b.boardId,
+                              child: Text(b.boardLabel?.toString() ?? ''),
+                            ))
+                        .toList(),
+                    onChanged: (val) async {
+                      setState(() {
+                        boardId = val;
+                        classId = null;
+                        subjectId = null;
+                      });
+                      if (val != null) {
+                        await _lead.loadClasses(val);
+                      }
+                    },
+                    validator: (v) => v == null ? 'Required' : null,
+                  );
+                }),
+                const SizedBox(height: 16),
+
+                // CLASS
+                Obx(() {
+                  final classes = _lead.classes;
+                  final fetching = _lead.isFetchingClasses.value;
+                  return DropdownButtonFormField<int>(
+                    isExpanded: true,
+                    value: classId,
+                    decoration: _dec('Class').copyWith(
+                      suffixIcon: fetching
+                          ? const Padding(
+                              padding: EdgeInsets.all(10),
+                              child: SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            )
+                          : null,
+                    ),
+                    items: classes
+                        .map((c) => DropdownMenuItem<int>(
+                              value: c.courseId,
+                              child: Text(c.courseName),
+                            ))
+                        .toList(),
+                    onChanged: (boardId == null)
+                        ? null
+                        : (val) async {
+                            setState(() {
+                              classId = val;
+                              subjectId = null;
+                            });
+                            if (val != null && boardId != null) {
+                              await _lead.loadSubjects(
+                                  classId: val, boardId: boardId!);
+                            }
+                          },
+                    validator: (v) => v == null ? 'Required' : null,
+                  );
+                }),
+                const SizedBox(height: 16),
+
+                // SUBJECT
+                Obx(() {
+                  final subjects = _lead.subjects;
+                  final fetching = _lead.isFetchingSubjects.value;
+                  return DropdownButtonFormField<int>(
+                    isExpanded: true,
+                    value: subjectId,
+                    decoration: _dec('Subject').copyWith(
+                      suffixIcon: fetching
+                          ? const Padding(
+                              padding: EdgeInsets.all(10),
+                              child: SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            )
+                          : null,
+                    ),
+                    items: subjects
+                        .map((s) => DropdownMenuItem<int>(
+                              value: s.subjectId,
+                              child: Text(s.subjectName),
+                            ))
+                        .toList(),
+                    onChanged: (boardId == null || classId == null)
+                        ? null
+                        : (val) => setState(() => subjectId = val),
+                    validator: (v) => v == null ? 'Required' : null,
+                  );
+                }),
+                const SizedBox(height: 16),
+
                 DropdownButtonFormField<String>(
-                  value: selectedBoardId,
-                  hint: const Text('Select Board', style: TextStyle(color: Color(0xFF9B9B9B))),
                   isExpanded: true,
-                  decoration: _dropdownDecoration(),
-                  items: boardLeadMap.entries.map((entry) {
-                    return DropdownMenuItem<String>(
-                      value: entry.key,
-                      child: Text(entry.value),
-                    );
-                  }).toList(),
-                  onChanged: (val) => setState(() => selectedBoardId = val),
-                  validator: (val) => val == null ? 'Please select Board' : null,
-                ),
-                const SizedBox(height: 16),
-                _dropdownField(
-                  label: 'Tutor Gender',
                   value: tutorGender,
-                  items: ['Male', 'Female', 'Any'],
-                  onChanged: (val) => setState(() => tutorGender = val),
+                  decoration: _dec('Tutor Gender'),
+                  items: _genders
+                      .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                      .toList(),
+                  onChanged: (v) => setState(() => tutorGender = v),
                 ),
                 const SizedBox(height: 16),
-                _dropdownField(
-                  label: 'Teaching Mode',
+
+                DropdownButtonFormField<String>(
+                  isExpanded: true,
                   value: teachingMode,
-                  items: ['Online', 'Offline', 'Hybrid'],
-                  onChanged: (val) => setState(() => teachingMode = val),
+                  decoration: _dec('Teaching Mode'),
+                  items: _modes
+                      .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                      .toList(),
+                  onChanged: (v) => setState(() => teachingMode = v),
+                  validator: (v) => v == null ? 'Required' : null,
                 ),
                 const SizedBox(height: 16),
-                _dropdownField(
-                  label: 'Select State',
+
+                DropdownButtonFormField<String>(
+                  isExpanded: true,
                   value: selectedState,
-                  items: ['Uttar Pradesh', 'Delhi', 'Maharashtra', 'Bihar', 'Tamil Nadu'],
-                  onChanged: (val) => setState(() => selectedState = val),
+                  decoration: _dec('State'),
+                  items: _states
+                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                      .toList(),
+                  onChanged: (v) => setState(() => selectedState = v),
+                  validator: (v) => v == null ? 'Required' : null,
                 ),
                 const SizedBox(height: 16),
-                _buildTextField('Max Hits', (val) => maxHits = val, keyboardType: TextInputType.number),
+
+                TextFormField(
+                  controller: maxHitsCtrl,
+                  decoration: _dec('Max Hits'),
+                  keyboardType: TextInputType.number,
+                ),
                 const SizedBox(height: 24),
-                _sectionTitle("Class & Subject"),
-                Obx(() {
-                  return _buildDropdownField1<ClassData>(
-                    label: 'Select Class',
-                    items: getClassesController.classList,
-                    selectedItem: selectedClass,
-                    itemLabel: (item) => item.className,
-                    onChanged: (val) => setState(() => selectedClass = val),
-                  );
-                }),
-                const SizedBox(height: 10),
-                Obx(() {
-                  return _buildDropdownField1<SubjectData>(
-                    label: 'Select Subject',
-                    items: getSubjectController.subjectList,
-                    selectedItem: selectedSubject,
-                    itemLabel: (item) => item.subjectName,
-                    onChanged: (val) => setState(() => selectedSubject = val),
-                  );
-                }),
+
+                _sectionTitle('Class & Subject'),
                 const SizedBox(height: 24),
-                _sectionTitle("Session Info"),
-                _buildTextField('Preferred Timing', (val) => timing = val),
+
+                _sectionTitle('Session Info'),
+                TextFormField(
+                  controller: timingCtrl,
+                  decoration: _dec('Preferred Timing'),
+                ),
                 const SizedBox(height: 16),
-                _buildTextField('Fee (₹/Hrs)', (val) => fee = val, keyboardType: TextInputType.number),
+
+                TextFormField(
+                  controller: feeCtrl,
+                  decoration: _dec('Fee (₹/Hrs)'),
+                  keyboardType: TextInputType.number,
+                ),
                 const SizedBox(height: 16),
-                _buildTextField('Required Coins', (val) => coinsRequired = val, keyboardType: TextInputType.number),
+
+                TextFormField(
+                  controller: coinsCtrl,
+                  decoration: _dec('Required Coins'),
+                  keyboardType: TextInputType.number,
+                ),
                 const SizedBox(height: 16),
-                _buildTextField('Remarks / Notes', (val) => remarks = val, maxLines: 3),
-                const SizedBox(height: 32),
-                Text('Select Support Agent', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: primary)),
+
+                TextFormField(
+                  controller: remarksCtrl,
+                  decoration: _dec('Remarks / Notes'),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 24),
+
+                _sectionTitle('Select Support Agent'),
                 Column(
-                  children: supportAgents.map((agent) {
+                  children: _supportAgents.map((agent) {
                     final display = '${agent['name']} - ${agent['number']}';
                     return RadioListTile<String>(
                       title: Text(display),
                       value: agent['number']!,
                       groupValue: selectedSupportAgent,
-                      onChanged: (val) => setState(() => selectedSupportAgent = val),
+                      onChanged: (v) => setState(() => selectedSupportAgent = v),
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
+
                 SafeArea(
-                  bottom: true,
-                  child: ElevatedButton.icon(
-                    onPressed: _submitForm,
-                    
-                    label: const Text('Submit Lead'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primary,
-                      minimumSize: const Size.fromHeight(48),
+                  top: false,
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _submitting ? null : _submitForm,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryColor,
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                      child: Text(_submitting
+                          ? (widget.lead == null ? 'Submitting…' : 'Updating…')
+                          : (widget.lead == null ? 'Submit Lead' : 'Update Lead')),
                     ),
                   ),
                 ),
@@ -178,127 +594,19 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
     );
   }
 
-  InputDecoration _dropdownDecoration() {
-    return InputDecoration(
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-      filled: true,
-      fillColor: Colors.grey.shade100,
-    );
-  }
-
-  Widget _dropdownField({
-    required String label,
-    required String? value,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return DropdownButtonFormField<String>(
-      value: value,
-      hint: Text(label, style: const TextStyle(color: Color(0xFF9B9B9B))),
-      isExpanded: true,
-      decoration: _dropdownDecoration(),
-      items: items.map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
-      onChanged: onChanged,
-      validator: (val) => val == null ? 'Please select $label' : null,
-    );
-  }
-
-  Widget _buildDropdownField1<T>({
-    required String label,
-    required List<T> items,
-    required T? selectedItem,
-    required String Function(T) itemLabel,
-    required ValueChanged<T?> onChanged,
-  }) {
-    return DropdownButtonFormField<T>(
-      value: selectedItem,
-      hint: Text(label, style: const TextStyle(color: Color(0xFF9B9B9B))),
-      isExpanded: true,
-      items: items.map((item) => DropdownMenuItem<T>(
-        value: item,
-        child: Text(itemLabel(item)),
-      )).toList(),
-      onChanged: onChanged,
-      validator: (value) => value == null ? 'Please select $label' : null,
-    );
-  }
-
-  Widget _buildTextField(String label, Function(String) onSaved,
-      {TextInputType keyboardType = TextInputType.text, int maxLines = 1, int? maxLength}) {
-    return TextFormField(
-      keyboardType: keyboardType,
-      maxLength: maxLength,
-      maxLines: maxLines,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: Color(0xFF9B9B9B)),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-        filled: true,
-        fillColor: Colors.grey.shade100,
-        counterText: '',
-      ),
-      validator: (value) => value == null || value.isEmpty ? 'Enter $label' : null,
-      onChanged: onSaved,
-    );
-  }
-
-  Widget _sectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppColors.primaryColor,
-              fontSize: 16,
+  Widget _sectionTitle(String title) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppColors.primaryColor,
+                fontSize: 16,
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _submitForm() {
-    if (_formKey.currentState!.validate()) {
-      if (selectedClass == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select a Class')),
-        );
-        return;
-      }
-
-      print("==== Submitting Lead Data ====");
-      print("Selected Class ID: ${selectedClass?.classId} (${selectedClass?.classId.runtimeType})");
-      print("Selected Board ID: $selectedBoardId");
-      print("Selected Subject ID: ${selectedSubject?.subjectId}");
-
-      final data = LeadCreateRequest(
-        name: name ?? "",
-        mobile: phone ?? "",
-        boardId: selectedBoardId ?? "",
-        classId: selectedClass?.classId.toString() ?? "",
-        location: location ?? "",
-        state: selectedState ?? "",
-        mode: teachingMode ?? "",
-        fee: fee ?? "",
-        subjectId: selectedSubject?.subjectId.toString() ?? "",
-        userId: "7",
-        tutorGender: tutorGender ?? "",
-        maxHits: maxHits ?? "",
-        supportAgent: selectedSupportAgent ?? "",
-        leadId: '',
+          ],
+        ),
       );
-
-      print("Final classId in data: ${data.classId} (${data.classId.runtimeType})");
-
-      leadCreateController.createOrUpdateLead(data);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lead submitted successfully')),
-      );
-      Navigator.pop(context, true);
-    }
-  }
 }

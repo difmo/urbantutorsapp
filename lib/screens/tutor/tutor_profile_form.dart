@@ -144,6 +144,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
   }
 
   Future<void> onSavePressed() async {
+        String? userIdd = await StorageService.getUserId();
     // Basic guard
     if (selectedBoardId == null) {
       Get.snackbar('Missing info', 'Please select a Board');
@@ -165,7 +166,8 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
       final backBase64 = await _fileToBase64(_backIdImage) ?? '';
 
       final request = StudentProfileUpdateRequest(
-        userId: 146, // TODO: replace with actual logged-in user id
+        userId:
+            int.parse(userIdd!), // TODO: replace with actual logged-in user id
         boardId: selectedBoardId!,
         courseId: selectedClassId!, // mapping "Class" -> courseId
         subjectId: selectedSubjectId!,
@@ -197,7 +199,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
     return Scaffold(
         appBar: AppBar(
-          title: const Text("Student Profile"),
+          title: const Text("Profile"),
           backgroundColor: Theme.of(context).primaryColor,
         ),
         body: Stack(children: [

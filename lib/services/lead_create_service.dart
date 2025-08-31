@@ -31,7 +31,7 @@ class LeadCreateService {
         'state': state,
         'mode': mode,
         'fee': fee,
-        // 'lead_id': leadId, // Uncomment if needed
+        'lead_id': leadId, // Uncomment if needed
         'subject_id': subjectId,
         'user_id': userId,
       });

@@ -6,14 +6,14 @@ import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
 import 'package:urbantutorsapp/utils/app_log.dart';
 
-class NotePage extends StatefulWidget {
-  const NotePage({super.key});
+class NotesTutor extends StatefulWidget {
+  const NotesTutor({super.key});
 
   @override
-  State<NotePage> createState() => _NotePageState();
+  State<NotesTutor> createState() => _NotesTutorState();
 }
 
-class _NotePageState extends State<NotePage> {
+class _NotesTutorState extends State<NotesTutor> {
   final _formKey = GlobalKey<FormState>();
 
   // Text controllers
