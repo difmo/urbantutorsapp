@@ -137,7 +137,6 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
     );
   }
 
-
   Future<String?> _fileToBase64(XFile? file) async {
     if (file == null) return null;
     final bytes = await File(file.path).readAsBytes();
