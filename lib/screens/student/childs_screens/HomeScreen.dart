@@ -13,7 +13,7 @@ class HomeScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              _featureTile(context, 'Notes', Icons.note, primaryColor),
+              _featureTile(context, 'Notess', Icons.note, primaryColor),
               SizedBox(width: 16),
               _featureTile(context, 'PYQ\'s', Icons.assignment_turned_in, primaryColor),
             ],

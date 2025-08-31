@@ -1,76 +1,80 @@
 import 'package:flutter/material.dart';
+import 'package:urbantutorsapp/theme/theme_constants.dart';
 
 class UpgradeScreen extends StatelessWidget {
   const UpgradeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).primaryColor;
+        final primaryColor = AppColors.primaryColor;
+    final accentColor = AppColors.accentColor;
 
-    return Scaffold(
+    return SafeArea(
+      child: Scaffold(
+        
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              const Text(
+                "Choose Your Plan",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                "Unlock premium features and get more learning benefits!",
+                style: TextStyle(fontSize: 14, color: Colors.black54),
+              ),
+              const SizedBox(height: 20),
       
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            const Text(
-              "Choose Your Plan",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              "Unlock premium features and get more learning benefits!",
-              style: TextStyle(fontSize: 14, color: Colors.black54),
-            ),
-            const SizedBox(height: 20),
-
-            // Plan Cards
-            _buildPlanCard(
-              context,
-              title: 'Basic Plan',
-              price: '₹199/month',
-              coins: '100 Coins',
-              features: [
-                'Access PDF Courses',
-                'Private Chat Support',
-                'Limited Live Classes',
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildPlanCard(
-              context,
-              title: 'Premium Plan',
-              price: '₹499/month',
-              coins: 'Unlimited Coins',
-              features: [
-                'All Basic Plan Features',
-                'Unlimited Live Classes',
-                '1-on-1 Private Tutor Sessions',
-                'Priority Support',
-              ],
-              isPopular: true,
-            ),
-            const SizedBox(height: 24),
-
-            // One-time Purchase
-            const Text(
-              "Buy Coins",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _coinTile(context, '₹49', '50 Coins'),
-                _coinTile(context, '₹99', '120 Coins'),
-                _coinTile(context, '₹199', '300 Coins'),
-                _coinTile(context, '₹499', '1000 Coins'),
-              ],
-            )
-          ],
+              // Plan Cards
+              _buildPlanCard(
+                context,
+                title: 'Basic Plan',
+                price: '₹199/month',
+                coins: '100 Coins',
+                features: [
+                  'Access PDF Courses',
+                  'Private Chat Support',
+                  'Limited Live Classes',
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildPlanCard(
+                context,
+                title: 'Premium Plan',
+                price: '₹499/month',
+                coins: 'Unlimited Coins',
+                features: [
+                  'All Basic Plan Features',
+                  'Unlimited Live Classes',
+                  '1-on-1 Private Tutor Sessions',
+                  'Priority Support',
+                ],
+                isPopular: true,
+              ),
+              const SizedBox(height: 24),
+      
+              // One-time Purchase
+              const Text(
+                "Buy Coins",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  _coinTile(context, '₹49', '50 Coins'),
+                  _coinTile(context, '₹99', '120 Coins'),
+                  _coinTile(context, '₹199', '300 Coins'),
+                  _coinTile(context, '₹499', '1000 Coins'),
+                ],
+              )
+            ],
+          ),
         ),
       ),
     );

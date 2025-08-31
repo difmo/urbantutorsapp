@@ -1,63 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/enquiry_details_page_tutor.dart';
-import 'package:urbantutorsapp/screens/tutor/notes_tutor.dart';
-import 'package:urbantutorsapp/screens/tutor/tutor_chat_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
-import 'package:urbantutorsapp/screens/tutor/tutor_courses_screen.dart';
-import 'package:urbantutorsapp/screens/tutor/tutor_pyq_screen.dart';
-import 'package:urbantutorsapp/screens/tutor/tutor_support_screen.dart';
-
-import 'package:urbantutorsapp/utils/storage_helper.dart';
-import 'package:urbantutorsapp/widgets/CustomTeacherNavBar.dart';
 import 'package:urbantutorsapp/widgets/TutorDrawer.dart';
-import '../../theme/theme_constants.dart';
+import 'package:urbantutorsapp/theme/theme_constants.dart';
+
+import 'package:urbantutorsapp/controllers/tutor_leads_controller.dart';
+import 'package:urbantutorsapp/models/tutor_lead.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class TutorDashboard extends StatefulWidget {
   const TutorDashboard({super.key});
+
   @override
   State<TutorDashboard> createState() => _TutorDashboardState();
 }
 
 class _TutorDashboardState extends State<TutorDashboard> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  int _currentIndex = 0;
+  final TutorLeadsController _leads = Get.put(TutorLeadsController());
 
-  final List<Widget> _screens = [
-    const DashboardHomeTab(),
-    const NotePage(),
-    const TutorPYQScreen(),
-    CoursesScreen(),
-    const TutorChatScreen(),
-    const TutorSupportScreen(),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey,
-      body: _screens[_currentIndex],
-      bottomNavigationBar: CustomTeacherNavBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-      ),
-    );
-  }
-}
-
-class DashboardHomeTab extends StatefulWidget {
-  const DashboardHomeTab({super.key});
-
-  @override
-  State<DashboardHomeTab> createState() => _DashboardHomeTabState();
-}
-
-class _DashboardHomeTabState extends State<DashboardHomeTab> {
   RangeValues _currentRangeValues = const RangeValues(1, 10);
 
   @override
@@ -177,181 +141,299 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
             ],
           ),
         ),
-        body: TabBarView(
+        body: Obx(() {
+          if (_leads.isLoading.value) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (_leads.error.isNotEmpty) {
+            return _ErrorRetry(
+              message: _leads.error.value,
+              onRetry: _leads.load,
+            );
+          }
+
+          return TabBarView(
+            children: [
+              _nearbyTab(context), // Offline only
+              _enquiryTab(context), // All leads
+              _contactedTab(context), // Marked as contacted
+            ],
+          );
+        }),
+      ),
+    );
+  }
+
+  // ---------- Nearby
+  Widget _nearbyTab(BuildContext context) {
+    final items = _leads.nearby;
+    return RefreshIndicator(
+      onRefresh: _leads.refreshNow,
+      child: ListView(
+        padding: const EdgeInsets.only(top: 12),
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Selected Range: ${_currentRangeValues.start.round()} km - ${_currentRangeValues.end.round()} km",
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                RangeSlider(
+                  values: _currentRangeValues,
+                  min: 1,
+                  max: 50,
+                  divisions: 49,
+                  labels: RangeLabels(
+                    "${_currentRangeValues.start.round()} km",
+                    "${_currentRangeValues.end.round()} km",
+                  ),
+                  onChanged: (RangeValues values) {
+                    setState(() {
+                      _currentRangeValues = values;
+                    });
+                  },
+                  activeColor: AppColors.accentColor,
+                  inactiveColor: Colors.grey[300],
+                ),
+              ],
+            ),
+          ),
+          if (items.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: Text('No nearby (offline) leads found')),
+            ),
+          ...items.map((e) => _LeadCard(
+                lead: e,
+                isContacted: _leads.contactedIds.contains(e.id),
+                onContactToggle: () => _leads.toggleContacted(e.id),
+                onReadMore: () => _openDetails(e),
+              )),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  // ---------- Enquiry (all)
+  Widget _enquiryTab(BuildContext context) {
+    final items = _leads.enquiries;
+    return RefreshIndicator(
+      onRefresh: _leads.refreshNow,
+      child: items.isEmpty
+          ? const Center(child: Text('No leads yet'))
+          : ListView.builder(
+              itemCount: items.length,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemBuilder: (_, i) {
+                final e = items[i];
+                return _LeadCard(
+                  lead: e,
+                  isContacted: _leads.contactedIds.contains(e.id),
+                  onContactToggle: () => _leads.toggleContacted(e.id),
+                  onReadMore: () => _openDetails(e),
+                );
+              },
+            ),
+    );
+  }
+
+  // ---------- Contacted (local toggle)
+  Widget _contactedTab(BuildContext context) {
+    final items = _leads.contacted;
+    return RefreshIndicator(
+      onRefresh: _leads.refreshNow,
+      child: items.isEmpty
+          ? const Center(child: Text('No contacted leads yet'))
+          : ListView.builder(
+              itemCount: items.length,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemBuilder: (_, i) {
+                final e = items[i];
+                return _LeadCard(
+                  lead: e,
+                  isContacted: true,
+                  onContactToggle: () => _leads.toggleContacted(e.id),
+                  onReadMore: () => _openDetails(e),
+                );
+              },
+            ),
+    );
+  }
+
+  void _openDetails(TutorLead e) {
+    // Navigator.push(
+    //   context,
+    //   MaterialPageRoute(
+    //     builder: (_) => LeadDetailPage(enquiry: e.toMap()), // your page expects a Map
+    //   ),
+    // );
+  }
+}
+
+class _ErrorRetry extends StatelessWidget {
+  const _ErrorRetry({required this.message, required this.onRetry});
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            _buildNearbyTab(),
-            _buildEnquiryTab(),
-            const Center(child: Text("No Data Available")),
+            const Icon(Icons.error_outline, color: Colors.redAccent, size: 40),
+            const SizedBox(height: 8),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 44,
+              child: ElevatedButton(
+                onPressed: onRetry,
+                child: const Text('Retry'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LeadCard extends StatelessWidget {
+  const _LeadCard({
+    required this.lead,
+    required this.isContacted,
+    required this.onContactToggle,
+    required this.onReadMore,
+  });
+
+  final TutorLead lead;
+  final bool isContacted;
+  final VoidCallback onContactToggle;
+  final VoidCallback onReadMore;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // header row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  lead.studentName.isEmpty
+                      ? 'Lead #${lead.id}'
+                      : lead.studentName,
+                  style: const TextStyle(
+                    color: AppColors.accentColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  lead.createdAt != null ? _fmtDate(lead.createdAt!) : '',
+                  style: const TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+
+            _kv(Icons.school, 'Class', lead.courseName),
+            const SizedBox(height: 4),
+            _kv(Icons.book, 'Subject', lead.subjectName),
+            const SizedBox(height: 4),
+            _kv(Icons.location_on, 'Location', lead.location),
+            const SizedBox(height: 4),
+            _kv(Icons.computer, 'Mode', lead.mode),
+            const SizedBox(height: 6),
+
+            Row(
+              children: [
+                const Icon(Icons.attach_money,
+                    size: 18, color: AppColors.accentColor),
+                const SizedBox(width: 4),
+                Text('₹${lead.price}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textColor)),
+                const Spacer(),
+
+                // Contacted toggle (kept compact to avoid infinite width)
+                OutlinedButton.icon(
+                  onPressed: onContactToggle,
+                  icon: Icon(
+                      isContacted ? Icons.check_circle : Icons.circle_outlined,
+                      size: 18),
+                  label: Text(isContacted ? 'Contacted' : 'Mark Contacted'),
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    side: BorderSide(
+                        color:
+                            isContacted ? Colors.green : Colors.blue.shade200),
+                    foregroundColor:
+                        isContacted ? Colors.green : AppColors.primaryColor,
+                    minimumSize: const Size(0, 36),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // Read more
+                ElevatedButton(
+                  onPressed: onReadMore,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, 36),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                  child: const Text('Read More'),
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildNearbyTab() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Selected Range: ${_currentRangeValues.start.round()} km - ${_currentRangeValues.end.round()} km",
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-          RangeSlider(
-            values: _currentRangeValues,
-            min: 1,
-            max: 50,
-            divisions: 49,
-            labels: RangeLabels(
-              "${_currentRangeValues.start.round()} km",
-              "${_currentRangeValues.end.round()} km",
-            ),
-            onChanged: (RangeValues values) {
-              setState(() {
-                _currentRangeValues = values;
-              });
-            },
-            activeColor: AppColors.accentColor,
-            inactiveColor: Colors.grey[300],
-          ),
-        ],
+  static Widget _kv(IconData icon, String k, String v) {
+    return Row(children: [
+      Icon(icon, color: AppColors.accentColor, size: 18),
+      const SizedBox(width: 6),
+      Expanded(
+        child:
+            Text('$k: $v', style: const TextStyle(color: AppColors.textColor)),
       ),
-    );
+    ]);
   }
 
-  Widget _buildEnquiryTab() {
-    final enquiries = [
-      {
-        "lead": "489",
-        "date": "Aug 26, 2025",
-        "class": "12th NIOS",
-        "subject": "Biology, English",
-        "location": "Pi 2, Greater Noida",
-        "mode": "Offline",
-        "fee": "₹700/Hrs",
-      },
-      {
-        "lead": "488",
-        "date": "Aug 26, 2025",
-        "class": "6th CBSE",
-        "subject": "All Subjects",
-        "location": "Amrapali Dream Valley, Greater Noida",
-        "mode": "Offline",
-        "fee": "₹6K/Month",
-      },
+  static String _fmtDate(DateTime d) {
+    // simple dd MMM yyyy
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
-
-    return Container(
-      color: AppColors.backgroundColor,
-      child: ListView.builder(
-        itemCount: enquiries.length,
-        itemBuilder: (context, index) {
-          final item = enquiries[index];
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 3,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text("Lead No: ${item["lead"]}",
-                          style: const TextStyle(
-                              color: AppColors.accentColor,
-                              fontWeight: FontWeight.bold)),
-                      Text(item["date"]!,
-                          style: const TextStyle(color: Colors.grey)),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Row(children: [
-                    const Icon(Icons.school,
-                        color: AppColors.accentColor, size: 18),
-                    const SizedBox(width: 6),
-                    Expanded(
-                        child: Text("Class: ${item["class"]}",
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textColor))),
-                  ]),
-                  const SizedBox(height: 4),
-                  Row(children: [
-                    const Icon(Icons.book,
-                        color: AppColors.accentColor, size: 18),
-                    const SizedBox(width: 6),
-                    Expanded(
-                        child: Text("Subject: ${item["subject"]}",
-                            style:
-                                const TextStyle(color: AppColors.textColor))),
-                  ]),
-                  const SizedBox(height: 4),
-                  Row(children: [
-                    const Icon(Icons.location_on,
-                        color: AppColors.accentColor, size: 18),
-                    const SizedBox(width: 6),
-                    Expanded(
-                        child: Text("Location: ${item["location"]}",
-                            style:
-                                const TextStyle(color: AppColors.textColor))),
-                  ]),
-                  const SizedBox(height: 4),
-                  Row(children: [
-                    const Icon(Icons.computer,
-                        color: AppColors.accentColor, size: 18),
-                    const SizedBox(width: 6),
-                    Expanded(
-                        child: Text("Mode: ${item["mode"]}",
-                            style:
-                                const TextStyle(color: AppColors.textColor))),
-                  ]),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(Icons.attach_money,
-                          size: 18, color: AppColors.accentColor),
-                      const SizedBox(width: 4),
-                      Text(item["fee"]!,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textColor)),
-                      const Spacer(),
-                      InkWell(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => LeadDetailPage(enquiry: item),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Text("Read More",
-                              style: TextStyle(
-                                  color: AppColors.primaryColor,
-                                  fontWeight: FontWeight.bold)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
+    return '${d.day} ${months[d.month - 1]} ${d.year}';
   }
 }

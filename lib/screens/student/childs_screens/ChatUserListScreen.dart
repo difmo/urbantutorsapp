@@ -29,60 +29,62 @@ class ChatUserListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).primaryColor;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chat with Tutors'),
-        backgroundColor: Colors.white,
-        elevation: 1,
-        foregroundColor: Colors.black,
+    return SafeArea(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: chatUsers.isEmpty
+            ? const Center(child: Text("No chats available"))
+            : ListView.separated(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: chatUsers.length,
+                separatorBuilder: (_, __) =>
+                    const Divider(indent: 72, height: 1),
+                itemBuilder: (context, index) {
+                  final user = chatUsers[index];
+                  return ListTile(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              ChatScreen(teacherName: user['name']!),
+                        ),
+                      );
+                    },
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
+                    leading: CircleAvatar(
+                      radius: 26,
+                      backgroundColor: primaryColor.withOpacity(0.1),
+                      child: Text(
+                        user['profile']!,
+                        style: TextStyle(
+                          fontSize: 20,
+                          color: primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      user['name']!,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                    subtitle: Text(
+                      user['lastMessage']!,
+                      style:
+                          const TextStyle(color: Colors.black54, fontSize: 14),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios,
+                        size: 16, color: Colors.grey),
+                  );
+                },
+              ),
       ),
-      body: chatUsers.isEmpty
-          ? const Center(child: Text("No chats available"))
-          : ListView.separated(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: chatUsers.length,
-              separatorBuilder: (_, __) => const Divider(indent: 72, height: 1),
-              itemBuilder: (context, index) {
-                final user = chatUsers[index];
-                return ListTile(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ChatScreen(teacherName: user['name']!),
-                      ),
-                    );  
-                  },
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  leading: CircleAvatar(
-                    radius: 26,
-                    backgroundColor: primaryColor.withOpacity(0.1),
-                    child: Text(
-                      user['profile']!,
-                      style: TextStyle(
-                        fontSize: 20,
-                        color: primaryColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  title: Text(
-                    user['name']!,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
-                  ),
-                  subtitle: Text(
-                    user['lastMessage']!,
-                    style: const TextStyle(color: Colors.black54, fontSize: 14),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-                );
-              },
-            ),
     );
   }
 }

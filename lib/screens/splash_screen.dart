@@ -105,7 +105,7 @@ class _SplashScreenState extends State<SplashScreen>
       }
     } else {
       // No token → go to welcome screen
-      target = const TutorDashboard();
+      target = const WelcomeScreen();
     }
 
     Navigator.pushReplacement(

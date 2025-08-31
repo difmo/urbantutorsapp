@@ -35,6 +35,7 @@ class ApiService {
           // 'Content-Type': isJson ? 'application/json' : 'multipart/form-data',
         },
       );
+      print(path);
       return await _dio.post(path, data: data, options: options);
     } on DioError catch (e) {
       throw Exception(e.response?.data ?? 'Network error: ${e.message}');

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:urbantutorsapp/theme/theme_constants.dart';
 
 class HistoryScreen extends StatelessWidget {
   final List<Map<String, String>> historyItems = [
@@ -33,29 +34,32 @@ class HistoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).primaryColor;
+     final primaryColor = AppColors.primaryColor;
+    final accentColor = AppColors.accentColor;
 
-    return Scaffold(
-      body: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: historyItems.length,
-        separatorBuilder: (_, __) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          final item = historyItems[index];
-
-          return ListTile(
-            leading: _getIcon(item['type'], primaryColor),
-            title: Text(
-              item['title']!,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: Text(item['subtitle']!,
-                style: const TextStyle(color: Colors.black54)),
-            onTap: () {
-              // Optionally: show detail page or dialog
-            },
-          );
-        },
+    return SafeArea(
+      child: Scaffold(
+        body: ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: historyItems.length,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (context, index) {
+            final item = historyItems[index];
+      
+            return ListTile(
+              leading: _getIcon(item['type'], primaryColor),
+              title: Text(
+                item['title']!,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(item['subtitle']!,
+                  style: const TextStyle(color: Colors.black54)),
+              onTap: () {
+                // Optionally: show detail page or dialog
+              },
+            );
+          },
+        ),
       ),
     );
   }

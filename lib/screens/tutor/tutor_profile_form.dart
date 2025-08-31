@@ -5,13 +5,16 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/models/profile_modals/student_profile_request_modal.dart';
+import 'package:urbantutorsapp/models/profile_modals/tutor_profile_request_modal.dart';
 import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart'
     show LeadMetaController;
 import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
+import 'package:urbantutorsapp/screens/tutor/pending_page.dart';
 import 'dart:developer' as dev;
 
 import 'package:urbantutorsapp/utils/app_log.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class TutorProfileFormScreen extends StatefulWidget {
   const TutorProfileFormScreen({super.key});
@@ -189,16 +192,15 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // final boards =
-    //     _masterDataController.masterData.value?.data?.boardLead ?? [];
+    final boards =
+        _masterDataController.masterData.value?.data?.boardLead ?? [];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Student Profile"),
-        backgroundColor: Theme.of(context).primaryColor,
-      ),
-      body: Stack(
-        children: [
+        appBar: AppBar(
+          title: const Text("Student Profile"),
+          backgroundColor: Theme.of(context).primaryColor,
+        ),
+        body: Stack(children: [
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
@@ -557,30 +559,18 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  TextField(
-                      controller: remarkController,
-                      decoration: const InputDecoration(labelText: "Remarks")),
                   const SizedBox(height: 24),
-
-                  Center(
-                    child: ElevatedButton(
-                        onPressed: onSavePressed,
-                        child: const Text("Save Profile")),
-                  ),
+                  // Center(
+                  //   child: ElevatedButton(
+                  //     onPressed: onUpdatePressed,
+                  //     child: const Text("Save and Proceed"),
+                  //   ),
+                  // ),
                 ],
               ),
             ),
           ),
-
-          // Loader Overlay
-          if (_overlayLoading)
-            Container(
-              color: Colors.black.withOpacity(0.25),
-              child: const Center(child: CircularProgressIndicator()),
-            ),
-        ],
-      ),
-    );
+        ]));
   }
 
   Widget _idUploadBox(String label, XFile? file, String type) {

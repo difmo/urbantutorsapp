@@ -13,4 +13,5 @@ class ApiConstants {
   static const USER_PROFIEL_FETCH = '/user_profile';
   static const STUDENT_PROFILE_UPDATE = '/student_profile_update';
   static const MASTERDATE = '/master_data';
+  static const LEADS_VIEW_URL = '${BASE_URL}leads_vew';
 }

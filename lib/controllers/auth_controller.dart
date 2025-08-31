@@ -57,14 +57,14 @@ class AuthController extends GetxController {
 
       await StorageService.saveToken(token.value);
 
-      // 👇 Backend gives int, store it in RxInt
       int roleIdd = res.data.userData.roles[0].roleId;
+      int userId = res.data.userData.id;
+      print("User idididididididd $userId");
 
       await StorageService.saveRoleId(roleIdd);
+      await StorageService.saveUserId(userId);
 
-      // print("roleidfromotp: ${roleId.value}");
-
-      await StorageService.saveRole("Admin");
+      print(await StorageService.getUserId());
       return roleIdd;
     } catch (e) {
       print("Error while otp verification: $e");
