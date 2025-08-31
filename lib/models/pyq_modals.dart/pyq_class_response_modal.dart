@@ -201,19 +201,23 @@ class ChapterData {
 
 class ChapterDetailsResponse {
   final bool success;
-  final ChapterDetailsData data;
+  final ChapterDetailsData? data; // <-- nullable now
   final String? message;
 
   ChapterDetailsResponse({
     required this.success,
-    required this.data,
+    this.data,
     this.message,
   });
 
   factory ChapterDetailsResponse.fromJson(Map<String, dynamic> json) {
+    final rawData = json['data'];
+
     return ChapterDetailsResponse(
       success: json['success'] ?? false,
-      data: ChapterDetailsData.fromJson(json['data']),
+      data: (rawData is Map<String, dynamic>)
+          ? ChapterDetailsData.fromJson(rawData)
+          : null, // <-- handles [] gracefully
       message: json['message'],
     );
   }
@@ -243,7 +247,7 @@ class ChapterDetailsData {
       subjectName: json['subjectName'] ?? '',
       chapterName: json['chapterName'] ?? '',
       imageUrl: json['imageurl'] ?? '',
-      chapterDetail: (json['chapter_detail'] as List<dynamic>)
+      chapterDetail: (json['chapter_detail'] as List<dynamic>? ?? [])
           .map((e) => ChapterDetailItem.fromJson(e))
           .toList(),
     );
@@ -281,18 +285,18 @@ class ChapterDetailItem {
 
   factory ChapterDetailItem.fromJson(Map<String, dynamic> json) {
     return ChapterDetailItem(
-      id: json['id'],
-      boardId: json['board_id'],
-      boardClassId: json['boardclass_id'],
-      boardSubjectId: json['boardsubject_id'],
-      chapterId: json['chapter_id'],
-      type: json['type'],
-      headingName: json['heding_name'],
-      image: json['image'],
-      content: json['content'],
-      status: json['status'],
-      createdAt: json['created_at'],
-      updatedAt: json['updated_at'],
+      id: json['id'] ?? 0,
+      boardId: json['board_id'] ?? 0,
+      boardClassId: json['boardclass_id'] ?? 0,
+      boardSubjectId: json['boardsubject_id'] ?? 0,
+      chapterId: json['chapter_id'] ?? 0,
+      type: json['type'] ?? '',
+      headingName: json['heding_name'] ?? '',
+      image: json['image'] ?? '',
+      content: json['content'] ?? '',
+      status: json['status'] ?? 0,
+      createdAt: json['created_at'] ?? '',
+      updatedAt: json['updated_at'] ?? '',
     );
   }
 }

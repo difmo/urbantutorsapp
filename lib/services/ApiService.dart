@@ -26,7 +26,7 @@ class ApiService {
       print("token null hai yaha");
     }
 
-    print('fromapiservice' + token1.toString());
+    // print('fromapiservice' + token1.toString());
     try {
       Options options = Options(
         headers: {
@@ -55,7 +55,9 @@ class ApiService {
           'Authorization': token != null ? 'Bearer $token' : null,
         },
       );
-      return await _dio.get(path,);
+      return await _dio.get(
+        path,
+      );
     } on DioError catch (e) {
       throw Exception(e.response?.data ?? 'Network error: ${e.message}');
     }

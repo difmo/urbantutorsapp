@@ -44,7 +44,11 @@ class PyqController extends GetxController {
       // Mock here or fetch from API
       boards.assignAll([
         BoardLead(boardId: 1, boardLabel: "CBSE"),
-        BoardLead(boardId: 2, boardLabel: "ICSE"),
+        BoardLead(boardId: 2, boardLabel: "IB"),
+        BoardLead(boardId: 3, boardLabel: "IGCSE"),
+        BoardLead(boardId: 4, boardLabel: "ICSE"),
+        BoardLead(boardId: 5, boardLabel: "ISC"),
+        BoardLead(boardId: 6, boardLabel: "NIOS"),
       ]);
     } catch (e) {
       errorMessage.value = e.toString();
