@@ -57,7 +57,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
   void initState() {
     super.initState();
     print("dinesh");
-    ever(profileUpdateController.studentprofileData, (student) {
+    ever(profileUpdateController.tutorprofileData, (student) {
       AppLog.i('[UI] studentprofileData changed');
       if (student != null) {
         nameController.text = student.studentName ?? '';
@@ -144,7 +144,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
   }
 
   Future<void> onSavePressed() async {
-        String? userIdd = await StorageService.getUserId();
+    String? userIdd = await StorageService.getUserId();
     // Basic guard
     if (selectedBoardId == null) {
       Get.snackbar('Missing info', 'Please select a Board');
@@ -158,18 +158,15 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
       Get.snackbar('Missing info', 'Please select a Subject');
       return;
     }
-
     setState(() => _overlayLoading = true);
     try {
       final profileBase64 = await _fileToBase64(_profileImage) ?? '';
       final frontBase64 = await _fileToBase64(_frontIdImage) ?? '';
       final backBase64 = await _fileToBase64(_backIdImage) ?? '';
-
       final request = StudentProfileUpdateRequest(
-        userId:
-            int.parse(userIdd!), // TODO: replace with actual logged-in user id
+        userId: int.parse(userIdd!),
         boardId: selectedBoardId!,
-        courseId: selectedClassId!, // mapping "Class" -> courseId
+        courseId: selectedClassId!,
         subjectId: selectedSubjectId!,
         price: double.tryParse(priceController.text.trim())
                 ?.clamp(0, double.infinity) ??
@@ -182,7 +179,6 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
         frontId: frontBase64,
         frontBack: backBase64,
       );
-
       await profileUpdateController.updateProfileForStudent(request);
       Get.snackbar('Success', 'Profile updated successfully');
     } catch (e) {
@@ -562,12 +558,12 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                   const SizedBox(height: 24),
 
                   const SizedBox(height: 24),
-                  // Center(
-                  //   child: ElevatedButton(
-                  //     onPressed: onUpdatePressed,
-                  //     child: const Text("Save and Proceed"),
-                  //   ),
-                  // ),
+                  Center(
+                    child: ElevatedButton(
+                      onPressed: onSavePressed,
+                      child: const Text("Save and Proceed"),
+                    ),
+                  ),
                 ],
               ),
             ),

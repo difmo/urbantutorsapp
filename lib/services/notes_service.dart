@@ -3,6 +3,9 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:urbantutorsapp/models/notes_models.dart.dart';
 
+// Define BASE_URL for image URL construction
+const String BASE_URL = 'https://urbantutors.pro';
+
 class NotesService {
   static const _classesUrl = 'https://urbantutors.pro/api/getclasses';
   static const _subjectsUrl = 'https://urbantutors.pro/api/getsubjects';
@@ -98,15 +101,17 @@ class NotesService {
       throw Exception('getchapter_details failed: ${res.statusCode}');
     }
     final map = jsonDecode(res.body) as Map<String, dynamic>;
-    return ChapterDetails.fromJson(map);
+    // Pass the full response to ChapterDetails.fromJson
+    return ChapterDetails.fromJson(map['data'] as Map<String, dynamic>);
   }
 
   // Build full image URL safely
-  static String buildImageUrl(String base, String file) {
-    if (base.isEmpty || file.isEmpty) return '';
-    final uri = Uri.parse(base.endsWith('/')
-        ? base + Uri.encodeComponent(file)
-        : '$base/${Uri.encodeComponent(file)}');
+  static String buildImageUrl(String path) {
+    if (BASE_URL.isEmpty || path.isEmpty) return '';
+    final fullPath = 'public/admin/uploads/chapter_details/$path';
+    final uri = Uri.parse(BASE_URL.endsWith('/')
+        ? BASE_URL + Uri.encodeComponent(fullPath)
+        : '$BASE_URL/${Uri.encodeComponent(fullPath)}');
     return uri.toString();
   }
 }

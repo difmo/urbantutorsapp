@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:urbantutorsapp/controllers/notes_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
+import 'package:urbantutorsapp/screens/student/ChapterDetailsScreen.dart';
 import 'package:urbantutorsapp/utils/app_log.dart';
 
 class NotesScreen extends StatefulWidget {
-  const NotesScreen({super.key});
+  final String ? flags;
+  const NotesScreen({super.key, this.flags});
 
   @override
   State<NotesScreen> createState() => _NotesScreenState();
@@ -33,15 +35,6 @@ class _NotesScreenState extends State<NotesScreen> {
   final MasterDataController _md = Get.find<MasterDataController>();
   final NotesController _notesController = Get.put(NotesController());
 
-  static const _states = <String>[
-    'Delhi',
-    'Uttar Pradesh',
-    'Haryana',
-    'Maharashtra',
-    'Karnataka',
-    'Tamil Nadu'
-  ];
-  static const _modes = <String>['Online', 'Offline', 'Hybrid'];
 
   @override
   void dispose() {
@@ -83,26 +76,13 @@ class _NotesScreenState extends State<NotesScreen> {
         child: child,
       );
 
-  Future<void> _onGetOtp() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    AppLog.i('[FORM] Submit → '
-        'name=${nameCtrl.text}, '
-        'mobile=${mobileCtrl.text}, '
-        'board=$boardId, class=$classId, subject=$subjectId, chapter=$chapterId, '
-        'locality=${localityCtrl.text}, state=$stateVal, mode=$modeVal, '
-        'fee=$_fee');
-
-    Get.snackbar('OTP', 'We just sent an OTP to ${mobileCtrl.text}');
-  }
-
   @override
   Widget build(BuildContext context) {
     const blue = Color(0xFF4A90E2);
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
-        title: const Text('Notes'),
+        title: Text(widget.flags == "Note" ? 'Notes' : 'PYQ’s'),
         backgroundColor: blue,
         elevation: 0,
       ),
@@ -135,6 +115,7 @@ class _NotesScreenState extends State<NotesScreen> {
                                 ))
                             .toList(),
                         onChanged: (val) {
+                          print(val);
                           AppLog.i('[UI] Board changed → $val');
                           setState(() {
                             boardId = val;
@@ -142,8 +123,9 @@ class _NotesScreenState extends State<NotesScreen> {
                             subjectId = null;
                             chapterId = null;
                           });
+
                           if (val != null) {
-                            _notesController.fetchClasses(boardId: val);
+                            _notesController.fetchClasses(boardId: val, type: widget.flags);
                           }
                         },
                         validator: (v) => v == null ? 'Required' : null,
@@ -175,8 +157,8 @@ class _NotesScreenState extends State<NotesScreen> {
                         ),
                         items: classes
                             .map((c) => DropdownMenuItem<int>(
-                                  value: c.id,
-                                  child: Text(c.name,
+                                  value: c.class_id,
+                                  child: Text(c.ClassName,
                                       overflow: TextOverflow.ellipsis),
                                 ))
                             .toList(),
@@ -193,6 +175,7 @@ class _NotesScreenState extends State<NotesScreen> {
                                   _notesController.fetchSubjects(
                                     boardId: boardId!,
                                     classId: val,
+                                    type: widget.flags,
                                   );
                                 }
                               },
@@ -225,8 +208,8 @@ class _NotesScreenState extends State<NotesScreen> {
                         ),
                         items: subjects
                             .map((s) => DropdownMenuItem<int>(
-                                  value: s.id,
-                                  child: Text(s.name,
+                                  value: s.subjectId,
+                                  child: Text(s.subjectName,
                                       overflow: TextOverflow.ellipsis),
                                 ))
                             .toList(),
@@ -240,7 +223,7 @@ class _NotesScreenState extends State<NotesScreen> {
                                 });
                                 if (val != null) {
                                   _notesController.fetchChapters(
-                                      subjectId: val);
+                                      subjectId: val,type: widget.flags);
                                 }
                               },
                         validator: (v) => v == null ? 'Required' : null,
@@ -272,8 +255,8 @@ class _NotesScreenState extends State<NotesScreen> {
                         ),
                         items: chapters
                             .map((c) => DropdownMenuItem<int>(
-                                  value: c.id,
-                                  child: Text(c.name,
+                                  value: c.chapterId,
+                                  child: Text(c.chapterName,
                                       overflow: TextOverflow.ellipsis),
                                 ))
                             .toList(),
@@ -282,7 +265,24 @@ class _NotesScreenState extends State<NotesScreen> {
                             : (val) {
                                 AppLog.i('[UI] Chapter changed → $val');
                                 setState(() => chapterId = val);
+
+                                   if (val != null) {
+                                  _notesController.fetchChapterDetails(
+                                      chapterId: val,
+                                      type: widget.flags);
+                                }
+
+                                   Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => ChapterDetailsScreen(
+                                          chapterId: val!,
+                                        ),
+                                ),
+                              );
                               },
+
+                              
                         validator: (v) => v == null ? 'Required' : null,
                       ),
                     );

@@ -69,9 +69,9 @@ class ProfileUpdateController extends GetxController {
       final response = await _profileUpdateService.getProfileForTutor();
       tutorprofileData.value = response.data;
       if (tutorprofileData.value?.mostExperienceSubjectName != null) {
-        // StorageService.saveIsProfileStatus("completed");
+        StorageService.saveIsProfileStatus("completed");
       } else {
-        // StorageService.saveIsProfileStatus("pending");
+        StorageService.saveIsProfileStatus("pending");
       }
 
       debugPrint("✅ Profile fetched successfully:");

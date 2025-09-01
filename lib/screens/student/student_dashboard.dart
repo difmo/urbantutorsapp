@@ -170,7 +170,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                             Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (_) => NotesScreen()));
+                                    builder: (_) =>
+                                        NotesScreen(flags: "Note")));
                           },
                         ),
                         _FeatureCard(
@@ -184,7 +185,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                             Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (_) => PyqScreenNew()));
+                                    builder: (_) => NotesScreen(flags: "pyq")));
                           },
                         ),
                       ],
