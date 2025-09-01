@@ -19,7 +19,6 @@ import 'package:urbantutorsapp/widgets/CustomTeacherNavBar.dart';
 import 'package:urbantutorsapp/widgets/TutorDrawer.dart';
 import '../../theme/theme_constants.dart';
 
-
 /// ✅ Extracted Dashboard main tab (Nearby / Enquiry / Contacted)
 class DashboardHomeTab extends StatefulWidget {
   const DashboardHomeTab({super.key});
@@ -38,46 +37,109 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
     final accentColor = AppColors.accentColor;
 
     return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-   
-          bottom: const TabBar(
-            labelColor: AppColors.accentColor,
-            unselectedLabelColor: Colors.white70,
-            indicatorColor: AppColors.accentColor,
-            tabs: [
-              Tab(text: "Nearby", icon: Icon(Icons.location_on)),
-              Tab(text: "ENQUIRY", icon: Icon(Icons.message)),
-              Tab(text: "CONTACTED", icon: Icon(Icons.check_circle)),
-            ],
+        length: 3,
+        child: Scaffold(
+          appBar: AppBar(
+            backgroundColor: AppColors.primaryColor,
+            elevation: 2,
+            toolbarHeight: 75,
+            title: Row(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [primaryColor, accentColor],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(2),
+                  child: const CircleAvatar(
+                    backgroundColor: Colors.transparent,
+                    radius: 24,
+                    child: Text(
+                      'S',
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Text('Welcome, Tutor',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.white)),
+                const Spacer(),
+                const SizedBox(width: 8),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => TutorCoinsScreen()));
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: accentColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.monetization_on,
+                              color: accentColor, size: 14),
+                          const SizedBox(width: 6),
+                          const Text(
+                            "200 coins",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 10,
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              ],
+            ),
+            bottom: const TabBar(
+              labelColor: AppColors.accentColor,
+              unselectedLabelColor: Colors.white70,
+              indicatorColor: AppColors.accentColor,
+              tabs: [
+                Tab(text: "Nearby", icon: Icon(Icons.location_on)),
+                Tab(text: "ENQUIRY", icon: Icon(Icons.message)),
+                Tab(text: "CONTACTED", icon: Icon(Icons.check_circle)),
+              ],
+            ),
           ),
-        ),
-        body: Obx(() {
-          if (_leads.isLoading.value) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (_leads.error.isNotEmpty) {
-            return _ErrorRetry(
-              message: _leads.error.value,
-              onRetry: _leads.load,
+          body: Obx(() {
+            if (_leads.isLoading.value) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (_leads.error.isNotEmpty) {
+              return _ErrorRetry(
+                message: _leads.error.value,
+                onRetry: _leads.load,
+              );
+            }
+
+            return TabBarView(
+              children: [
+                _nearbyTab(context), // Offline only
+                _enquiryTab(context), // All leads
+                _contactedTab(context), // Marked as contacted
+              ],
             );
-          }
-
-          return TabBarView(
-            children: [
-              _nearbyTab(context), // Offline only
-              _enquiryTab(context), // All leads
-              _contactedTab(context), // Marked as contacted
-            ],
-          );
-        }),
-      ));
+          }),
+        ));
   }
-
-
-
-
 
   // ---------- Nearby
   Widget _nearbyTab(BuildContext context) {
@@ -185,7 +247,9 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
       context,
       MaterialPageRoute(
         builder: (_) => LeadDetailPage(
-          enquiry: e.toMap().map((key, value) => MapEntry(key, value?.toString() ?? '')),
+          enquiry: e
+              .toMap()
+              .map((key, value) => MapEntry(key, value?.toString() ?? '')),
         ), // your page expects a Map
       ),
     );

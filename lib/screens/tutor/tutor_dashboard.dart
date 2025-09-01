@@ -33,7 +33,7 @@ class _TutorDashboardState extends State<TutorDashboard> {
   final List<Widget> _screens = [
     const DashboardHomeTab(),
     const NotesTutor(),
-    const TutorPYQScreen(),
+    const TutorPyqScreen(),
     CoursesScreen(),
     const TutorChatScreen(),
     const TutorSupportScreen(),
@@ -68,75 +68,7 @@ class _TutorDashboardState extends State<TutorDashboard> {
               );
             }
           }),
-          appBar: AppBar(
-              backgroundColor: AppColors.primaryColor,
-              elevation: 2,
-              toolbarHeight: 75,
-              title: Row(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [primaryColor, accentColor],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    padding: const EdgeInsets.all(2),
-                    child: const CircleAvatar(
-                      backgroundColor: Colors.transparent,
-                      radius: 24,
-                      child: Text(
-                        'S',
-                        style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text('Welcome, Tutor',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.white)),
-                  const Spacer(),
-                  const SizedBox(width: 8),
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => TutorCoinsScreen()));
-                      },
-                      borderRadius: BorderRadius.circular(20),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: accentColor.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.monetization_on,
-                                color: accentColor, size: 14),
-                            const SizedBox(width: 6),
-                            const Text(
-                              "200 coins",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 10,
-                              ),
-                            )
-                          ],
-                        ),
-                      ),
-                    ),
-                  )
-                ],
-              )),
+         
           body: _screens[_currentIndex], // ✅ show selected screen
           bottomNavigationBar: CustomTeacherNavBar(
             currentIndex: _currentIndex,

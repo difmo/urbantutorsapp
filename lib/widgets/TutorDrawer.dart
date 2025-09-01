@@ -105,7 +105,7 @@ class TutorDrawer extends StatelessWidget {
                           child: GestureDetector(
                             onTap: () {
                               Navigator.pop(context); // Close drawer
-                              Get.to(() => const TutorPYQScreen());
+                              Get.to(() => const TutorPyqScreen());
                             },
                             child: Container(
                               padding: const EdgeInsets.all(6),
