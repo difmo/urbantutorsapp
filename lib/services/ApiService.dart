@@ -57,6 +57,7 @@ class ApiService {
       );
       return await _dio.get(
         path,
+        options: options,
       );
     } on DioError catch (e) {
       throw Exception(e.response?.data ?? 'Network error: ${e.message}');

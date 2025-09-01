@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:urbantutorsapp/controllers/auth_controller.dart';
+import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/pay_course_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
@@ -16,6 +17,7 @@ void main() async {
   Get.put(LeadMetaController(), permanent: true);
   Get.put(LocationController(), permanent: true);
   Get.put(PayCourseController(), permanent: true);
+  Get.put(CoinsController(), permanent: true);
 
   runApp(const UrbanTutorsProApp());
 }

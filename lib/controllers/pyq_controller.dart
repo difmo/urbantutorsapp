@@ -122,4 +122,6 @@ class PyqController extends GetxController {
       loadingDetails.value = false;
     }
   }
+
+  
 }

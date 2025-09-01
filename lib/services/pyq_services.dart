@@ -77,6 +77,9 @@ class PyqServices {
     }
   }
 
+
+
+
   void _handleError(DioError e, String methodName) {
     debugPrint("❌ Error in $methodName");
     debugPrint(e.toString());
@@ -88,4 +91,8 @@ class PyqServices {
       throw Exception('Network error: ${e.message}');
     }
   }
+
+
+
+  
 }

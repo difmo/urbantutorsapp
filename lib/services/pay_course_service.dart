@@ -53,27 +53,4 @@ static String buildImageUrl(String? image) {
     return list.map((e) => PayCourse.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  /// If your server needs **multipart/form-data** instead:
-  Future<List<PayCourse>> fetchCoursesMultipart({
-    required String token,
-    Map<String, String>? fields,
-  }) async {
-    final req = http.MultipartRequest('POST', Uri.parse(_api))
-      ..headers['Accept'] = 'application/json'
-      ..headers['Authorization'] = 'Bearer $token'
-      ..fields.addAll(fields ?? const {});
-    final streamed = await req.send();
-    final res = await http.Response.fromStream(streamed);
-
-    if (res.statusCode == 401) {
-      throw Exception('Unauthorized (401). Token missing/expired.');
-    }
-    if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw Exception('getpaycourse failed: ${res.statusCode} ${res.reasonPhrase}');
-    }
-
-    final body = jsonDecode(res.body) as Map<String, dynamic>;
-    final list = (body['data'] as List<dynamic>? ?? []);
-    return list.map((e) => PayCourse.fromJson(e as Map<String, dynamic>)).toList();
-  }
 }
