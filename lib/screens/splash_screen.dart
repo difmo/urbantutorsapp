@@ -86,7 +86,8 @@ class _SplashScreenState extends State<SplashScreen>
     if (token != null) {
       switch (roleId) {
         case '3':
-          target = isProfiledataEmpty() == true || profileStatus == "completed"
+          target = 
+          isProfiledataEmpty() == true || profileStatus == "completed"
               ? StudentDashboardScreen()
               : StudentProfileFormScreen();
           break;
