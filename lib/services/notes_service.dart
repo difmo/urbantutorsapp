@@ -20,8 +20,9 @@ class NotesService {
       'Accept': 'application/json',
       if (form) 'Content-Type': 'application/x-www-form-urlencoded',
     };
-    if (token != null && token!.isNotEmpty)
+    if (token != null && token!.isNotEmpty) {
       h['Authorization'] = 'Bearer $token';
+    }
     return h;
   }
 

@@ -38,7 +38,7 @@ Future<LoginResponse> verifyOtp({
   } catch (e) {
     print("❌ Error in verifyOtp (from AuthService):");
     print(e.toString());
-    throw e;
+    rethrow;
   }
 }
 

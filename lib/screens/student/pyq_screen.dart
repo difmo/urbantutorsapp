@@ -28,7 +28,7 @@ class _PyqScreenState extends State<PyqScreen> {
   String? stateVal;
   String? modeVal;
 
-  double _fee = 700;
+  final double _fee = 700;
 
   // GetX controllers (already registered in main/initialBinding)
   final MasterDataController _md = Get.find<MasterDataController>();

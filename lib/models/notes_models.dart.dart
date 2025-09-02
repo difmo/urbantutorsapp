@@ -11,10 +11,10 @@ class NotesClass {
   });
 
   factory NotesClass.fromJson(Map<String, dynamic> j) {
-    int _id(dynamic v) => (v is num) ? v.toInt() : int.tryParse('$v') ?? 0;
+    int id(dynamic v) => (v is num) ? v.toInt() : int.tryParse('$v') ?? 0;
     return NotesClass(
-      board_id: _id(j['board_id']),
-      class_id: _id(j['class_id']),
+      board_id: id(j['board_id']),
+      class_id: id(j['class_id']),
       ClassName: (j['ClassName'] ?? j['class_name'] ?? '').toString(),
       type: (j['type'] ?? '').toString(),
     );
@@ -37,11 +37,11 @@ class NotesSubject {
   });
 
   factory NotesSubject.fromJson(Map<String, dynamic> j) {
-    int _id(dynamic v) => (v is num) ? v.toInt() : int.tryParse('$v') ?? 0;
+    int id(dynamic v) => (v is num) ? v.toInt() : int.tryParse('$v') ?? 0;
     return NotesSubject(
-      boardId: _id(j['board_id']),
-      classId: _id(j['class_id']),
-      subjectId: _id(j['subject_id']),
+      boardId: id(j['board_id']),
+      classId: id(j['class_id']),
+      subjectId: id(j['subject_id']),
       subjectName: (j['subjectName'] ?? j['subject_name'] ?? '').toString(),
       type: (j['type'] ?? '').toString(),
     );
@@ -66,12 +66,12 @@ class NotesChapter {
   });
 
   factory NotesChapter.fromJson(Map<String, dynamic> j) {
-    int _id(dynamic v) => (v is num) ? v.toInt() : int.tryParse('$v') ?? 0;
+    int id(dynamic v) => (v is num) ? v.toInt() : int.tryParse('$v') ?? 0;
     return NotesChapter(
-      boardId: _id(j['board_id']),
-      classId: _id(j['class_id']),
-      subjectId: _id(j['subject_id']),
-      chapterId: _id(j['chapter_id']),
+      boardId: id(j['board_id']),
+      classId: id(j['class_id']),
+      subjectId: id(j['subject_id']),
+      chapterId: id(j['chapter_id']),
       chapterName: (j['ChapterName'] ?? j['chapter_name'] ?? '').toString(),
       type: (j['type'] ?? '').toString(),
     );
@@ -108,18 +108,18 @@ class ChapterDetailItem {
   });
 
   factory ChapterDetailItem.fromJson(Map<String, dynamic> j) {
-    int _id(dynamic v) => (v is num) ? v.toInt() : int.tryParse('$v') ?? 0;
+    int id(dynamic v) => (v is num) ? v.toInt() : int.tryParse('$v') ?? 0;
     return ChapterDetailItem(
-      id: _id(j['id']),
-      boardId: _id(j['board_id']),
-      boardClassId: _id(j['boardclass_id']),
-      boardSubjectId: _id(j['boardsubject_id']),
-      chapterId: _id(j['chapter_id']),
+      id: id(j['id']),
+      boardId: id(j['board_id']),
+      boardClassId: id(j['boardclass_id']),
+      boardSubjectId: id(j['boardsubject_id']),
+      chapterId: id(j['chapter_id']),
       type: (j['type'] ?? '').toString(),
       heading: (j['heding_name'] ?? j['heading_name'] ?? '').toString(),
       image: (j['image'] ?? '').toString(),
       content: (j['content'] ?? '').toString(),
-      status: _id(j['status']),
+      status: id(j['status']),
       createdAt: (j['created_at'] ?? '').toString(),
       updatedAt: (j['updated_at'] ?? '').toString(),
     );

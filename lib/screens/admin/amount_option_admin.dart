@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:urbantutorsapp/widgets/custom_input_field.dart';
 
 class AmountOptionsScreen extends StatefulWidget {
-  const AmountOptionsScreen({Key? key}) : super(key: key);
+  const AmountOptionsScreen({super.key});
 
   @override
   State<AmountOptionsScreen> createState() => _AmountOptionsScreenState();
@@ -32,7 +32,7 @@ class _AmountOptionsScreenState extends State<AmountOptionsScreen> {
     );
   }
   void _AddOption() {
-  final TextEditingController _optionController = TextEditingController();
+  final TextEditingController optionController = TextEditingController();
 
   showDialog(
     context: context,
@@ -41,7 +41,7 @@ class _AmountOptionsScreenState extends State<AmountOptionsScreen> {
         backgroundColor: Colors.white,
         title: const Text('Add Amount Option'),
         content: TextField(
-          controller: _optionController,
+          controller: optionController,
           keyboardType: TextInputType.number,
           decoration: const InputDecoration(
             labelText: 'Enter amount',
@@ -57,7 +57,7 @@ class _AmountOptionsScreenState extends State<AmountOptionsScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              final input = _optionController.text.trim();
+              final input = optionController.text.trim();
               if (input.isNotEmpty) {
                 // TODO: Save input to list or state
                 ScaffoldMessenger.of(context).showSnackBar(

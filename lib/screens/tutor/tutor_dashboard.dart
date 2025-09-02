@@ -6,7 +6,6 @@ import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/DashboardHomeTab.dart';
 import 'package:urbantutorsapp/screens/tutor/notes_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_chat_screen.dart';
-import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_courses_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_pyq_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_support_screen.dart';
@@ -27,7 +26,7 @@ class TutorDashboard extends StatefulWidget {
 class _TutorDashboardState extends State<TutorDashboard> {
   final TutorLeadsController _leads = Get.put(TutorLeadsController());
 
-  RangeValues _currentRangeValues = const RangeValues(1, 10);
+  final RangeValues _currentRangeValues = const RangeValues(1, 10);
   int _currentIndex = 0;
 
   final List<Widget> _screens = [

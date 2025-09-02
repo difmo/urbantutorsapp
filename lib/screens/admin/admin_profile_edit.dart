@@ -8,7 +8,7 @@ import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class AdminProfileEdit extends StatefulWidget {
-  const AdminProfileEdit({Key? key}) : super(key: key);
+  const AdminProfileEdit({super.key});
 
   @override
   State<AdminProfileEdit> createState() => _AdminProfileEditState();

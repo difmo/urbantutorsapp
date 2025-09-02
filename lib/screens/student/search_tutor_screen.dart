@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:urbantutorsapp/controllers/lead_create_controller.dart';
+import 'package:urbantutorsapp/models/lead_create_model_request.dart';
 
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
 import 'package:urbantutorsapp/utils/app_log.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class SearchTutorScreen extends StatefulWidget {
   const SearchTutorScreen({super.key});
@@ -29,7 +32,7 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
   String? modeVal;
 
   double _fee = 700;
-
+  bool _submitting = false;
   // GetX controllers (already registered in main/initialBinding)
   final MasterDataController _md = Get.find<MasterDataController>();
   final LeadMetaController _lead = Get.find<LeadMetaController>();
@@ -39,7 +42,10 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
     'Delhi', 'Uttar Pradesh', 'Haryana', 'Maharashtra', 'Karnataka', 'Tamil Nadu'
   ];
   static const _modes = <String>['Online', 'Offline', 'Hybrid'];
-
+  final LeadCreateController _leadCreate =
+      Get.isRegistered<LeadCreateController>()
+          ? Get.find<LeadCreateController>()
+          : Get.put(LeadCreateController());
   @override
   void dispose() {
     nameCtrl.dispose();
@@ -80,18 +86,74 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
         child: child,
       );
 
-  Future<void> _onGetOtp() async {
+    Future<void> _onGetOtp() async {
+    FocusScope.of(context).unfocus();
+
     if (!_formKey.currentState!.validate()) return;
 
-    AppLog.i('[FORM] Submit → '
-        'name=${nameCtrl.text}, '
-        'mobile=${mobileCtrl.text}, '
-        'board=$boardId, class=$classId, subject=$subjectId, '
-        'locality=${localityCtrl.text}, state=$stateVal, mode=$modeVal, '
-        'fee=$_fee');
+    if (boardId == null) return _toast('Please select a Board');
+    if (classId == null) return _toast('Please select a Class');
+    if (subjectId == null) return _toast('Please select a Subject');
 
-    // TODO: call your OTP API here
-    Get.snackbar('OTP', 'We just sent an OTP to ${mobileCtrl.text}');
+    final subjectValid = _lead.subjects.any((s) => s.subjectId == subjectId);
+    if (!subjectValid) {
+      return _toast('Selected subject is not valid for the chosen Board/Class');
+    }
+
+    final locText = localityCtrl.text.trim();
+    if (locText.isEmpty) return _toast('Please enter your Locality');
+
+    if (modeVal == null) return _toast('Please select Teaching Mode');
+    if (stateVal == null) return _toast('Please select State');
+
+    final phoneOk = RegExp(r'^\d{10}$').hasMatch(mobileCtrl.text.trim());
+    if (!phoneOk) return _toast('Enter a valid 10-digit mobile number');
+
+    final userId = await StorageService.getUserId();
+    if (userId == null) return _toast('User not found. Please login again.');
+
+    final req = LeadCreateRequest(
+      name: nameCtrl.text.trim(),
+      mobile: mobileCtrl.text.trim(),
+      boardId: boardId!.toString(),
+      classId: classId!.toString(),
+      subjectId: subjectId!.toString(),
+      location: locText,
+      state: stateVal ?? '',
+      mode: modeVal ?? '',
+      fee: _fee.round().toString(),
+      userId: userId,
+      tutorGender: 'Any',
+      maxHits: "",
+      supportAgent: '',
+      leadId:  '',
+    );
+
+    if (_submitting) return;
+    setState(() => _submitting = true);
+
+    try {
+      await _leadCreate.createOrUpdateLead(req);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lead updated successfully'),
+        ),
+      );
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+   
+  void _toast(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   @override

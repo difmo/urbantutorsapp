@@ -366,7 +366,7 @@ class _PackTile extends StatelessWidget {
               if ((pack.description ?? '').isNotEmpty) ...[
                 const SizedBox(height: 2),
                 Text(
-                  pack.description!,
+                  pack.description,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 11, color: Colors.black54),

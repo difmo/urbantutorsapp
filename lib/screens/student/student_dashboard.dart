@@ -12,7 +12,6 @@ import 'package:urbantutorsapp/screens/student/childs_screens/UpgradeScreen.dart
 import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart';
 import 'package:urbantutorsapp/screens/student/notes_screen.dart';
 import 'package:urbantutorsapp/screens/student/pdf_courses_screen.dart';
-import 'package:urbantutorsapp/screens/student/pyq_screen_new.dart';
 import 'package:urbantutorsapp/screens/student/search_tutor_screen.dart';
 
 import 'package:urbantutorsapp/utils/storage_helper.dart';

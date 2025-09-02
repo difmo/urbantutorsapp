@@ -29,7 +29,7 @@ class _NotesTutorState extends State<NotesTutor> {
   String? stateVal;
   String? modeVal;
 
-  double _fee = 700;
+  final double _fee = 700;
 
   // GetX controllers
   final MasterDataController _md = Get.find<MasterDataController>();

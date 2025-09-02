@@ -16,7 +16,7 @@ class PyqServices {
       });
       debugPrint("✅ fetchClass response: ${response.data}");
       return ClassResponse.fromJson(response.data);
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       _handleError(e, 'fetchClass');
       rethrow;
     }
@@ -34,7 +34,7 @@ class PyqServices {
       });
       debugPrint("✅ fetchSubjects response: ${response.data}");
       return SubjectResponse.fromJson(response.data);
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       _handleError(e, 'fetchSubjects');
       rethrow;
     }
@@ -52,7 +52,7 @@ class PyqServices {
       });
       debugPrint("✅ fetchChapter response: ${response.data}");
       return ChapterResponse.fromJson(response.data);
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       _handleError(e, 'fetchChapter');
       rethrow;
     }
@@ -71,7 +71,7 @@ class PyqServices {
       });
       debugPrint("✅ fetchChapterDetails response: ${response.data}");
       return ChapterDetailsResponse.fromJson(response.data);
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       _handleError(e, 'fetchChapterDetails');
       rethrow;
     }
@@ -80,7 +80,7 @@ class PyqServices {
 
 
 
-  void _handleError(DioError e, String methodName) {
+  void _handleError(DioException e, String methodName) {
     debugPrint("❌ Error in $methodName");
     debugPrint(e.toString());
     if (e.response != null) {

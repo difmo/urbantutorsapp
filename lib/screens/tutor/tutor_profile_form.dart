@@ -5,12 +5,10 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/models/profile_modals/student_profile_request_modal.dart';
-import 'package:urbantutorsapp/models/profile_modals/tutor_profile_request_modal.dart';
 import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart'
     show LeadMetaController;
 import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
-import 'package:urbantutorsapp/screens/tutor/pending_page.dart';
 import 'dart:developer' as dev;
 
 import 'package:urbantutorsapp/utils/app_log.dart';

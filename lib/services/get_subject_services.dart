@@ -19,7 +19,7 @@ class GetSubjectServices {
       }else {
         throw Exception('Failed to load subject data');
       }
-  } on DioError catch (e) {
+  } on DioException catch (e) {
     print("response from catch get subjectservies");
     print(e.toString());
     if (e.response != null) {

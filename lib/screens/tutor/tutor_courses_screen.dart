@@ -1,11 +1,9 @@
 // lib/screens/student/pay_courses_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:urbantutorsapp/controllers/pay_course_controller.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:urbantutorsapp/services/pay_course_service.dart';
 
 class CoursesScreen extends StatefulWidget {
   const CoursesScreen({super.key});

@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:urbantutorsapp/models/lead__model.dart';
 import 'package:urbantutorsapp/services/ApiService.dart';
 import 'package:urbantutorsapp/utils/api_constants.dart';
@@ -14,7 +13,7 @@ class LeadService {
     } catch (e) {
       print("Error in getLeads (from LeadService):");
       print(e.toString());
-      throw e;
+      rethrow;
     }
   }
 }

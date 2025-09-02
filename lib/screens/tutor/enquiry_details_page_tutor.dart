@@ -94,7 +94,7 @@ $phone
                     style: TextStyle(fontWeight: FontWeight.bold)),
                 Text(
                   leadNo,
-                  style: const TextStyle(color: Color(0xFFFf9ba73)),
+                  style: const TextStyle(color: Color(0xffff9ba73)),
                 ),
               ],
             ),

@@ -13,12 +13,12 @@ class MyCoinsData {
   });
 
   factory MyCoinsData.fromJson(Map<String, dynamic> j) {
-    double _d(v) => v == null ? 0.0 : double.tryParse(v.toString()) ?? 0.0;
+    double d(v) => v == null ? 0.0 : double.tryParse(v.toString()) ?? 0.0;
     final List list = (j['coinsDetails'] as List?) ?? const [];
     return MyCoinsData(
-      available: _d(j['total_Available_balance']),
-      spent: _d(j['total_spent_balance']),
-      total: _d(j['total_balance']),
+      available: d(j['total_Available_balance']),
+      spent: d(j['total_spent_balance']),
+      total: d(j['total_balance']),
       details:
           list.map((e) => CoinTxn.fromJson(e as Map<String, dynamic>)).toList(),
     );
@@ -55,21 +55,21 @@ class CoinTxn {
   });
 
   factory CoinTxn.fromJson(Map<String, dynamic> j) {
-    double _d(v) => v == null ? 0.0 : double.tryParse(v.toString()) ?? 0.0;
-    DateTime? _t(v) => v == null ? null : DateTime.tryParse(v.toString());
+    double d(v) => v == null ? 0.0 : double.tryParse(v.toString()) ?? 0.0;
+    DateTime? t(v) => v == null ? null : DateTime.tryParse(v.toString());
     return CoinTxn(
       id: int.tryParse(j['id'].toString()) ?? 0,
       userId: int.tryParse(j['user_id'].toString()) ?? 0,
       orderId: j['order_id']?.toString(),
       status: int.tryParse(j['transaction_status'].toString()) ?? 0,
       receiptId: j['receipt_id']?.toString(),
-      amount: _d(j['amount']),
-      finalAmount: _d(j['final_amount']),
-      coins: _d(j['coins']),
-      discountAmount: _d(j['discount_amount']),
-      discountPercentage: _d(j['discount_percentage']),
+      amount: d(j['amount']),
+      finalAmount: d(j['final_amount']),
+      coins: d(j['coins']),
+      discountAmount: d(j['discount_amount']),
+      discountPercentage: d(j['discount_percentage']),
       offers: int.tryParse(j['offers'].toString()) ?? 0,
-      createdAt: _t(j['created_at']),
+      createdAt: t(j['created_at']),
     );
   }
 }

@@ -16,7 +16,7 @@ class GetChapterDetailsServices {
       } else {
         throw Exception('Failed to load Chapter details');
       }
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       print("response from catch get Chapter deatils");
       print(e.toString());
       if (e.response != null) {

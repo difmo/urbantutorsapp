@@ -42,7 +42,7 @@ class LeadCreateService {
       );
 
       return response;
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       // 🔴 Handle error response
       if (e.response != null) {
         print("❌ API Error Response:");

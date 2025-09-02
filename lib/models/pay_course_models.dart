@@ -28,8 +28,8 @@ class PayCourse {
   
 
       factory PayCourse.fromJson(Map<String, dynamic> j) {
-    double _toDouble(dynamic v) => (v is num) ? v.toDouble() : double.tryParse('$v') ?? 0;
-    int _toInt(dynamic v) => (v is num) ? v.toInt() : int.tryParse('$v') ?? 0;
+    double toDouble(dynamic v) => (v is num) ? v.toDouble() : double.tryParse('$v') ?? 0;
+    int toInt(dynamic v) => (v is num) ? v.toInt() : int.tryParse('$v') ?? 0;
 
 
 
@@ -37,24 +37,24 @@ class PayCourse {
 
 
  
-    DateTime? _toDate(dynamic v) {
+    DateTime? toDate(dynamic v) {
       if (v == null) return null;
       return DateTime.tryParse('$v');
     }
 
 
     return PayCourse(
-      id: _toInt(j['id']),
+      id: toInt(j['id']),
       image: j['image']?.toString(),
       pdf: j['pdf']?.toString(),
       courseName: j['course_name']?.toString() ?? '',
-      number: _toInt(j['number']),
-      rating: _toDouble(j['rating']),
-      coins: _toInt(j['coins']),
+      number: toInt(j['number']),
+      rating: toDouble(j['rating']),
+      coins: toInt(j['coins']),
       description: j['description']?.toString() ?? '',
-      status: _toInt(j['status']),
-      createdAt: _toDate(j['created_at']),
-      updatedAt: _toDate(j['updated_at']),
+      status: toInt(j['status']),
+      createdAt: toDate(j['created_at']),
+      updatedAt: toDate(j['updated_at']),
     );
   }
 

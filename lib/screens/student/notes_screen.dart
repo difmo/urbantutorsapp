@@ -29,7 +29,7 @@ class _NotesScreenState extends State<NotesScreen> {
   String? stateVal;
   String? modeVal;
 
-  double _fee = 700;
+  final double _fee = 700;
 
   // GetX controllers
   final MasterDataController _md = Get.find<MasterDataController>();

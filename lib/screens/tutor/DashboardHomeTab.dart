@@ -1,22 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
-import 'package:get/get_state_manager/src/rx_flutter/rx_obx_widget.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/controllers/tutor_leads_controller.dart';
 import 'package:urbantutorsapp/models/tutor_lead.dart';
-import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/enquiry_details_page_tutor.dart';
-import 'package:urbantutorsapp/screens/tutor/notes_tutor.dart';
-import 'package:urbantutorsapp/screens/tutor/tutor_chat_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
-import 'package:urbantutorsapp/screens/tutor/tutor_courses_screen.dart';
-import 'package:urbantutorsapp/screens/tutor/tutor_pyq_screen.dart';
-import 'package:urbantutorsapp/screens/tutor/tutor_support_screen.dart';
 
-import 'package:urbantutorsapp/utils/storage_helper.dart';
-import 'package:urbantutorsapp/widgets/CustomTeacherNavBar.dart';
-import 'package:urbantutorsapp/widgets/TutorDrawer.dart';
 import '../../theme/theme_constants.dart';
 
 /// ✅ Extracted Dashboard main tab (Nearby / Enquiry / Contacted)

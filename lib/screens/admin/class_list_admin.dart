@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class ClassListAdmin extends StatefulWidget {
-  const ClassListAdmin({Key? key}) : super(key: key);
+  const ClassListAdmin({super.key});
 
   @override
   State<ClassListAdmin> createState() => _ClassListAdminState();

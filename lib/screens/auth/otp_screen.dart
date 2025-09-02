@@ -22,7 +22,7 @@ class OTPScreen extends StatefulWidget {
   final int roleId;
   final String otp;
 
-  OTPScreen({
+  const OTPScreen({
     super.key,
     required this.phone,
     required this.role,

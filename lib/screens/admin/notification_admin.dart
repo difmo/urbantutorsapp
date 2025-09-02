@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 
 class NotificationPage extends StatefulWidget {
-  const NotificationPage({Key? key}) : super(key: key);
+  const NotificationPage({super.key});
 
   @override
   State<NotificationPage> createState() => _NotificationPageState();
 }
 
 class _NotificationPageState extends State<NotificationPage> {
-  List<String> _notifications = [];
+  final List<String> _notifications = [];
 
   @override
   void initState() {
@@ -72,11 +72,11 @@ class _NotificationPageState extends State<NotificationPage> {
       floatingActionButton: FloatingActionButton(
         onPressed: _clearAllNotifications,
         tooltip: 'Clear All',
+        backgroundColor: AppColors.primaryColor,
         child: const Icon(
           Icons.delete,
           color: Colors.white,
         ),
-        backgroundColor: AppColors.primaryColor,
       ),
     );
   }

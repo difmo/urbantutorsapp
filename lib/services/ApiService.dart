@@ -37,11 +37,11 @@ class ApiService {
       );
       print(path);
       return await _dio.post(path, data: data, options: options);
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       throw Exception(e.response?.data ?? 'Network error: ${e.message}');
     } catch (e) {
-      print('Pritam' + e.toString());
-      throw (e);
+      print('Pritam$e');
+      rethrow;
     }
   }
 
@@ -59,7 +59,7 @@ class ApiService {
         path,
         options: options,
       );
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       throw Exception(e.response?.data ?? 'Network error: ${e.message}');
     }
   }
@@ -77,7 +77,7 @@ class ApiService {
         },
       );
       return await _dio.put(path, data: data, options: options);
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       throw Exception(e.response?.data ?? 'Network error: ${e.message}');
     }
   }
@@ -93,7 +93,7 @@ class ApiService {
         },
       );
       return await _dio.delete(path, options: options);
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       throw Exception(e.response?.data ?? 'Network error: ${e.message}');
     }
   }

@@ -6,7 +6,7 @@ import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class AdmitProfile extends StatefulWidget {
-  const AdmitProfile({Key? key}) : super(key: key);
+  const AdmitProfile({super.key});
 
   @override
   _AdmitProfileState createState() => _AdmitProfileState();

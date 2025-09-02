@@ -6,7 +6,7 @@ import 'package:urbantutorsapp/utils/api_constants.dart';
 class ProfileService {
   Future<StudentProfileModel> getUserProfile(String token) async {
     print('whynotrunnig');
-    print('tokenfromwhynotrunnig' + token);
+    print('tokenfromwhynotrunnig$token');
     try {
       print('tryerrocomes');
       final response = await ApiService.post(
@@ -18,8 +18,8 @@ class ProfileService {
       print('ResponsefromProfileservices' + response.data);
       return StudentProfileModel.fromJson(response.data);
     } catch (e) {
-      print('thsiscomefromprofileservices' + e.toString());
-      throw (e);
+      print('thsiscomefromprofileservices$e');
+      rethrow;
     }
   }
 

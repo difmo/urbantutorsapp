@@ -34,40 +34,7 @@ class _ChapterDetailsScreenState extends State<ChapterDetailsScreen> {
       backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(backgroundColor: blue, title: const Text('Chapter Details')),
       body: Obx(() {
-        if (_controller.chapterDetails.value == null) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.redAccent, size: 40),
-                  const SizedBox(height: 8),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 44,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: blue,
-                        minimumSize: const Size(0, 44),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        elevation: 0,
-                      ),
-                      onPressed: _load,
-                      child: const Text('Retry'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
         final d = _controller.chapterDetails.value;
-        if (d == null) {
-          return const Center(child: Text('No details found'));
-        }
 
         return RefreshIndicator(
           onRefresh: _load,

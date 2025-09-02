@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:http/http.dart' as http;
 import 'package:urbantutorsapp/models/pay_course_models.dart';
- import 'dart:developer' as developer;
 class PayCourseService {
   static const _api = 'https://urbantutors.pro/api/getpaycourse';
 

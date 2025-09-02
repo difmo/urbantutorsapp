@@ -1,11 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../theme/theme_constants.dart';
 
 class TutorProfileScreenEdit extends StatefulWidget {
-  const TutorProfileScreenEdit({Key? key}) : super(key: key);
+  const TutorProfileScreenEdit({super.key});
 
   @override
   State<TutorProfileScreenEdit> createState() => _TutorProfileScreenEditState();

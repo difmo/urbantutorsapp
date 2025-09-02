@@ -27,7 +27,7 @@ class GetClassesService {
       } else {
         throw Exception('❌ Failed to load class data. Status: ${response.statusCode}');
       }
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       print("❌ DioError while fetching classes:");
       print(e.toString());
 

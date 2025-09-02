@@ -6,7 +6,7 @@ import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class PendingPage extends StatelessWidget {
-  const PendingPage({Key? key}) : super(key: key);
+  const PendingPage({super.key});
 
   Future<void> _refreshProfile(BuildContext context) async {
     final controller = Get.find<ProfileUpdateController>();

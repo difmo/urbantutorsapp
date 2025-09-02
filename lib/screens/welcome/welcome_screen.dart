@@ -34,7 +34,7 @@ class WelcomeScreen extends StatelessWidget {
   /// Reusable Role Button
   Widget _roleButton(BuildContext context, String label, int roleId,
       IconData icon, Color color) {
-    return Container(
+    return SizedBox(
       width: double.infinity,
       child: GestureDetector(
         onTap: () => navigateToNext(context, label, roleId),

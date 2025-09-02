@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import '../../theme/theme_constants.dart';
 
 class TermsAndConditionsScreen extends StatefulWidget {
-  const TermsAndConditionsScreen({Key? key}) : super(key: key);
+  const TermsAndConditionsScreen({super.key});
 
   @override
   State<TermsAndConditionsScreen> createState() =>

@@ -21,7 +21,7 @@ class ProfileUpdateService {
     } catch (e) {
       print("❌ Error in getMasterData (from ProfileUpdateService):");
       print(e.toString());
-      throw e;
+      rethrow;
     }
   }
 
@@ -40,7 +40,7 @@ class ProfileUpdateService {
     } catch (e) {
       print("❌ Error in getProfileUpdate (from ProfileUpdateService):");
       print(e.toString());
-      throw e;
+      rethrow;
     }
   }
 
@@ -58,7 +58,7 @@ class ProfileUpdateService {
     } catch (e) {
       print("❌ Error in getProfileUpdate (from ProfileUpdateService):");
       print(e.toString());
-      throw e;
+      rethrow;
     }
   }
 
@@ -77,7 +77,7 @@ class ProfileUpdateService {
     } catch (e) {
       print("❌ Error in updateProfile (from ProfileUpdateService):");
       print(e.toString());
-      throw e;
+      rethrow;
     }
   }
 
@@ -96,7 +96,7 @@ class ProfileUpdateService {
     } catch (e) {
       print("❌ Error in updateProfile (from ProfileUpdateService):");
       print(e.toString());
-      throw e;
+      rethrow;
     }
   }
 }

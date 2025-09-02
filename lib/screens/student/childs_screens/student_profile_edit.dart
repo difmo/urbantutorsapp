@@ -4,7 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 
 class StudentProfileScreenEdit extends StatefulWidget {
-  const StudentProfileScreenEdit({Key? key}) : super(key: key);
+  const StudentProfileScreenEdit({super.key});
 
   @override
   State<StudentProfileScreenEdit> createState() =>

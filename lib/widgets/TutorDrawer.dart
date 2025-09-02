@@ -16,10 +16,10 @@ class TutorDrawer extends StatelessWidget {
   final String activeLabel;
 
   const TutorDrawer({
-    Key? key,
+    super.key,
     this.onMenuTap,
     this.activeLabel = '',
-  }) : super(key: key);
+  });
 
   Future<void> _launchRateUs() async {
     const url =
