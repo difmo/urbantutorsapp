@@ -43,9 +43,8 @@ class ProfileUpdateController extends GetxController {
 
     try {
       final response = await _profileUpdateService.getProfileForStudent();
-      studentprofileData.value = response.data;
-
-      debugPrint("✅ Profile fetched successfully:");
+      setProfile(response.data);
+      debugPrint("✅ Profile fetched successfully:  ${response.data}");
     } catch (e) {
       debugPrint("❌ Error in fetchProfileUpdate: $e");
       Get.snackbar(
@@ -58,6 +57,10 @@ class ProfileUpdateController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  void setProfile(StudentProfileDataNew? p) {
+    studentprofileData.value = p;
   }
 
   Future<void> fetchProfileForTutor() async {

@@ -6,6 +6,7 @@ import 'package:urbantutorsapp/models/lead_create_model_request.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
+import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/app_log.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
@@ -494,15 +495,14 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                       alignment: Alignment.centerLeft,
                       child: SizedBox(
                         height: 42,
-                        width: 120,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF22C55E),
+                            backgroundColor: AppColors.primaryColor,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             elevation: 0,
                           ),
                           onPressed: _onGetOtp,
-                          child: const Text('Get OTP',
+                          child: const Text('Submit Form',
                               style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white)),
                         ),
                       ),

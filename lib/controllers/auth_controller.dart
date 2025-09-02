@@ -59,15 +59,20 @@ class AuthController extends GetxController {
       int roleIdd = res.data.userData.roles[0].roleId;
       int userId = res.data.userData.id;
       print("User idididididididd $userId");
-
+       await StorageService.saveIsProfileStatus("completed");
       await StorageService.saveRoleId(roleIdd);
       await StorageService.saveUserId(userId);
       print(await StorageService.getUserId());
       return roleIdd;
     } catch (e) {
+      await StorageService.saveIsProfileStatus("pending");
       print("Error while otp verification: $e");
       Get.snackbar('Error', e.toString());
-      return 0;
+      return roleId == "Student/Parent"
+          ? 3
+          : roleId == "Private Tutor"
+              ? 2
+              : 5;
     } finally {
       isLoading.value = false;
     }

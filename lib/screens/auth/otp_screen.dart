@@ -95,10 +95,13 @@ class _OTPScreenState extends State<OTPScreen> {
 
       switch (roleId) {
         case 3:
-          dashboard =
-              profileStatus == "completed" || isProfiledataEmpty() == false
-                  ? StudentDashboardScreen()
-                  : StudentProfileFormScreen();
+          if (profileStatus == "pending") {
+            dashboard = PendingPage();
+          } else if (profileStatus == "completed") {
+            dashboard = StudentDashboardScreen();
+          } else {
+            dashboard = StudentProfileFormScreen();
+          }
           break;
         case 2:
           dashboard = profileStatus == null || profileStatus == "pending"

@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/controllers/tutor_leads_controller.dart';
 import 'package:urbantutorsapp/models/tutor_lead.dart';
+import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/enquiry_details_page_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
+import 'package:urbantutorsapp/widgets/AdminDrawer.dart';
+import 'package:urbantutorsapp/widgets/TutorDrawer.dart';
 
 import '../../theme/theme_constants.dart';
 
@@ -18,7 +23,26 @@ class DashboardHomeTab extends StatefulWidget {
 class _DashboardHomeTabState extends State<DashboardHomeTab> {
   RangeValues _currentRangeValues = const RangeValues(1, 10);
   final TutorLeadsController _leads = Get.put(TutorLeadsController());
-
+  Future<void> _handleMenuTap(String label) async {
+    Navigator.of(context).pop();
+    if (label == 'Logout') {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      await StorageService.clear();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Logged out successfully')));
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const SplashScreen()),
+        (_) => false,
+      );
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Navigating to $label')));
+    }
+  }
   @override
   Widget build(BuildContext context) {
     final primaryColor = AppColors.primaryColor;
@@ -27,6 +51,7 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
     return DefaultTabController(
         length: 3,
         child: Scaffold(
+           endDrawer: TutorDrawer(onMenuTap: _handleMenuTap),
           appBar: AppBar(
             backgroundColor: AppColors.primaryColor,
             elevation: 2,

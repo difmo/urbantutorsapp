@@ -199,9 +199,7 @@ class _StudentDrawerState extends State<StudentDrawer> {
                           ),
                           SizedBox(height: 4),
                           Text(
-                            _profileUpdateController
-                                    .studentprofileData.value!.courseName ??
-                                "Unknown User",
+                             _profileUpdateController.studentprofileData.value?.courseName ?? "Unknown User",
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.black54,
