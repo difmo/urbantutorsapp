@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/tutor_leads_controller.dart';
 import 'package:urbantutorsapp/models/tutor_lead.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
@@ -43,6 +44,27 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
           .showSnackBar(SnackBar(content: Text('Navigating to $label')));
     }
   }
+
+  late final CoinsController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = Get.isRegistered<CoinsController>()
+        ? Get.find<CoinsController>()
+        : Get.put(CoinsController());
+
+    // if you already have refreshAll(), keep this.
+    // otherwise ensure it fetches both packages + wallet.
+    _c.refreshAll();
+  }
+
+  num _toNum(dynamic v) {
+    if (v == null) return 0;
+    if (v is num) return v;
+    return num.tryParse(v.toString()) ?? 0;
+  }
+
   @override
   Widget build(BuildContext context) {
     final primaryColor = AppColors.primaryColor;
@@ -51,76 +73,94 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
     return DefaultTabController(
         length: 3,
         child: Scaffold(
-           endDrawer: TutorDrawer(onMenuTap: _handleMenuTap),
+          endDrawer: TutorDrawer(onMenuTap: _handleMenuTap),
           appBar: AppBar(
             backgroundColor: AppColors.primaryColor,
             elevation: 2,
             toolbarHeight: 75,
-            title: Row(
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [primaryColor, accentColor],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+            title: Obx(() {
+              final loading = _c.loadingCoins.value || _c.loadingMyCoins.value;
+              final wallet = _c.myCoins.value; // Rxn<...> -> nullable model
+
+              // Format safely (int/double/String/null)
+              final balanceNum = _toNum(wallet?.available);
+              final balanceText = balanceNum.toStringAsFixed(0);
+
+              if (loading && wallet == null) {
+                return const SizedBox(
+                  height: 24,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: CircularProgressIndicator(color: Colors.white),
+                  ),
+                );
+              }
+              return Row(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [primaryColor, accentColor],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    child: const CircleAvatar(
+                      backgroundColor: Colors.transparent,
+                      radius: 24,
+                      child: Text(
+                        'S',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
-                  padding: const EdgeInsets.all(2),
-                  child: const CircleAvatar(
-                    backgroundColor: Colors.transparent,
-                    radius: 24,
-                    child: Text(
-                      'S',
+                  const SizedBox(width: 12),
+                  const Text('Welcome, Tutor',
                       style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                const Text('Welcome, Tutor',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.white)),
-                const Spacer(),
-                const SizedBox(width: 8),
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => TutorCoinsScreen()));
-                    },
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: accentColor.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.monetization_on,
-                              color: accentColor, size: 14),
-                          const SizedBox(width: 6),
-                          const Text(
-                            "200 coins",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 10,
-                            ),
-                          )
-                        ],
+                          fontWeight: FontWeight.bold, color: Colors.white)),
+                  const Spacer(),
+                  const SizedBox(width: 8),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => TutorCoinsScreen()));
+                      },
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: accentColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.monetization_on,
+                                color: accentColor, size: 14),
+                            const SizedBox(width: 6),
+                            Text(
+                              "$balanceText coins",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 10,
+                              ),
+                            )
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                )
-              ],
-            ),
+                  )
+                ],
+              );
+            }),
             bottom: const TabBar(
               labelColor: AppColors.accentColor,
               unselectedLabelColor: Colors.white70,

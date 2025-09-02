@@ -30,19 +30,119 @@ class CoinsController extends GetxController {
 
   // Razorpay
   Razorpay? _razorpay;
-  static const String _razorpayKeyId = 'rzp_test_G8C4fq7TzDzwgm'; // ← your key id
 
+  // ⚠️ Use only KEY_ID in the app (test)
+  static const String _rzpKeyId = 'rzp_test_G8C4fq7TzDzwgm';
   @override
   void onInit() {
     super.onInit();
+    super.onInit();
     fetchCoins();
     fetchMyCoins();
+    _initRazorpay();
   }
+
+  void _initRazorpay() {
+    _razorpay ??= Razorpay();
+    _razorpay!.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onPaymentSuccess);
+    _razorpay!.on(Razorpay.EVENT_PAYMENT_ERROR, _onPaymentError);
+    _razorpay!.on(Razorpay.EVENT_EXTERNAL_WALLET, _onExternalWallet);
+  }
+
 
   @override
   void onClose() {
     _razorpay?.clear();
     super.onClose();
+  }
+
+  void _toast(BuildContext ctx, String msg) {
+    if (!ctx.mounted) return;
+    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  Future<void> startRazorpayCheckout(
+      BuildContext context, CoinPackage pack) async {
+    final token = await StorageService
+        .getToken(); // unused here but keep if you later call your server
+    final userId = await StorageService.getUserId();
+    if (token == null || userId == null) {
+      _toast(context, 'Please login');
+      return;
+    }
+
+    final amountPaise = (pack.total * 100).round().clamp(100, 999999999);
+
+    try {
+      isCreatingOrder.value = true;
+
+      // 👇 Create order directly on Razorpay (since your server endpoint 404s)
+      final orderId = await _service.createRazorpayOrderDirect(
+        amountPaise: amountPaise,
+        receipt: 'rcpt_${DateTime.now().millisecondsSinceEpoch}_$userId',
+        notes: {
+          'user_id': userId,
+          'coins': '${pack.coins}',
+          'package_id': '${pack.id ?? ''}',
+        },
+      );
+
+      // Open checkout with that orderId
+      final options = {
+        'key': _rzpKeyId,
+        'amount': amountPaise, // paise
+        'currency': 'INR',
+        'name': 'Urban Tutors',
+        'description': '${pack.coins} Coins',
+        'order_id': orderId, // 🔥 required
+        'theme': {'color': '#5AB55E'},
+      };
+
+      _razorpay ??= Razorpay();
+      _razorpay!.open(options);
+    } catch (e) {
+      _toast(context, 'Order error: $e');
+    } finally {
+      isCreatingOrder.value = false;
+    }
+  }
+
+  Future<void> _onPaymentSuccess(PaymentSuccessResponse r) async {
+    print(
+        "Payment successful: ${r.paymentId}, order: ${r.orderId}, signature: ${r.signature}");  
+    // Verify with backend (mandatory)
+    final token = await StorageService.getToken();
+    final userId = await StorageService.getUserId();
+    if (token == null || userId == null) return;
+
+    final ok = await _service.verifyRazorpayPayment(
+      userId: userId,
+      razorpayOrderId: r.orderId ?? '',
+      razorpayPaymentId: r.paymentId ?? '',
+      razorpaySignature: r.signature ?? '',
+      token: token,
+    );
+    if (ok) {
+      print("Payment successful and verified $ok");
+      Get.snackbar('Payment', 'Payment successful 🎉');
+      // Refresh wallet/txns if you expose these:
+      await refreshAll(); // make sure this only updates Rx after first frame
+    } else {
+         print("Payment successful and verified $ok");
+      Get.snackbar('Payment', 'Verification failed',
+          backgroundColor: Colors.red.shade100);
+    }
+  }
+
+  void _onPaymentError(PaymentFailureResponse r) {
+    print("Payment failed: ${r.code}: ${r.message ?? ''}");
+    Get.snackbar('Payment failed', '${r.code}: ${r.message ?? ''}',
+        backgroundColor: Colors.red.shade100);
+  }
+
+  void _onExternalWallet(ExternalWalletResponse r) {
+    print("External wallet: ${r.walletName ?? ''}");
+    Get.snackbar('External wallet', r.walletName ?? '');
   }
 
   Future<void> fetchCoins() async {
@@ -92,7 +192,9 @@ class CoinsController extends GetxController {
     try {
       isCreatingOrder.value = true;
       final _ = await _service.createQuinceOrder(
-        pack: pack, userId: userId, token: token,
+        pack: pack,
+        userId: userId,
+        token: token,
       );
       // TODO: open URL if your API returns one
     } catch (e) {
@@ -130,72 +232,8 @@ class CoinsController extends GetxController {
       final id = (resp.data['id'] ?? '').toString();
       if (id.isNotEmpty) return id;
     }
-    throw Exception('Failed to create Razorpay order: ${resp.statusCode} ${resp.data}');
-  }
-
-  // -------------------- RAZORPAY --------------------
-  Future<void> startRazorpayCheckout(
-      BuildContext context, CoinPackage pack) async {
-    final token = await StorageService.getToken();
-    final userId = await StorageService.getUserId();
-    if (token == null || userId == null) {
-      _toast(context, 'Please login');
-      return;
-    }
-    // Amount in paise (integer)
-    final amountPaise = (pack.total * 100).round();
-
-    try {
-      isCreatingOrder.value = true;
-
-      // 1) Create order on your server (server uses KEY_SECRET)
-      final orderId = await _service.createRazorpayOrder(
-        userId: userId,
-        amountPaise: amountPaise,
-        token: token,
-      );
-
-      // 2) Setup Razorpay instance & callbacks
-      _razorpay ??= Razorpay();
-      _razorpay!.on(Razorpay.EVENT_PAYMENT_SUCCESS,
-          (PaymentSuccessResponse r) async {
-        final ok = await verifyRazorpayAndRefresh(
-          razorpayOrderId: r.orderId ?? '',
-          razorpayPaymentId: r.paymentId ?? '',
-          razorpaySignature: r.signature ?? '',
-          context: context,
-        );
-        _toast(context, ok ? 'Payment successful' : 'Verification failed');
-      });
-
-      _razorpay!.on(Razorpay.EVENT_PAYMENT_ERROR,
-          (PaymentFailureResponse r) => _toast(
-                context,
-                'Payment failed: ${r.message ?? r.code}',
-              ));
-
-      _razorpay!.on(Razorpay.EVENT_EXTERNAL_WALLET,
-          (ExternalWalletResponse r) =>
-              _toast(context, 'External wallet: ${r.walletName}'));
-
-      // 3) Open checkout
-      final options = {
-        'key': _razorpayKeyId,
-        'amount': amountPaise, // in paise
-        'name': 'Urban Tutors',
-        'description': '${pack.coins} Coins',
-        'order_id': orderId,
-        'currency': 'INR',
-        'theme': {'color': '#5AB55E'},
-        // 'prefill': {'contact': '9xxxxxxxxx', 'email': 'user@email.com'},
-      };
-
-      _razorpay!.open(options);
-    } catch (e) {
-      _toast(context, e.toString());
-    } finally {
-      isCreatingOrder.value = false;
-    }
+    throw Exception(
+        'Failed to create Razorpay order: ${resp.statusCode} ${resp.data}');
   }
 
   /// Call your `/api/purchasecoins` (already implemented in service)
@@ -224,12 +262,6 @@ class CoinsController extends GetxController {
     } catch (e) {
       _toast(context, e.toString());
       return false;
-    }
-  }
-
-  void _toast(BuildContext ctx, String msg) {
-    if (ctx.mounted) {
-      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
 }

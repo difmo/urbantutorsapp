@@ -1,8 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/ChatUserListScreen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/HistoryScreen.dart';
@@ -13,7 +15,6 @@ import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart
 import 'package:urbantutorsapp/screens/student/notes_screen.dart';
 import 'package:urbantutorsapp/screens/student/pdf_courses_screen.dart';
 import 'package:urbantutorsapp/screens/student/search_tutor_screen.dart';
-
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/CustomStudentNavBar.dart';
 import 'package:urbantutorsapp/widgets/StudentDrawer.dart';
@@ -30,13 +31,33 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _currentIndex = 0;
 
+
   final List<Widget> _screens = [
-    HomeScreen(),
+    const HomeScreen(),
     ChatUserListScreen(),
-    UpgradeScreen(),
+    const UpgradeScreen(),
     HistoryScreen(),
-    SupportScreen(),
+    const SupportScreen(),
   ];
+
+  late final CoinsController _c;
+  @override
+  void initState() {
+    super.initState();
+    _c = Get.isRegistered<CoinsController>()
+        ? Get.find<CoinsController>()
+        : Get.put(CoinsController());
+
+    // if you already have refreshAll(), keep this.
+    // otherwise ensure it fetches both packages + wallet.
+    _c.refreshAll();
+  }
+
+  num _toNum(dynamic v) {
+    if (v == null) return 0;
+    if (v is num) return v;
+    return num.tryParse(v.toString()) ?? 0;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,12 +98,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         toolbarHeight: 72,
         titleSpacing: 0,
         systemOverlayStyle: const SystemUiOverlayStyle(
-          // status bar icons visible
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.light,
           statusBarBrightness: Brightness.dark,
         ),
-        // 🔹 Gradient only inside the AppBar
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -92,19 +111,41 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             ),
           ),
         ),
-        title: _Header(
-          primary: primary,
-          accent: accent,
-          onCoinTap: () {
-            Navigator.push(
-                context, MaterialPageRoute(builder: (_) => CoinsStudent()));
-          },
-        ),
+        title: Obx(() {
+          final loading = _c.loadingCoins.value || _c.loadingMyCoins.value;
+          final wallet = _c.myCoins.value; // Rxn<...> -> nullable model
+
+          // Format safely (int/double/String/null)
+          final balanceNum = _toNum(wallet?.available);
+          final balanceText = balanceNum.toStringAsFixed(0);
+
+          if (loading && wallet == null) {
+            return const SizedBox(
+              height: 24,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+            );
+          }
+
+          return _Header(
+            primary: primary,
+            accent: accent,
+            balance: balanceText,
+            onCoinTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CoinsStudentScreen()),
+              );
+            },
+          );
+        }),
         actions: [
           Builder(
-            builder: (context) => IconButton(
+            builder: (ctx) => IconButton(
               icon: const Icon(Icons.menu, color: Colors.white),
-              onPressed: () => Scaffold.of(context).openEndDrawer(),
+              onPressed: () => Scaffold.maybeOf(ctx)?.openEndDrawer(),
             ),
           ),
         ],
@@ -123,8 +164,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         decoration: const BoxDecoration(
           color: Colors.white,
           boxShadow: [
-            BoxShadow(
-                color: Colors.black12, blurRadius: 8, offset: Offset(0, -2))
+            BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, -2))
           ],
         ),
         child: CustomStudentNavBar(
@@ -147,10 +187,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const _QuickStatsRow(), // no extra spacer inside Row
                     const SizedBox(height: 16),
-                    _QuickStatsRow(primary: primary, accent: accent),
-                    const SizedBox(height: 16),
-                    _SectionHeader(title: 'Your tools'),
+                    const _SectionHeader(title: 'Your tools'),
                     GridView.count(
                       crossAxisCount: 2,
                       shrinkWrap: true,
@@ -161,36 +200,33 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                         _FeatureCard(
                           label: 'Notes',
                           icon: Icons.note_alt_outlined,
-                          gradient: LinearGradient(colors: [
-                            primary.withOpacity(.15),
-                            primary.withOpacity(.05)
-                          ]),
+                          gradient: LinearGradient(
+                            colors: [primary.withOpacity(.15), primary.withOpacity(.05)],
+                          ),
                           onTap: () {
                             Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) =>
-                                        NotesScreen(flags: "Note")));
+                              context,
+                              MaterialPageRoute(builder: (_) => const NotesScreen(flags: "Note")),
+                            );
                           },
                         ),
                         _FeatureCard(
                           label: 'PYQ’s',
                           icon: Icons.assignment_turned_in_outlined,
-                          gradient: LinearGradient(colors: [
-                            accent.withOpacity(.15),
-                            accent.withOpacity(.05)
-                          ]),
+                          gradient: LinearGradient(
+                            colors: [accent.withOpacity(.15), accent.withOpacity(.05)],
+                          ),
                           onTap: () {
                             Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) => NotesScreen(flags: "pyq")));
+                              context,
+                              MaterialPageRoute(builder: (_) => const NotesScreen(flags: "pyq")),
+                            );
                           },
                         ),
                       ],
                     ),
                     const SizedBox(height: 22),
-                    _SectionHeader(title: 'Continue learning'),
+                    const _SectionHeader(title: 'Continue learning'),
                     const SizedBox(height: 12),
                     _BigActionCard(
                       label: 'Courses (PDF)',
@@ -203,9 +239,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       ),
                       onTap: () {
                         Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => PDFCoursesScreen()));
+                          context,
+                          MaterialPageRoute(builder: (_) => const PDFCoursesScreen()),
+                        );
                       },
                     ),
                     const SizedBox(height: 14),
@@ -220,9 +256,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       ),
                       onTap: () {
                         Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const SearchTutorScreen()));
+                          context,
+                          MaterialPageRoute(builder: (_) => const SearchTutorScreen()),
+                        );
                       },
                     ),
                     const SizedBox(height: 24),
@@ -237,46 +273,52 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   }
 }
 
-/// ---------- Header pieces
+/// ---------- Header
 
 class _Header extends StatelessWidget {
-  const _Header(
-      {required this.primary, required this.accent, required this.onCoinTap});
+  const _Header({
+    required this.primary,
+    required this.accent,
+    required this.onCoinTap,
+    required this.balance,
+  });
+
   final Color primary;
   final Color accent;
   final VoidCallback onCoinTap;
+  final String balance;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        // Gradient ring avatar
         Container(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: LinearGradient(
-                colors: [primary, accent],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight),
+              colors: [primary, accent],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
           padding: const EdgeInsets.all(2),
           child: const CircleAvatar(
             radius: 22,
             backgroundColor: Colors.white,
-            child: Text('S',
-                style: TextStyle(
-                    fontWeight: FontWeight.w800, color: Colors.black87)),
+            child: Text(
+              'S',
+              style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black87),
+            ),
           ),
         ),
         const SizedBox(width: 12),
         const Expanded(
-          child: Text('Welcome, Student',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 18)),
+          child: Text(
+            'Welcome, Student',
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18),
+          ),
         ),
-        // Coins chip (glass)
         InkWell(
           borderRadius: BorderRadius.circular(22),
           onTap: onCoinTap,
@@ -285,22 +327,24 @@ class _Header extends StatelessWidget {
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(.18),
                   borderRadius: BorderRadius.circular(22),
                   border: Border.all(color: Colors.white.withOpacity(.25)),
                 ),
                 child: Row(
-                  children: const [
-                    Icon(Icons.monetization_on, size: 16, color: Colors.white),
-                    SizedBox(width: 6),
-                    Text('200 coins',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12)),
+                  children: [
+                    const Icon(Icons.monetization_on, size: 16, color: Colors.white),
+                    const SizedBox(width: 6),
+                    Text(
+                      '$balance coins',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -340,8 +384,7 @@ class _BottomCurveClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     final p = Path()..lineTo(0, size.height - 50);
-    p.quadraticBezierTo(
-        size.width * 0.5, size.height, size.width, size.height - 50);
+    p.quadraticBezierTo(size.width * 0.5, size.height, size.width, size.height - 50);
     p.lineTo(size.width, 0);
     p.close();
     return p;
@@ -359,46 +402,48 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(title,
-        style: const TextStyle(
-            fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black87));
+    return Text(
+      title,
+      style:
+          const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black87),
+    );
   }
 }
 
 class _QuickStatsRow extends StatelessWidget {
-  const _QuickStatsRow({required this.primary, required this.accent});
-  final Color primary;
-  final Color accent;
+  const _QuickStatsRow();
 
   @override
   Widget build(BuildContext context) {
+    final primary = AppColors.primaryColor;
+    final accent = AppColors.accentColor;
     return Row(
       children: [
-        SizedBox(
-          height: 25,
-        ),
         _StatChip(
-            icon: Icons.chat_bubble_outline,
-            label: 'Messages',
-            value: '3',
-            tint: primary),
+          icon: Icons.chat_bubble_outline,
+          label: 'Messages',
+          value: '3',
+          tint: primary,
+        ),
         const SizedBox(width: 10),
         _StatChip(
-            icon: Icons.verified_user_outlined,
-            label: 'Plan',
-            value: 'Basic',
-            tint: accent),
+          icon: Icons.verified_user_outlined,
+          label: 'Plan',
+          value: 'Basic',
+          tint: accent,
+        ),
       ],
     );
   }
 }
 
 class _StatChip extends StatelessWidget {
-  const _StatChip(
-      {required this.icon,
-      required this.label,
-      required this.value,
-      required this.tint});
+  const _StatChip({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.tint,
+  });
   final IconData icon;
   final String label;
   final String value;
@@ -413,8 +458,7 @@ class _StatChip extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
           boxShadow: const [
-            BoxShadow(
-                color: Color(0x11000000), blurRadius: 12, offset: Offset(0, 6))
+            BoxShadow(color: Color(0x11000000), blurRadius: 12, offset: Offset(0, 6))
           ],
           border: Border.all(color: Colors.black12.withOpacity(.05)),
         ),
@@ -427,7 +471,8 @@ class _StatChip extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
-                    colors: [tint.withOpacity(.15), tint.withOpacity(.05)]),
+                  colors: [tint.withOpacity(.15), tint.withOpacity(.05)],
+                ),
               ),
               child: Icon(icon, size: 18, color: tint),
             ),
@@ -437,12 +482,10 @@ class _StatChip extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label,
-                      style:
-                          const TextStyle(fontSize: 11, color: Colors.black54)),
+                  Text(label, style: const TextStyle(fontSize: 11, color: Colors.black54)),
                   Text(value,
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w700)),
+                      style:
+                          const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
                 ],
               ),
             )
@@ -476,8 +519,7 @@ class _FeatureCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           gradient: gradient,
           boxShadow: const [
-            BoxShadow(
-                color: Color(0x12000000), blurRadius: 10, offset: Offset(0, 6))
+            BoxShadow(color: Color(0x12000000), blurRadius: 10, offset: Offset(0, 6))
           ],
           border: Border.all(color: Colors.black12.withOpacity(.04)),
         ),
@@ -521,8 +563,7 @@ class _BigActionCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           gradient: gradient,
           boxShadow: const [
-            BoxShadow(
-                color: Color(0x14000000), blurRadius: 14, offset: Offset(0, 8))
+            BoxShadow(color: Color(0x14000000), blurRadius: 14, offset: Offset(0, 8))
           ],
           border: Border.all(color: Colors.black12.withOpacity(.05)),
         ),
@@ -534,10 +575,7 @@ class _BigActionCard extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
-                  colors: [
-                    Colors.black.withOpacity(.06),
-                    Colors.white.withOpacity(.5)
-                  ],
+                  colors: [Colors.black.withOpacity(.06), Colors.white.withOpacity(.5)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -551,17 +589,14 @@ class _BigActionCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(label,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w800)),
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
                   const SizedBox(height: 6),
                   Text(subtitle,
-                      style:
-                          const TextStyle(fontSize: 12, color: Colors.black54)),
+                      style: const TextStyle(fontSize: 12, color: Colors.black54)),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios,
-                size: 16, color: Colors.black45),
+            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.black45),
           ],
         ),
       ),
@@ -579,7 +614,10 @@ class _InkCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-          borderRadius: BorderRadius.circular(16), onTap: onTap, child: child),
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: child,
+      ),
     );
   }
 }

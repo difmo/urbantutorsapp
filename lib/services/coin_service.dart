@@ -1,4 +1,6 @@
 // lib/services/coin_service.dart
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:urbantutorsapp/models/coin_package.dart';
 import 'package:urbantutorsapp/models/my_coins.dart';
@@ -49,9 +51,9 @@ class CoinService {
     required String token,
   }) async {
     final form = FormData.fromMap({'user_id': userId});
-    final res =
-        await ApiService.post('https://urbantutors.pro/api/my_coins', form,
-            token: token);
+    final res = await ApiService.post(
+        'https://urbantutors.pro/api/my_coins', form,
+        token: token);
     developer.log("my_coins → ${res.data}", name: 'CoinService');
 
     if (res.statusCode == 200 &&
@@ -72,14 +74,13 @@ class CoinService {
       'user_id': userId,
       'package_id': pack.id,
       'coins': pack.coins,
-      // send final payable (incl. GST/discount) if your backend expects it:
       'amount': pack.total.toStringAsFixed(2),
       'gateway': 'quince',
     };
 
-    final res =
-        await ApiService.post('https://urbantutors.pro/api/purchasecoins',
-            payload, token: token);
+    final res = await ApiService.post(
+        'https://urbantutors.pro/api/purchasecoins', payload,
+        token: token);
     developer.log("purchasecoins(quince-init) → ${res.data}",
         name: 'CoinService');
 
@@ -90,36 +91,46 @@ class CoinService {
     throw Exception(res.data?['message'] ?? 'Unable to create order');
   }
 
-/// Create a Razorpay order on YOUR SERVER (server uses KEY_SECRET).
-  /// Adjust the endpoint if yours differs.
-  Future<String> createRazorpayOrder({
-    required String userId,
-    required int amountPaise, // INR in paise
-    required String token,
+   // ⛳️ Test keys (OK for dev). For prod, NEVER embed KEY_SECRET in app.
+  static const String rzpKeyId = 'rzp_test_G8C4fq7TzDzwgm';
+  static const String rzpKeySecret = 'jx32K2TTW84b1Gj53IWAfFVf';
+
+  // ---------- DIRECT Razorpay order create (TEST/DEV) ----------
+  Future<String> createRazorpayOrderDirect({
+    required int amountPaise,
+    required String receipt,
+    Map<String, dynamic>? notes,
   }) async {
-    // You can send receipt/currency if your backend expects them
-    final payload = {
-      'user_id': userId,
-      'amount': amountPaise,   // server must forward to Razorpay Orders API
+    final dio = Dio(BaseOptions(
+      baseUrl: 'https://api.razorpay.com/v1/',
+      headers: {
+        // Basic Auth: key_id:key_secret
+        'Authorization': 'Basic ${base64Encode(utf8.encode('$rzpKeyId:$rzpKeySecret'))}',
+        'Content-Type': 'application/json',
+      },
+      receiveDataWhenStatusError: true,
+      validateStatus: (_) => true,
+    ));
+
+    final body = {
+      'amount': amountPaise,      // paise
       'currency': 'INR',
+      'receipt': receipt,
+      'payment_capture': 1,
+      if (notes != null) 'notes': notes,
     };
 
-    // Example endpoint name — change to your actual:
-    final res = await ApiService.post(
-      'https://urbantutors.pro/api/create_razorpay_order',
-      payload,
-      token: token,
-    );
+    developer.log('RZP create order → $body', name: 'CoinService');
 
-    // Expecting: { success: true, data: { order_id: 'order_xxx', amount: 12345 } }
-    if (res.statusCode == 200 &&
-        res.data is Map &&
-        (res.data['success'] == true)) {
-      final data = res.data['data'] ?? res.data;
-      final orderId = (data['order_id'] ?? data['id'] ?? '').toString();
-      if (orderId.isNotEmpty) return orderId;
+    final res = await dio.post('orders', data: body);
+
+    developer.log('RZP resp [${res.statusCode}] → ${res.data}', name: 'CoinService');
+
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      final id = res.data?['id']?.toString();
+      if (id != null && id.isNotEmpty) return id;
     }
-    throw Exception(res.data?['message'] ?? 'Failed to create Razorpay order');
+    throw Exception('Razorpay order create failed: ${res.statusCode} ${res.data}');
   }
 
   /// Verify Razorpay success with your backend
@@ -138,9 +149,9 @@ class CoinService {
       'razorpay_signature': razorpaySignature,
     });
 
-    final res =
-        await ApiService.post('https://urbantutors.pro/api/purchasecoins',
-            form, token: token);
+    final res = await ApiService.post(
+        'https://urbantutors.pro/api/purchasecoins', form,
+        token: token);
     developer.log("purchasecoins(razorpay-verify) → ${res.data}",
         name: 'CoinService');
 

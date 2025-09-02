@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:urbantutorsapp/controllers/coins_controller.dart';
 
 import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/DashboardHomeTab.dart';
@@ -28,7 +29,7 @@ class _TutorDashboardState extends State<TutorDashboard> {
 
   final RangeValues _currentRangeValues = const RangeValues(1, 10);
   int _currentIndex = 0;
-
+  late final CoinsController _c;
   final List<Widget> _screens = [
     const DashboardHomeTab(),
     const NotesTutor(),
@@ -37,6 +38,24 @@ class _TutorDashboardState extends State<TutorDashboard> {
     const TutorChatScreen(),
     const TutorSupportScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _c = Get.isRegistered<CoinsController>()
+        ? Get.find<CoinsController>()
+        : Get.put(CoinsController());
+
+    // if you already have refreshAll(), keep this.
+    // otherwise ensure it fetches both packages + wallet.
+    _c.refreshAll();
+  }
+
+  num _toNum(dynamic v) {
+    if (v == null) return 0;
+    if (v is num) return v;
+    return num.tryParse(v.toString()) ?? 0;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +86,6 @@ class _TutorDashboardState extends State<TutorDashboard> {
               );
             }
           }),
-         
           body: _screens[_currentIndex], // ✅ show selected screen
           bottomNavigationBar: CustomTeacherNavBar(
             currentIndex: _currentIndex,

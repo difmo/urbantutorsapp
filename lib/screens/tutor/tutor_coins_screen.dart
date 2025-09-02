@@ -5,6 +5,7 @@ import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/models/coin_package.dart';
 import 'package:urbantutorsapp/models/my_coins.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
+import 'dart:math' as math;
 
 class TutorCoinsScreen extends StatefulWidget {
   const TutorCoinsScreen({super.key});
@@ -16,13 +17,20 @@ class TutorCoinsScreen extends StatefulWidget {
 class _TutorCoinsScreenState extends State<TutorCoinsScreen> {
   late final CoinsController _c;
 
+  num _numVal(dynamic v) {
+    if (v is num) return v;
+    if (v == null) return 0;
+    return num.tryParse(v.toString()) ?? 0;
+  }
+
   @override
   void initState() {
     super.initState();
     _c = Get.isRegistered<CoinsController>()
         ? Get.find<CoinsController>()
         : Get.put(CoinsController());
-    _c.refreshAll();
+    // Avoid updating Rx during the first build
+    WidgetsBinding.instance.addPostFrameCallback((_) => _c.refreshAll());
   }
 
   @override
@@ -46,7 +54,7 @@ class _TutorCoinsScreenState extends State<TutorCoinsScreen> {
       body: Obx(() {
         final packs = _c.coins;
         final wallet = _c.myCoins.value;
-        final available = (wallet?.available ?? 0).toStringAsFixed(0);
+        final available = _numVal(wallet?.available).toStringAsFixed(0);
 
         if (_c.loadingCoins.value && _c.loadingMyCoins.value) {
           return const Center(child: CircularProgressIndicator());
@@ -54,7 +62,8 @@ class _TutorCoinsScreenState extends State<TutorCoinsScreen> {
 
         return LayoutBuilder(builder: (context, cts) {
           final width = cts.maxWidth;
-          final isWide = width >= 700;
+          final cross =
+              math.max(2, math.min(6, (width ~/ 260))); // int, not num
 
           return SingleChildScrollView(
             padding: const EdgeInsets.only(bottom: 24),
@@ -74,19 +83,19 @@ class _TutorCoinsScreenState extends State<TutorCoinsScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // Packs
                 if (_c.loadingCoins.value)
                   const Center(child: CircularProgressIndicator())
                 else if (_c.errorMessage.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(_c.errorMessage.value,
-                        style: const TextStyle(color: Colors.red)),
+                    child: Text(
+                      _c.errorMessage.value,
+                      style: const TextStyle(color: Colors.red),
+                    ),
                   )
                 else if (packs.isEmpty)
                   const Center(child: Text('No coin packs available'))
-                else if (!isWide)
+                else if (width < 700)
                   SizedBox(
                     height: 130,
                     child: ListView.separated(
@@ -114,7 +123,7 @@ class _TutorCoinsScreenState extends State<TutorCoinsScreen> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: (width ~/ 260).clamp(2, 6),
+                        crossAxisCount: cross,
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 12,
                         childAspectRatio: 260 / 130,
@@ -131,7 +140,6 @@ class _TutorCoinsScreenState extends State<TutorCoinsScreen> {
                       },
                     ),
                   ),
-
                 const SizedBox(height: 24),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -148,21 +156,20 @@ class _TutorCoinsScreenState extends State<TutorCoinsScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-
-                // Transactions
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
                   child: Text('Transactions :',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16)),
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 ),
                 const SizedBox(height: 8),
-
                 if (_c.loadingMyCoins.value)
                   const Center(
-                      child: Padding(
-                          padding: EdgeInsets.all(16),
-                          child: CircularProgressIndicator()))
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
                 else if (_c.myCoinsError.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -194,21 +201,19 @@ class _TutorCoinsScreenState extends State<TutorCoinsScreen> {
     );
   }
 
-  // ---------- Checkout (opens Quince on controller) ----------
+  // ---------- Checkout ----------
   void _showCheckout(BuildContext context, CoinPackage p, Color primary) {
-    // math shown in the UI; final server charge comes from your backend
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) {
         final mq = MediaQuery.of(context);
-        // Calculate pricing details
         final base = p.baseAmount ?? p.effectiveAmount;
         final discount = p.hasPercentOffer
             ? base * (p.discountPercentage ?? 0) / 100
             : (p.flatOff ?? 0);
-        final effective = base - discount;
+        final effective = (base - discount).clamp(0, double.infinity);
         final gst = effective * 0.12;
         final total = effective + gst;
 
@@ -223,7 +228,6 @@ class _TutorCoinsScreenState extends State<TutorCoinsScreen> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
             ),
-            // ❌ Do NOT wrap this whole Column with Obx.
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,35 +248,18 @@ class _TutorCoinsScreenState extends State<TutorCoinsScreen> {
                 _row('Total Payable', '₹${total.toStringAsFixed(2)}',
                     bold: true),
                 const SizedBox(height: 16),
-                // ✅ Wrap ONLY the changing part with Obx
                 Align(
                   alignment: Alignment.centerRight,
                   child: Obx(() {
                     final busy = _c.isCreatingOrder.value;
-                    return Wrap(
-                      spacing: 12,
-                      children: [
-                        ElevatedButton(
-                          onPressed: busy
-                              ? null
-                              : () {
-                                  Navigator.pop(context);
-                                  _c.startRazorpayCheckout(
-                                      context, p); // Razorpay
-                                },
-                          child:
-                              Text(busy ? 'Processing…' : 'Pay with Razorpay'),
-                        ),
-                        // ElevatedButton(
-                        //   onPressed: busy
-                        //       ? null
-                        //       : () {
-                        //           Navigator.pop(context);
-                        //           _c.checkoutQuince(context, p); // Quince
-                        //         },
-                        //   child: const Text('Pay with Quince'),
-                        // ),
-                      ],
+                    return ElevatedButton(
+                      onPressed: busy
+                          ? null
+                          : () {
+                              Navigator.pop(context);
+                              _c.startRazorpayCheckout(context, p);
+                            },
+                      child: Text(busy ? 'Processing…' : 'Pay with Razorpay'),
                     );
                   }),
                 ),
@@ -289,9 +276,11 @@ class _TutorCoinsScreenState extends State<TutorCoinsScreen> {
         child: Row(
           children: [
             Expanded(child: Text(a)),
-            Text(b,
-                style: TextStyle(
-                    fontWeight: bold ? FontWeight.bold : FontWeight.w500)),
+            Text(
+              b,
+              style: TextStyle(
+                  fontWeight: bold ? FontWeight.bold : FontWeight.w500),
+            ),
           ],
         ),
       );
@@ -314,6 +303,9 @@ class _PackTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasOffer =
+        pack.hasPercentOffer || pack.flatOff > 0 || (pack.offers ?? 0) == 1;
+
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -331,9 +323,7 @@ class _PackTile extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (pack.hasPercentOffer ||
-                  pack.flatOff > 0 ||
-                  (pack.offers ?? 0) == 1)
+              if (hasOffer)
                 Container(
                   margin: const EdgeInsets.only(bottom: 6),
                   padding:
@@ -352,21 +342,27 @@ class _PackTile extends StatelessWidget {
                         const TextStyle(fontSize: 12, color: Colors.deepOrange),
                   ),
                 ),
-              Text('₹${pack.effectiveAmount.toStringAsFixed(2)}',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: primary)),
+              Text(
+                '₹${pack.effectiveAmount.toStringAsFixed(2)}',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: primary,
+                ),
+              ),
               const SizedBox(height: 4),
-              Text('${pack.coins} Coins',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                      color: accent)),
+              Text(
+                '${pack.coins} Coins',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  color: accent,
+                ),
+              ),
               if ((pack.description ?? '').isNotEmpty) ...[
                 const SizedBox(height: 2),
                 Text(
-                  pack.description,
+                  pack.description ?? '',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 11, color: Colors.black54),
@@ -410,8 +406,9 @@ class _TxnTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                    '₹${tx.finalAmount.toStringAsFixed(2)} • +${tx.coins.toStringAsFixed(0)} coins',
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                  '₹${tx.finalAmount.toStringAsFixed(2)} • +${tx.coins.toStringAsFixed(0)} coins',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 2),
                 Text('Order: ${tx.orderId ?? '-'}',
                     style:
