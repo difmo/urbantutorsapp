@@ -8,7 +8,6 @@ import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/enquiry_details_page_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
-import 'package:urbantutorsapp/widgets/AdminDrawer.dart';
 import 'package:urbantutorsapp/widgets/TutorDrawer.dart';
 
 import '../../theme/theme_constants.dart';

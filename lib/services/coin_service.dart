@@ -79,7 +79,7 @@ class CoinService {
     };
 
     final res = await ApiService.post(
-        'https://urbantutors.pro/api/purchasecoins', payload,
+        'https://urbantutors.pro/api/purchagecoins', payload,
         token: token);
     developer.log("purchasecoins(quince-init) → ${res.data}",
         name: 'CoinService');
@@ -150,11 +150,11 @@ class CoinService {
     });
 
     final res = await ApiService.post(
-        'https://urbantutors.pro/api/purchasecoins', form,
+        'https://urbantutors.pro/api/purchagecoins', form,
         token: token);
     developer.log("purchasecoins(razorpay-verify) → ${res.data}",
         name: 'CoinService');
-
+      
     if (res.statusCode == 200 && res.data is Map) {
       // API returns {success: false/true, message: "..."}
       return res.data['success'] == true;
