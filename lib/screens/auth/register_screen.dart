@@ -11,8 +11,9 @@ import 'otp_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   final String role;
+  final int roleId;
 
-  const RegisterScreen({super.key, required this.role});
+  const RegisterScreen({super.key, required this.role, required this.roleId});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -40,17 +41,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await prefs.setString('reg_phone', _phoneController.text.trim());
 
       try {
-        final otp = await auth.sendOtp(_phoneController.text.trim());
+        final otp = await auth.sendOtp(_phoneController.text.trim(),name:_nameController.text.toString(), roleId: widget.roleId);
         if (otp != null) {
           debugPrint('🔐 OTP for testing: $otp');
-
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => OTPScreen(
                 role: widget.role,
                 phone: _phoneController.text.trim(),
-                roleId: 1,
+                roleId: widget.roleId,
+                name: _nameController.text.toString(),
                 otp: otp,
               ),
             ),

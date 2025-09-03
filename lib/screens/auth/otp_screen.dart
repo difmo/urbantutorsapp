@@ -27,7 +27,8 @@ class OTPScreen extends StatefulWidget {
     required this.phone,
     required this.role,
     required this.roleId,
-    required this.otp,
+    required this.otp, 
+    required String name,
   });
 
   @override

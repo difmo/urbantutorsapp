@@ -108,7 +108,7 @@ class RoleIntroScreen extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => RegisterScreen(role: role),
+                              builder: (_) => RegisterScreen(role: role, roleId: roleId),
                             ),
                           );
                         },

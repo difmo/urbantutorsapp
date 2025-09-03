@@ -78,17 +78,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
       try {
         Future.delayed(const Duration(seconds: 2), () async {
-          final otp = await auth.sendOtp(phone);
+          final otp = await auth.sendOtpForLogin(phone, roleId: widget.roleId);
           Navigator.of(context).pop();
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => OTPScreen(
-                // ✅ This will now work because we imported otp_screen.dart
                 phone: phone,
                 role: widget.role,
                 roleId: widget.roleId,
                 otp: otp ?? "0000",
+                name: "",
               ),
             ),
           );

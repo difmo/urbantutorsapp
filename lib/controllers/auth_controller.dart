@@ -12,10 +12,10 @@ class AuthController extends GetxController {
   var token = ''.obs;
   var roleId = 0.obs;
 
-  Future<String?> sendOtp(String mobile) async {
+  Future<String?> sendOtp(String mobile, {required String name, required int roleId}) async {
     isLoading.value = true;
     try {
-      final res = await _authService.sendOtp(mobile);
+      final res = await _authService.sendOtp(mobile,name:name, roleId: roleId);
       final otp = res.data?['data']?['otp_data']?['mobile_otp']?.toString();
       debugPrint('OTP sent: $otp');
       return otp;
@@ -26,6 +26,21 @@ class AuthController extends GetxController {
       isLoading.value = false;
     }
   }
+    Future<String?> sendOtpForLogin(String mobile, {required int roleId}) async {
+    isLoading.value = true;
+    try {
+      final res = await _authService.sendOtp(mobile,name:"", roleId: roleId);
+      final otp = res.data?['data']?['otp_data']?['mobile_otp']?.toString();
+      debugPrint('OTP sent: $otp');
+      return otp;
+    } catch (e) {
+      Get.snackbar('Error', e.toString());
+      return null;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
 
   void printJson(dynamic data) {
     const JsonEncoder encoder = JsonEncoder.withIndent('  ');
