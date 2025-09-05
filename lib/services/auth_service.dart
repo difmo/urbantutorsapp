@@ -25,17 +25,15 @@ Future<LoginResponse> verifyOtp({
     final response = await ApiService.post(
       ApiConstants.VERIFY_OTP,
       FormData.fromMap({
-        'mobile': mobile,           // static mobile
-        'otp': otp,                  // static OTP
-        'name': name,               // static name
-        'role_id': roleId,                   // static role_id as String
-        'firebase_token': "STATIC_FB_TOKEN_ABC123", // static Firebase token
+        'mobile': mobile,           
+        'otp': otp,              
+        'name': name,              
+        'role_id': roleId,                   
+        'firebase_token': "STATIC_FB_TOKEN_ABC123", 
       }),
     );
-
     print("✅ Response from verifyOtp:");
     print(response.data); // or response.toString()
-
     return LoginResponse.fromJson(response.data);
   } catch (e) {
     print("❌ Error in verifyOtp (from AuthService):");

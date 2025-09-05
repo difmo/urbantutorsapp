@@ -49,7 +49,6 @@ class CoinsController extends GetxController {
     _razorpay!.on(Razorpay.EVENT_EXTERNAL_WALLET, _onExternalWallet);
   }
 
-
   @override
   void onClose() {
     _razorpay?.clear();
@@ -109,12 +108,13 @@ class CoinsController extends GetxController {
 
   Future<void> _onPaymentSuccess(PaymentSuccessResponse r) async {
     print(
-        "Payment successful: ${r.paymentId}, order: ${r.orderId}, signature: ${r.signature}");  
+        "Payment successful: ${r.paymentId}, order: ${r.orderId}, signature: ${r.signature}");
     // Verify with backend (mandatory)
     final token = await StorageService.getToken();
     final userId = await StorageService.getUserId();
+    print("User id in payment success $userId");
+    print("Token in payment success $token");
     if (token == null || userId == null) return;
-
     final ok = await _service.verifyRazorpayPayment(
       userId: userId,
       razorpayOrderId: r.orderId ?? '',
@@ -128,7 +128,7 @@ class CoinsController extends GetxController {
       // Refresh wallet/txns if you expose these:
       await refreshAll(); // make sure this only updates Rx after first frame
     } else {
-         print("Payment successful and verified $ok");
+      print("Payment successful and verifiedd $ok");
       Get.snackbar('Payment', 'Verification failed',
           backgroundColor: Colors.red.shade100);
     }

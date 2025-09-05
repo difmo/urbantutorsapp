@@ -152,11 +152,10 @@ class CoinService {
     final res = await ApiService.post(
         'https://urbantutors.pro/api/purchagecoins', form,
         token: token);
-    developer.log("purchasecoins(razorpay-verify) → ${res.data}",
-        name: 'CoinService');
+        print("Response from purchasecoins(razorpay-verify) → ${res.data}");
+
       
     if (res.statusCode == 200 && res.data is Map) {
-      // API returns {success: false/true, message: "..."}
       return res.data['success'] == true;
     }
     return false;
