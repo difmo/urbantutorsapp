@@ -83,7 +83,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          SizedBox(width: 120, child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500))),
+          SizedBox(
+              width: 120,
+              child: Text(label,
+                  style: const TextStyle(fontWeight: FontWeight.w500))),
           Expanded(
             child: TextField(
               controller: controller,
@@ -99,12 +102,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget buildRowDropdown(String label, String value, List<String> items, Function(String?) onChanged) {
+  Widget buildRowDropdown(String label, String value, List<String> items,
+      Function(String?) onChanged) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          SizedBox(width: 120, child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500))),
+          SizedBox(
+              width: 120,
+              child: Text(label,
+                  style: const TextStyle(fontWeight: FontWeight.w500))),
           Expanded(
             child: DropdownButtonFormField<String>(
               value: value,
@@ -113,7 +120,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 isDense: true,
               ),
               onChanged: isEditing ? onChanged : null,
-              items: items.map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
+              items: items
+                  .map((item) =>
+                      DropdownMenuItem(value: item, child: Text(item)))
+                  .toList(),
             ),
           ),
         ],
@@ -150,7 +160,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     radius: 50,
                     backgroundImage: profileImagePath != null
                         ? FileImage(File(profileImagePath!))
-                        : const AssetImage("assets/icons/profile.jpg") as ImageProvider,
+                        : const AssetImage("assets/icons/profile.jpg")
+                            as ImageProvider,
                   ),
                   if (isEditing)
                     Positioned(
@@ -164,7 +175,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             color: AppColors.primaryColor,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                          child: const Icon(Icons.camera_alt,
+                              color: Colors.white, size: 18),
                         ),
                       ),
                     ),
@@ -173,24 +185,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 20),
 
-            const Text("Personal details:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryColor)),
+            const Text("Personal details:",
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryColor)),
             buildRowTextField("Full Name", nameController),
-            buildRowDropdown("Gender", gender, genderList, (val) => setState(() => gender = val!)),
+            buildRowDropdown("Gender", gender, genderList,
+                (val) => setState(() => gender = val!)),
             buildRowTextField("Email", emailController),
             buildRowTextField("Locality", localityController),
-            buildRowDropdown("State", state, stateList, (val) => setState(() => state = val!)),
-            buildRowDropdown("City", city, cityList, (val) => setState(() => city = val!)),
+            buildRowDropdown("State", state, stateList,
+                (val) => setState(() => state = val!)),
+            buildRowDropdown(
+                "City", city, cityList, (val) => setState(() => city = val!)),
 
             const SizedBox(height: 16),
 
-            const Text("Class Preference:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryColor)),
-            buildRowDropdown("Class", preferredClass, classList, (val) => setState(() => preferredClass = val!)),
-            buildRowDropdown("Mode", preferredMode, modeList, (val) => setState(() => preferredMode = val!)),
-            buildRowDropdown("Subject", preferredSubject, subjectList, (val) => setState(() => preferredSubject = val!)),
+            const Text("Class Preference:",
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryColor)),
+            buildRowDropdown("Class", preferredClass, classList,
+                (val) => setState(() => preferredClass = val!)),
+            buildRowDropdown("Mode", preferredMode, modeList,
+                (val) => setState(() => preferredMode = val!)),
+            buildRowDropdown("Subject", preferredSubject, subjectList,
+                (val) => setState(() => preferredSubject = val!)),
 
             const SizedBox(height: 16),
 
-            const Text("Qualifications:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryColor)),
+            const Text("Qualifications:",
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryColor)),
             buildRowTextField("Experience", experienceController),
             buildRowTextField("Qualification", qualificationController),
 
@@ -205,7 +235,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       isEditing = false;
                     });
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Profile saved successfully")),
+                      const SnackBar(
+                          content: Text("Profile saved successfully")),
                     );
                   },
                   child: const Text("Save and Proceed"),

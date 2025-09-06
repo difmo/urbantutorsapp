@@ -5,11 +5,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:urbantutorsapp/controllers/auth_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
+import 'package:urbantutorsapp/models/user_new_modal.dart';
 
 import 'package:urbantutorsapp/screens/admin/admin_dashboard.dart';
+import 'package:urbantutorsapp/screens/admin/admin_pending_screen.dart';
+import 'package:urbantutorsapp/screens/admin/admin_profile_form.dart';
 import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
 import 'package:urbantutorsapp/screens/student/student_profile_form.dart';
-import 'package:urbantutorsapp/screens/tutor/pending_page.dart';
+import 'package:urbantutorsapp/screens/tutor/student_peding_screen.dart';
+import 'package:urbantutorsapp/screens/tutor/teacher_pending_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_profile_form.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
 import 'package:urbantutorsapp/shared/default_dashboard.dart';
@@ -27,7 +31,7 @@ class OTPScreen extends StatefulWidget {
     required this.phone,
     required this.role,
     required this.roleId,
-    required this.otp, 
+    required this.otp,
     required String name,
   });
 
@@ -43,11 +47,10 @@ class _OTPScreenState extends State<OTPScreen> {
 
   Future<void> _initProfile() async {
     await _profileUpdateController.fetchProfileForTutor();
-
-    if (_profileUpdateController
-            .tutorprofileData.value?.mostExperienceSubjectName !=
+    if (_profileUpdateController.tutorprofileData.value?.profile_status !=
         null) {
-      StorageService.saveIsProfileStatus("completed");
+      await StorageService.saveIsProfileStatus(
+          _profileUpdateController.tutorprofileData.value!.profile_status!);
     }
   }
 
@@ -63,62 +66,59 @@ class _OTPScreenState extends State<OTPScreen> {
   Future<void> _verifyOtp() async {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('reg_name') ?? 'User';
-    final role = widget.roleId;
     final firebaseToken = 'dummy_token';
     print("otp screen");
-    print(widget.role);
-    // print(r)
-    final bool isTeacherFormFilled = false;
-    final bool isStudentFormFilled = false;
-    final bool isVerified = false;
-
     try {
       final auth = Get.find<AuthController>();
-
-      int roleId = await auth.verifyOtp(
+      LoginResponse loginResponse = await auth.verifyOtp(
           widget.phone, otp, name, widget.roleId.toString(), firebaseToken);
 
-      final userData = {
-        "phone": widget.phone,
-        "role": role,
-        "name": name,
-      };
-      if (roleId == 2) {
-        _initProfile();
-      }
-      prefs.setString("userData", jsonEncode(userData));
-
-      final String? profileStatus = await StorageService.getIsProfileStatus();
-
+      prefs.setString("userData", jsonEncode(loginResponse.data.toJson()));
+      final roleId = loginResponse.data.userData!.roles[0].roleId;
+      final userId = loginResponse.data.userData!.id;
+      final profileStatus = loginResponse.data.userData!.profileStatus ?? 0;
+      print("Role id from otp screen $roleId");
+      print("Profile status from otp screen $profileStatus");
       Widget dashboard;
-      print("rolieddddddd otp time $roleId");
-      print("profilestatusssss otp time $profileStatus");
-
+      print("Role id from otp screen $roleId");
+      print("Profile status from otp screen $profileStatus");
       switch (roleId) {
         case 3:
-          if (profileStatus == "pending") {
-            dashboard = PendingPage();
-          } else if (profileStatus == "completed") {
+          if (profileStatus == 0) {
+            dashboard = StudentProfileFormScreen();
+          } else if (profileStatus == 1) {
+            dashboard = StudentPendingScreen();
+          } else if (profileStatus == 2) {
             dashboard = StudentDashboardScreen();
           } else {
-            dashboard = StudentProfileFormScreen();
+            dashboard = const DefaultDashboardScreen();
           }
           break;
         case 2:
-          dashboard = profileStatus == null || profileStatus == "pending"
-              ? profileStatus == "pending"
-                  ? PendingPage()
-                  : TutorProfileFormScreen()
-              : TutorDashboard();
+          if (profileStatus == 0) {
+            dashboard = TutorProfileFormScreen();
+          } else if (profileStatus == 1) {
+            dashboard = TeacherPendingScreen();
+          } else if (profileStatus == 2) {
+            dashboard = TutorDashboard();
+          } else {
+            dashboard = const DefaultDashboardScreen();
+          }
           break;
-
         case 5:
-          dashboard = const AdminDashboard();
+          if (profileStatus == 0) {
+            dashboard = AdminProfileForm();
+          } else if (profileStatus == 1) {
+            dashboard = AdminPendingScreen();
+          } else if (profileStatus == 2) {
+            dashboard = AdminDashboard();
+          } else {
+            dashboard = const DefaultDashboardScreen();
+          }
           break;
         default:
           dashboard = const DefaultDashboardScreen();
       }
-
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => dashboard),

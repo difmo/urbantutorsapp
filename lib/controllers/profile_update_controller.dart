@@ -22,7 +22,6 @@ class ProfileUpdateController extends GetxController {
     try {
       final response = await _profileUpdateService.getMaterData();
       masterData.value = response;
-
       debugPrint("✅ Master data fetched successfully:");
     } catch (e) {
       debugPrint("❌ Error in fetchMasterData: $e");
@@ -40,7 +39,6 @@ class ProfileUpdateController extends GetxController {
 
   Future<void> fetchProfileForStudent() async {
     isLoading.value = true;
-
     try {
       final response = await _profileUpdateService.getProfileForStudent();
       setProfile(response.data);
@@ -65,16 +63,15 @@ class ProfileUpdateController extends GetxController {
 
   Future<void> fetchProfileForTutor() async {
     isLoading.value = true;
-
     try {
       final response = await _profileUpdateService.getProfileForTutor();
       tutorprofileData.value = response.data;
-      if (tutorprofileData.value?.mostExperienceSubjectName != null) {
-        StorageService.saveIsProfileStatus("completed");
+      if (tutorprofileData.value?.profile_status != null) {
+        StorageService.saveIsProfileStatus(
+            tutorprofileData.value!.profile_status!);
       } else {
-        StorageService.saveIsProfileStatus("pending");
+        StorageService.saveIsProfileStatus(0);
       }
-
       debugPrint("✅ Profile fetched successfully:");
     } catch (e) {
       debugPrint("❌ Error in fetchProfileUpdate: $e");
@@ -94,12 +91,10 @@ class ProfileUpdateController extends GetxController {
   Future<bool> updateProfileForTutor(
       TutorProfileUpdateRequest updateData) async {
     isLoading.value = true;
-
     try {
       final response =
           await _profileUpdateService.updateProfileForTutor(updateData);
-      // studentprofileData.value = response.data;
-
+      tutorprofileData.value = response.data;
       debugPrint("✅ Profile updated successfully");
       Get.snackbar(
         'Success',
@@ -128,17 +123,10 @@ class ProfileUpdateController extends GetxController {
   Future<bool> updateProfileForStudent(
       StudentProfileUpdateRequest updateData) async {
     isLoading.value = true;
-
     try {
-      final response =
-          await _profileUpdateService.updateProfileForStudent(updateData);
-      // studentprofileData.value = response.data;
-
+      final response =await _profileUpdateService.updateProfileForStudent(updateData);
       debugPrint("✅ Profile updated successfully");
-      StorageService.saveIsProfileStatus("completed");
-
-      final String? profileStatus = await StorageService.getIsProfileStatus();
-
+      final int? profileStatus = await StorageService.getIsProfileStatus();
       print("profilstatuse");
       print(profileStatus);
       Get.offAll(() => const StudentDashboardScreen());

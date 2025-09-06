@@ -29,6 +29,9 @@ class QuinceOrder {
 }
 
 class CoinService {
+  static const String rzpKeyId = 'rzp_test_G8C4fq7TzDzwgm';
+  static const String rzpKeySecret = 'jx32K2TTW84b1Gj53IWAfFVf';
+
   /// Packs
   Future<List<CoinPackage>> fetchPackages({required String token}) async {
     developer.log("Fetching coin packages", name: 'CoinService');
@@ -91,9 +94,7 @@ class CoinService {
     throw Exception(res.data?['message'] ?? 'Unable to create order');
   }
 
-   // ⛳️ Test keys (OK for dev). For prod, NEVER embed KEY_SECRET in app.
-  static const String rzpKeyId = 'rzp_test_G8C4fq7TzDzwgm';
-  static const String rzpKeySecret = 'jx32K2TTW84b1Gj53IWAfFVf';
+
 
   // ---------- DIRECT Razorpay order create (TEST/DEV) ----------
   Future<String> createRazorpayOrderDirect({
@@ -133,6 +134,37 @@ class CoinService {
     throw Exception('Razorpay order create failed: ${res.statusCode} ${res.data}');
   }
 
+ /// 2) Register that order in YOUR backend (so verify won’t say “Order Id Miss Match”)
+  Future<void> registerOrderOnServer({
+    required String token,
+    required String userId,
+    required int amountPaise,
+    required int coinsId,
+    required String orderId,
+    required String receiptId,
+  }) async {
+    final form = FormData.fromMap({
+      'user_id': userId,
+      'amount': amountPaise.toString(), // paise
+      'coins_id': coinsId.toString(),
+      'order_id': orderId,
+      'receipt_id': receiptId,
+    });
+
+    final res = await ApiService.post(
+      'https://urbantutors.pro/api/create_order',
+      form,
+      token: token,
+    );
+    developer.log('create_order → [${res.statusCode}] ${res.data}',
+        name: 'CoinService');
+
+    final ok = (res.statusCode == 200 || res.statusCode == 201);
+    if (!(ok && res.data is Map && res.data['success'] == true)) {
+      throw Exception(res.data?['message'] ?? 'create_order failed');
+    }
+  }
+  
   /// Verify Razorpay success with your backend
   /// (fields per your Postman screenshot)
   Future<bool> verifyRazorpayPayment({

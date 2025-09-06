@@ -60,47 +60,86 @@ class CoinsController extends GetxController {
     ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  /// Start Razorpay checkout
   Future<void> startRazorpayCheckout(
       BuildContext context, CoinPackage pack) async {
-    final token = await StorageService
-        .getToken(); // unused here but keep if you later call your server
+    final token = await StorageService.getToken();
     final userId = await StorageService.getUserId();
     if (token == null || userId == null) {
       _toast(context, 'Please login');
       return;
     }
 
-    final amountPaise = (pack.total * 100).round().clamp(100, 999999999);
+    final coinsId =
+        (pack.id is int) ? pack.id as int : int.tryParse('${pack.id}') ?? 0;
+
+    // Amount in paise
+    final amountPaise = (pack.total * 100).round();
+    final receipt = 'rcptid_${DateTime.now().millisecondsSinceEpoch}';
 
     try {
       isCreatingOrder.value = true;
 
-      // 👇 Create order directly on Razorpay (since your server endpoint 404s)
-      final orderId = await _service.createRazorpayOrderDirect(
+      // 1) Razorpay order (RZP API)
+      final rzpOrderId = await _service.createRazorpayOrderDirect(
         amountPaise: amountPaise,
-        receipt: 'rcpt_${DateTime.now().millisecondsSinceEpoch}_$userId',
-        notes: {
-          'user_id': userId,
-          'coins': '${pack.coins}',
-          'package_id': '${pack.id ?? ''}',
-        },
+        receipt: receipt,
+        notes: {'user_id': userId, 'coins_id': coinsId.toString()},
       );
 
-      // Open checkout with that orderId
+      // 2) Register order in your backend (prevents “Order Id Miss Match”)
+      await _service.registerOrderOnServer(
+        token: token,
+        userId: userId,
+        amountPaise: amountPaise,
+        coinsId: coinsId,
+        orderId: rzpOrderId,
+        receiptId: receipt,
+      );
+      // 3) Setup callbacks
+      _razorpay ??= Razorpay();
+      _razorpay!.clear(); // avoid duplicate handlers
+      _razorpay!.on(Razorpay.EVENT_PAYMENT_SUCCESS,
+          (PaymentSuccessResponse r) async {
+        final ok = await _service.verifyRazorpayPayment(
+          userId: userId,
+          razorpayOrderId: r.orderId ?? '',
+          razorpayPaymentId: r.paymentId ?? '',
+          razorpaySignature: r.signature ?? '',
+          token: token,
+        );
+        _toast(context, ok ? 'Payment verified' : 'Verification failed');
+        if (ok) {
+          await refreshAll(); // reload packs + wallet + txns
+        }
+      });
+
+      _razorpay!.on(
+          Razorpay.EVENT_PAYMENT_ERROR,
+          (PaymentFailureResponse r) => _toast(
+                context,
+                'Payment failed: ${r.message ?? r.code}',
+              ));
+
+      _razorpay!.on(
+          Razorpay.EVENT_EXTERNAL_WALLET,
+          (ExternalWalletResponse r) =>
+              _toast(context, 'External wallet: ${r.walletName}'));
+
+      // 4) Open checkout
       final options = {
-        'key': _rzpKeyId,
-        'amount': amountPaise, // paise
+        'key': CoinService.rzpKeyId,
+        'amount': amountPaise,
         'currency': 'INR',
         'name': 'Urban Tutors',
         'description': '${pack.coins} Coins',
-        'order_id': orderId, // 🔥 required
+        'order_id': rzpOrderId, // <- MUST be the same you registered
         'theme': {'color': '#5AB55E'},
+        // 'prefill': {'contact': '9xxxxxxxxx', 'email': 'user@email.com'},
       };
-
-      _razorpay ??= Razorpay();
       _razorpay!.open(options);
     } catch (e) {
-      _toast(context, 'Order error: $e');
+      _toast(context, e.toString());
     } finally {
       isCreatingOrder.value = false;
     }

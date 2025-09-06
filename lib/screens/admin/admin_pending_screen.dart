@@ -5,16 +5,16 @@ import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
-class PendingPage extends StatelessWidget {
-  const PendingPage({super.key});
-
+class AdminPendingScreen extends StatelessWidget {
+  const AdminPendingScreen({super.key});
   Future<void> _refreshProfile(BuildContext context) async {
     final controller = Get.find<ProfileUpdateController>();
     await controller.fetchProfileForTutor();
 
-    final status = controller.tutorprofileData.value?.mostExperienceSubjectName;
-    if (status != null) {
-      await StorageService.saveIsProfileStatus("completed");
+    final status = controller.tutorprofileData.value?.profile_status;
+
+    if (status != null && status == 2) {
+      await StorageService.saveIsProfileStatus(status);
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => TutorDashboard()),
@@ -44,7 +44,6 @@ class PendingPage extends StatelessWidget {
                 color: AppColors.primaryColor,
               ),
               const SizedBox(height: 20),
-
               Text(
                 "Your profile is under verification",
                 textAlign: TextAlign.center,
@@ -55,7 +54,6 @@ class PendingPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-
               Text(
                 "Kindly Wait",
                 textAlign: TextAlign.center,

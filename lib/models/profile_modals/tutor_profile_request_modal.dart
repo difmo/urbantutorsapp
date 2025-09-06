@@ -21,6 +21,9 @@ class TutorProfileUpdateRequest {
     required this.profilePicture,
     required this.frontId,
     required this.frontBack,
+    required int boardId,
+    required int courseId,
+    required int subjectId,
   });
 
   Map<String, dynamic> toJson() {
@@ -50,6 +53,9 @@ class TutorProfileUpdateRequest {
       profilePicture: json["profile_picture"],
       frontId: json["frontid"],
       frontBack: json["frontback"],
+      boardId: json["board_id"],
+      courseId: json["course_id"],
+      subjectId: json["subject_id"],
     );
   }
 }

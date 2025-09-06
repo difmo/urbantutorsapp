@@ -20,6 +20,7 @@ class TutorProfileResponse {
 
 class TutorProfileData {
   final int id;
+  final int? profile_status;
   final String? profileId;
   final String? studentName;
   final String? mobile;
@@ -40,6 +41,7 @@ class TutorProfileData {
 
   TutorProfileData({
     required this.id,
+    this.profile_status,
     this.profileId,
     this.studentName,
     this.mobile,
@@ -62,6 +64,7 @@ class TutorProfileData {
   factory TutorProfileData.fromJson(Map<String, dynamic> json) {
     return TutorProfileData(
       id: json['id'] ?? 0,
+      profile_status: json['profile_status'] ?? 0,
       profileId: json['profile_id']?.toString(),
       studentName: json['student_name']?.toString(),
       mobile: json['mobile']?.toString(),

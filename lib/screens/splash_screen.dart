@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/admin/admin_dashboard.dart';
+import 'package:urbantutorsapp/screens/admin/admin_pending_screen.dart';
+import 'package:urbantutorsapp/screens/admin/admin_profile_form.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
 import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
 import 'package:urbantutorsapp/screens/student/student_profile_form.dart';
-import 'package:urbantutorsapp/screens/tutor/pending_page.dart';
+import 'package:urbantutorsapp/screens/tutor/student_peding_screen.dart';
+import 'package:urbantutorsapp/screens/tutor/teacher_pending_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_profile_form.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
 import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
@@ -46,14 +49,33 @@ class _SplashScreenState extends State<SplashScreen>
     _navigateAfterDelay();
   }
 
-  Future<void> _initProfile() async {
+  Future<void> _initTeacherProfile() async {
     await _profileUpdateController.fetchProfileForTutor();
-
-    if (_profileUpdateController
-            .tutorprofileData.value?.mostExperienceSubjectName !=
-        null) {
+    final status =
+        _profileUpdateController.tutorprofileData.value?.profile_status;
+    if (status != null) {
       print("running init profile ");
-      StorageService.saveIsProfileStatus("completed");
+      StorageService.saveIsProfileStatus(status);
+    }
+  }
+
+  Future<void> _initStudentProfile() async {
+    await _profileUpdateController.fetchProfileForStudent();
+    final status =
+        _profileUpdateController.studentprofileData.value?.profile_status;
+    if (status != null) {
+      print("running init profile ");
+      StorageService.saveIsProfileStatus(status);
+    }
+  }
+
+  Future<void> _initAdminProfile() async {
+    await _profileUpdateController.fetchProfileForStudent();
+    final status =
+        _profileUpdateController.studentprofileData.value?.profile_status;
+    if (status != null) {
+      print("running init profile ");
+      StorageService.saveIsProfileStatus(status);
     }
   }
 
@@ -73,43 +95,63 @@ class _SplashScreenState extends State<SplashScreen>
     print("Role Id from splash screen  $roleId");
     print("Comes from splash screen");
     if (!mounted) return;
+    if (roleId == 3) {
+      _initStudentProfile();
+    }
     if (roleId == 2) {
-      _initProfile();
+      _initTeacherProfile();
+    }
+    if (roleId == 5) {
+      _initAdminProfile();
     }
 
-    Widget target;
-    final String? profileStatus = await StorageService.getIsProfileStatus();
-
-    print("profilstatuse");
+    final profileStatus = await StorageService.getIsProfileStatus();
     print(profileStatus);
+
+    Widget dashboard;
     if (token != null) {
       switch (roleId) {
-        case '3':
-          target = 
-          isProfiledataEmpty() == true || profileStatus == "completed"
-              ? StudentDashboardScreen()
-              : StudentProfileFormScreen();
+        case 3:
+          if (profileStatus == 0) {
+            dashboard = StudentPendingScreen();
+          } else if (profileStatus == 1) {
+            dashboard = StudentProfileFormScreen();
+          } else if (profileStatus == 2) {
+            dashboard = StudentDashboardScreen();
+          } else {
+            dashboard = const DefaultDashboardScreen();
+          }
           break;
-        case '2':
-          target = profileStatus == null || profileStatus == "pending"
-              ? profileStatus == "pending"
-                  ? PendingPage()
-                  : TutorProfileFormScreen()
-              : TutorDashboard();
+        case 2:
+          if (profileStatus == 0) {
+            dashboard = TutorProfileFormScreen();
+          } else if (profileStatus == 1) {
+            dashboard = TeacherPendingScreen();
+          } else if (profileStatus == 2) {
+            dashboard = TutorDashboard();
+          } else {
+            dashboard = const DefaultDashboardScreen();
+          }
           break;
-        case '5':
-          target = const AdminDashboard();
+        case 5:
+          if (profileStatus == 0) {
+            dashboard = AdminProfileForm();
+          } else if (profileStatus == 1) {
+            dashboard = AdminPendingScreen();
+          } else if (profileStatus == 2) {
+            dashboard = AdminDashboard();
+          } else {
+            dashboard = const DefaultDashboardScreen();
+          }
           break;
         default:
-          target = const DefaultDashboardScreen();
+          dashboard = const DefaultDashboardScreen();
       }
     } else {
-      // No token → go to welcome screen
-      target = const WelcomeScreen();
+      dashboard = const WelcomeScreen();
     }
-
     Navigator.pushReplacement(
-        context, MaterialPageRoute(builder: (_) => target));
+        context, MaterialPageRoute(builder: (_) => dashboard));
   }
 
   @override

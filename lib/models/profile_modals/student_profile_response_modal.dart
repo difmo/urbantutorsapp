@@ -30,6 +30,7 @@ class StudentProfileResponsdModal {
 
 class StudentProfileDataNew {
   final int id;
+  final int ? profile_status;
   final String? profileId;
   final String? studentName;
   final String? mobile;
@@ -52,6 +53,7 @@ class StudentProfileDataNew {
 
   StudentProfileDataNew({
     required this.id,
+    this.profile_status,
     this.profileId,
     this.studentName,
     this.mobile,
@@ -76,6 +78,7 @@ class StudentProfileDataNew {
   factory StudentProfileDataNew.fromJson(Map<String, dynamic> json) {
     return StudentProfileDataNew(
       id: json['id'] ?? 0,
+      profile_status: json['profile_status'] ?? 0,
       profileId: json['profile_id'],
       studentName: json['student_name'],
       mobile: json['mobile'],
@@ -101,6 +104,7 @@ class StudentProfileDataNew {
   Map<String, dynamic> toJson() {
     return {
       "id": id,
+      "profile_status": profile_status,
       "profile_id": profileId,
       "student_name": studentName,
       "mobile": mobile,

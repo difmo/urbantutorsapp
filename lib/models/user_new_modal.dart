@@ -32,21 +32,21 @@ class LoginResponse {
 }
 
 class LoginData {
-  final String token;
-  final String fairbasetoken;
-  final UserData userData;
+  final String? token;
+  final String? fairbasetoken;
+  final UserData? userData;
 
   LoginData({
-    required this.token,
-    required this.fairbasetoken,
-    required this.userData,
+    this.token,
+    this.fairbasetoken,
+    this.userData,
   });
 
   factory LoginData.fromJson(Map<String, dynamic> json) {
     return LoginData(
-      token: json['token'],
-      fairbasetoken: json['fairbasetoken'],
-      userData: UserData.fromJson(json['user_data']),
+      token: json['token'] as String?,
+      fairbasetoken: json['fairbasetoken'] as String?,
+      userData: json['user_data'] != null ? UserData.fromJson(json['user_data']) : null,
     );
   }
 
@@ -54,7 +54,7 @@ class LoginData {
     return {
       'token': token,
       'fairbasetoken': fairbasetoken,
-      'user_data': userData.toJson(),
+      'user_data': userData?.toJson(),
     };
   }
 
@@ -66,6 +66,7 @@ class LoginData {
 
 class UserData {
   final int id;
+  final int? profileStatus; 
   final String name;
   final String mobile;
   final String createdAt;
@@ -74,6 +75,7 @@ class UserData {
 
   UserData({
     required this.id,
+    required this.profileStatus,
     required this.name,
     required this.mobile,
     required this.createdAt,
@@ -88,6 +90,7 @@ class UserData {
 
     return UserData(
       id: json['id'],
+      profileStatus: json['profile_status'],
       name: json['name'],
       mobile: json['mobile'],
       createdAt: json['created_at'],
@@ -99,6 +102,7 @@ class UserData {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'profile_status': profileStatus,
       'name': name,
       'mobile': mobile,
       'created_at': createdAt,
@@ -109,7 +113,7 @@ class UserData {
 
   @override
   String toString() {
-    return 'UserData(id: $id, name: $name, mobile: $mobile, createdAt: $createdAt, updatedAt: $updatedAt, roles: $roles)';
+    return 'UserData(id: $id, name: $name, profileStatus: $profileStatus, mobile: $mobile, createdAt: $createdAt, updatedAt: $updatedAt, roles: $roles)';
   }
 }
 

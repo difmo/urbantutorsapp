@@ -24,9 +24,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final AuthController auth = Get.find<AuthController>();
-
-  bool _agreed = false; // ⬅️ New checkbox state
-
+  bool _agreed = false;
   Future<void> _sendOtp() async {
     if (!_agreed) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -34,14 +32,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
       return;
     }
-
     if (_formKey.currentState!.validate()) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('reg_name', _nameController.text.trim());
       await prefs.setString('reg_phone', _phoneController.text.trim());
-
       try {
-        final otp = await auth.sendOtp(_phoneController.text.trim(),name:_nameController.text.toString(), roleId: widget.roleId);
+        final otp = await auth.sendOtp(_phoneController.text.trim(),
+            name: _nameController.text.toString(), roleId: widget.roleId);
         if (otp != null) {
           debugPrint('🔐 OTP for testing: $otp');
           Navigator.push(

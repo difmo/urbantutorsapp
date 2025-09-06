@@ -60,7 +60,7 @@ class WelcomeScreen extends StatelessWidget {
               Text(
                 label.toUpperCase(),
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 16,
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
@@ -121,7 +121,7 @@ class WelcomeScreen extends StatelessWidget {
                       builder: (_, offset, child) => Transform.translate(
                           offset: offset * 60, child: child),
                       child: const Text(
-                        'Welcome to Urban Tutors',
+                        'Welcome to Urban Tutors.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 28,
@@ -132,22 +132,22 @@ class WelcomeScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      'Are you a?',
+                      'Are you a',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Colors.black,
+                        color: Colors.red,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 40),
-                    // Buttons
+                    const SizedBox(height: 20),
+                    //Buttons
                     Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         _roleButton(
                           context,
-                          'Student/Parent',
+                          'Student / Parent',
                           3,
                           FontAwesomeIcons.userGraduate,
                           Colors.deepPurpleAccent,
@@ -158,7 +158,7 @@ class WelcomeScreen extends StatelessWidget {
                           'Private Tutor',
                           2,
                           FontAwesomeIcons.userTie,
-                          accent,
+                          Colors.green,
                         ),
                         const SizedBox(height: 16),
                         _roleButton(

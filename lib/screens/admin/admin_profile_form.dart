@@ -18,14 +18,14 @@ import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
 import 'package:urbantutorsapp/utils/app_log.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
-class TutorProfileFormScreen extends StatefulWidget {
-  const TutorProfileFormScreen({super.key});
+class AdminProfileForm extends StatefulWidget {
+  const AdminProfileForm({super.key});
 
   @override
-  State<TutorProfileFormScreen> createState() => _TutorProfileFormScreenState();
+  State<AdminProfileForm> createState() => _AdminProfileFormState();
 }
 
-class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
+class _AdminProfileFormState extends State<AdminProfileForm> {
   // Text controllers
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();

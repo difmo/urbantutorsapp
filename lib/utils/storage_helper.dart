@@ -24,19 +24,19 @@ class StorageService {
     await prefs.setString(_roleKey, role);
   }
 
-  static Future<void> saveIsProfileStatus(String isProfileDone) async {
+  static Future<void> saveIsProfileStatus(int isProfileDone) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_profileIdKey, isProfileDone);
+    await prefs.setInt(_profileIdKey, isProfileDone);
   }
 
   static Future<void> saveRoleId(int roleId) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_roleIdKey, roleId.toString());
+    await prefs.setInt(_roleIdKey, roleId);
   }
 
-  static Future<String?> getRoleId() async {
+  static Future<int?> getRoleId() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_roleIdKey);
+    return prefs.getInt(_roleIdKey);
   }
 
   static Future<String?> getUserId() async {
@@ -44,9 +44,9 @@ class StorageService {
     return prefs.getString(_saveUserID);
   }
 
-  static Future<String?> getIsProfileStatus() async {
+  static Future<int?> getIsProfileStatus() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_profileIdKey);
+    return prefs.getInt(_profileIdKey);
   }
 
   static Future<String?> getToken() async {

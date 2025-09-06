@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:urbantutorsapp/models/user_new_modal.dart';
 import 'package:urbantutorsapp/services/auth_service.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
@@ -12,24 +13,12 @@ class AuthController extends GetxController {
   var token = ''.obs;
   var roleId = 0.obs;
 
-  Future<String?> sendOtp(String mobile, {required String name, required int roleId}) async {
+  Future<String?> sendOtp(String mobile,
+      {required String name, required int roleId}) async {
     isLoading.value = true;
     try {
-      final res = await _authService.sendOtp(mobile,name:name, roleId: roleId);
-      final otp = res.data?['data']?['otp_data']?['mobile_otp']?.toString();
-      debugPrint('OTP sent: $otp');
-      return otp;
-    } catch (e) {
-      Get.snackbar('Error', e.toString());
-      return null;
-    } finally {
-      isLoading.value = false;
-    }
-  }
-    Future<String?> sendOtpForLogin(String mobile, {required int roleId}) async {
-    isLoading.value = true;
-    try {
-      final res = await _authService.sendOtp(mobile,name:"", roleId: roleId);
+      final res =
+          await _authService.sendOtp(mobile, name: name, roleId: roleId);
       final otp = res.data?['data']?['otp_data']?['mobile_otp']?.toString();
       debugPrint('OTP sent: $otp');
       return otp;
@@ -41,6 +30,20 @@ class AuthController extends GetxController {
     }
   }
 
+  Future<String?> sendOtpForLogin(String mobile, {required int roleId}) async {
+    isLoading.value = true;
+    try {
+      final res = await _authService.sendOtp(mobile, name: "", roleId: roleId);
+      final otp = res.data?['data']?['otp_data']?['mobile_otp']?.toString();
+      debugPrint('OTP sent: $otp');
+      return otp;
+    } catch (e) {
+      Get.snackbar('Error', e.toString());
+      return null;
+    } finally {
+      isLoading.value = false;
+    }
+  }
 
   void printJson(dynamic data) {
     const JsonEncoder encoder = JsonEncoder.withIndent('  ');
@@ -48,8 +51,8 @@ class AuthController extends GetxController {
     print(prettyJson);
   }
 
-  Future<int> verifyOtp(String mobile, String otp, String name, String roleId,
-      String fbToken) async {
+  Future<LoginResponse> verifyOtp(String mobile, String otp, String name,
+      String roleId, String fbToken) async {
     print("verifyotpfunction from verifyotp $roleId");
     isLoading.value = true;
     try {
@@ -60,34 +63,19 @@ class AuthController extends GetxController {
         roleId: roleId,
         firebaseToken: fbToken,
       );
-
-      token.value = res.data.token;
-
-      print(res.data.userData.roles);
-
-      printJson(res.data);
-      print("Tokenvalue");
-      print(token.value);
-
+      print("Response from verify otp: ${res.data}");
+      token.value = res.data.token!;
+      int roleIdd = res.data.userData!.roles[0].roleId;
+      int userId = res.data.userData!.id;
+      final profileStatus = res.data.userData!.profileStatus ?? 0;
       await StorageService.saveToken(token.value);
-
-      int roleIdd = res.data.userData.roles[0].roleId;
-      int userId = res.data.userData.id;
-      print("User idididididididd $userId");
-       await StorageService.saveIsProfileStatus("completed");
+      await StorageService.saveIsProfileStatus(profileStatus);
       await StorageService.saveRoleId(roleIdd);
       await StorageService.saveUserId(userId);
-      print(await StorageService.getUserId());
-      return roleIdd;
+      return res;
     } catch (e) {
-      await StorageService.saveIsProfileStatus("pending");
-      print("Error while otp verification: $e");
       Get.snackbar('Error', e.toString());
-      return roleId == "Student/Parent"
-          ? 3
-          : roleId == "Private Tutor"
-              ? 2
-              : 5;
+      rethrow;
     } finally {
       isLoading.value = false;
     }

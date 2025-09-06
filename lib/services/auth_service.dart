@@ -33,7 +33,7 @@ Future<LoginResponse> verifyOtp({
       }),
     );
     print("✅ Response from verifyOtp:");
-    print(response.data); // or response.toString()
+    print(response.data);
     return LoginResponse.fromJson(response.data);
   } catch (e) {
     print("❌ Error in verifyOtp (from AuthService):");
