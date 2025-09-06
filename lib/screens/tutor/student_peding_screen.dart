@@ -11,6 +11,7 @@ class StudentPendingScreen extends StatelessWidget {
     final controller = Get.find<ProfileUpdateController>();
     await controller.fetchProfileForStudent();
     final status = controller.studentprofileData.value?.profile_status;
+    
     if (status != null && status == 2) {
       await StorageService.saveIsProfileStatus(status);
       Navigator.pushReplacement(

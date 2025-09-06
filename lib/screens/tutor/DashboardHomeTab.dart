@@ -49,13 +49,13 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
   @override
   void initState() {
     super.initState();
+  
     _c = Get.isRegistered<CoinsController>()
         ? Get.find<CoinsController>()
         : Get.put(CoinsController());
 
-    // if you already have refreshAll(), keep this.
-    // otherwise ensure it fetches both packages + wallet.
     _c.refreshAll();
+
   }
 
   num _toNum(dynamic v) {
@@ -79,9 +79,7 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
             toolbarHeight: 75,
             title: Obx(() {
               final loading = _c.loadingCoins.value || _c.loadingMyCoins.value;
-              final wallet = _c.myCoins.value; // Rxn<...> -> nullable model
-
-              // Format safely (int/double/String/null)
+              final wallet = _c.myCoins.value; 
               final balanceNum = _toNum(wallet?.available);
               final balanceText = balanceNum.toStringAsFixed(0);
 

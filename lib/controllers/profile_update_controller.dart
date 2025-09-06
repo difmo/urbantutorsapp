@@ -124,7 +124,8 @@ class ProfileUpdateController extends GetxController {
       StudentProfileUpdateRequest updateData) async {
     isLoading.value = true;
     try {
-      final response =await _profileUpdateService.updateProfileForStudent(updateData);
+      final response =
+          await _profileUpdateService.updateProfileForStudent(updateData);
       debugPrint("✅ Profile updated successfully");
       final int? profileStatus = await StorageService.getIsProfileStatus();
       print("profilstatuse");

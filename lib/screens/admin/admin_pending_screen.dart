@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
-import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
+import 'package:urbantutorsapp/screens/admin/admin_dashboard.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
@@ -17,7 +17,7 @@ class AdminPendingScreen extends StatelessWidget {
       await StorageService.saveIsProfileStatus(status);
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => TutorDashboard()),
+        MaterialPageRoute(builder: (_) => AdminDashboard()),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
