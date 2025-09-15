@@ -114,7 +114,7 @@ class _AdmitProfileState extends State<AdmitProfile> {
                   const SizedBox(height: 20),
                   _buildInfoTile(Icons.person, "Name", "Nikhil Kumar"),
                   _buildInfoTile(Icons.apartment, "Department", "Technology"),
-                  _buildInfoTile(Icons.phone, "Phone", "+91 9876543210"),
+                  _buildInfoTile(Icons.phone, "Phone", "+91 95826 99555"),
                   _buildInfoTile(Icons.email, "Email", "nikhil@email.com"),
                 ],
               ),

@@ -45,9 +45,6 @@ class _TutorDashboardState extends State<TutorDashboard> {
     _c = Get.isRegistered<CoinsController>()
         ? Get.find<CoinsController>()
         : Get.put(CoinsController());
-
-    // if you already have refreshAll(), keep this.
-    // otherwise ensure it fetches both packages + wallet.
     _c.refreshAll();
   }
 

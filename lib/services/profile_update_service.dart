@@ -8,7 +8,6 @@ import 'package:urbantutorsapp/services/ApiService.dart';
 import 'package:urbantutorsapp/utils/api_constants.dart';
 
 class ProfileUpdateService {
-
   Future<MasterData> getMaterData() async {
     try {
       final response = await ApiService.get(
@@ -24,8 +23,6 @@ class ProfileUpdateService {
       rethrow;
     }
   }
-
-
 
   Future<StudentProfileResponsdModal> getProfileForStudent() async {
     try {
@@ -73,6 +70,22 @@ class ProfileUpdateService {
 
       print("✅ Response from updateProfile: ${response.data}");
 
+      return StudentUpdateResponse.fromJson(response.data);
+    } catch (e) {
+      print("❌ Error in updateProfile (from ProfileUpdateService):");
+      print(e.toString());
+      rethrow;
+    }
+  }
+
+  Future<StudentUpdateResponse> updateStudentProfile(updateData) async {
+    print(updateData);
+    try {
+      final response = await ApiService.post(
+        "/student_profile_update",
+        updateData,
+      );
+      print("✅ Response from updateProfile: ${response.data}");
       return StudentUpdateResponse.fromJson(response.data);
     } catch (e) {
       print("❌ Error in updateProfile (from ProfileUpdateService):");

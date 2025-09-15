@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
+import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/ChatUserListScreen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/HistoryScreen.dart';
@@ -31,32 +32,56 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _currentIndex = 0;
 
-
   final List<Widget> _screens = [
-    const HomeScreen(),
+    HomeScreen(),
     ChatUserListScreen(),
-    const UpgradeScreen(),
+    Upgradescreen(),
     HistoryScreen(),
-    const SupportScreen(),
+    SupportScreen(),
   ];
 
   late final CoinsController _c;
+  late final ProfileUpdateController _p; // ⬅️ NEW
+
   @override
   void initState() {
     super.initState();
     _c = Get.isRegistered<CoinsController>()
         ? Get.find<CoinsController>()
         : Get.put(CoinsController());
-
-    // if you already have refreshAll(), keep this.
-    // otherwise ensure it fetches both packages + wallet.
     _c.refreshAll();
+
+    _p = Get.isRegistered<ProfileUpdateController>()
+        ? Get.find<ProfileUpdateController>()
+        : Get.put(ProfileUpdateController());
+    // Try to ensure profile is present
+    _p.fetchProfileForStudent();
   }
 
   num _toNum(dynamic v) {
     if (v == null) return 0;
     if (v is num) return v;
     return num.tryParse(v.toString()) ?? 0;
+  }
+
+  String _initial(String? name) {
+    final n = (name ?? '').trim();
+    if (n.isEmpty) return 'S';
+    return n.characters.first.toUpperCase();
+  }
+
+  String _firstName(String? name) {
+    final n = (name ?? '').trim();
+    if (n.isEmpty) return 'Student';
+    final parts = n.split(RegExp(r'\s+'));
+    return parts.first;
+  }
+
+  String _greet() {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
   }
 
   @override
@@ -95,7 +120,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
-        toolbarHeight: 72,
+        toolbarHeight: 76,
         titleSpacing: 0,
         systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
@@ -112,14 +137,20 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           ),
         ),
         title: Obx(() {
-          final loading = _c.loadingCoins.value || _c.loadingMyCoins.value;
-          final wallet = _c.myCoins.value; // Rxn<...> -> nullable model
-
-          // Format safely (int/double/String/null)
+          // coins
+          final loadingCoins = _c.loadingCoins.value || _c.loadingMyCoins.value;
+          final wallet = _c.myCoins.value;
           final balanceNum = _toNum(wallet?.available);
           final balanceText = balanceNum.toStringAsFixed(0);
 
-          if (loading && wallet == null) {
+          // profile
+          final prof = _p.studentprofileData.value;
+          final name = prof?.studentName?.trim();
+          final initial = _initial(name);
+          final greet = _greet();
+          final displayName = _firstName(name);
+
+          if (loadingCoins && wallet == null && prof == null) {
             return const SizedBox(
               height: 24,
               child: Align(
@@ -128,10 +159,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               ),
             );
           }
-
           return _Header(
             primary: primary,
             accent: accent,
+            initial: initial,
+            greeting: "Welcome",
+            name: displayName,
             balance: balanceText,
             onCoinTap: () {
               Navigator.push(
@@ -144,7 +177,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         actions: [
           Builder(
             builder: (ctx) => IconButton(
-              icon: const Icon(Icons.menu, color: Colors.white),
+              icon: const Icon(
+                Icons.menu,
+                color: Colors.white,
+                size: 45,
+              ),
               onPressed: () => Scaffold.maybeOf(ctx)?.openEndDrawer(),
             ),
           ),
@@ -164,7 +201,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         decoration: const BoxDecoration(
           color: Colors.white,
           boxShadow: [
-            BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, -2))
+            BoxShadow(
+                color: Colors.black12, blurRadius: 8, offset: Offset(0, -2))
           ],
         ),
         child: CustomStudentNavBar(
@@ -179,59 +217,21 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(
-          child: Stack(
-            children: [
-              _CurvedGradient(primary: primary, accent: accent),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 120, 16, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisSpacing: 14,
+                  mainAxisSpacing: 14,
                   children: [
-                    const _QuickStatsRow(), // no extra spacer inside Row
-                    const SizedBox(height: 16),
-                    const _SectionHeader(title: 'Your tools'),
-                    GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisSpacing: 14,
-                      mainAxisSpacing: 14,
-                      children: [
-                        _FeatureCard(
-                          label: 'Notes',
-                          icon: Icons.note_alt_outlined,
-                          gradient: LinearGradient(
-                            colors: [primary.withOpacity(.15), primary.withOpacity(.05)],
-                          ),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const NotesScreen(flags: "Note")),
-                            );
-                          },
-                        ),
-                        _FeatureCard(
-                          label: 'PYQ’s',
-                          icon: Icons.assignment_turned_in_outlined,
-                          gradient: LinearGradient(
-                            colors: [accent.withOpacity(.15), accent.withOpacity(.05)],
-                          ),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const NotesScreen(flags: "pyq")),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 22),
-                    const _SectionHeader(title: 'Continue learning'),
-                    const SizedBox(height: 12),
-                    _BigActionCard(
-                      label: 'Courses (PDF)',
-                      subtitle: 'Hand-picked PDF content',
-                      icon: Icons.picture_as_pdf,
+                    _FeatureCard(
+                      label: 'Notes',
+                      icon: Icons.note_alt_outlined,
                       gradient: LinearGradient(
                         colors: [accent.withOpacity(.18), Colors.white],
                         begin: Alignment.topLeft,
@@ -240,32 +240,70 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const PDFCoursesScreen()),
+                          MaterialPageRoute(
+                              builder: (_) => const NotesScreen(flags: "Note")),
                         );
                       },
                     ),
-                    const SizedBox(height: 14),
-                    _BigActionCard(
-                      label: 'Search Private Tutor Now',
-                      subtitle: 'Find expert tutors near you',
-                      icon: Icons.search_rounded,
+                    _FeatureCard(
+                      label: 'PYQ’s',
+                      icon: Icons.assignment_turned_in_outlined,
                       gradient: LinearGradient(
-                        colors: [primary.withOpacity(.18), Colors.white],
+                        colors: [accent.withOpacity(.18), Colors.white],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const SearchTutorScreen()),
+                          MaterialPageRoute(
+                              builder: (_) => const NotesScreen(flags: "pyq")),
                         );
                       },
                     ),
-                    const SizedBox(height: 24),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 22),
+                _BigActionCard(
+                  label: 'Courses (PDF)',
+                  subtitle:
+                      'Kindly Purchase the most Valuable and Popular PDF Courses.',
+                  icon: Icons.picture_as_pdf,
+                  gradient: LinearGradient(
+                    colors: [accent.withOpacity(.18), Colors.white],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const PDFCoursesScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 14),
+                _BigActionCard(
+                  label: 'Search a Private Tutor Now.',
+                  subtitle:
+                      'Find  Expert Private Tutor (Online/Offline) for any Subject withhin few Minutes.',
+                  icon: Icons.search_rounded,
+                  gradient: LinearGradient(
+                    colors: [accent.withOpacity(.18), Colors.white],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const SearchTutorScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ],
@@ -273,14 +311,15 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   }
 }
 
-/// ---------- Header
-
 class _Header extends StatelessWidget {
   const _Header({
     required this.primary,
     required this.accent,
     required this.onCoinTap,
     required this.balance,
+    required this.initial,
+    required this.greeting,
+    required this.name,
   });
 
   final Color primary;
@@ -288,35 +327,69 @@ class _Header extends StatelessWidget {
   final VoidCallback onCoinTap;
   final String balance;
 
+  final String initial;
+  final String greeting;
+  final String name;
+  String _capFirst(String s) {
+    final t = s.trim();
+    if (t.isEmpty) return '';
+    return t[0].toUpperCase() + t.substring(1);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
+        SizedBox(
+          width: 8,
+        ),
         Container(
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [primary, accent],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [primary, accent],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(width: 1, color: AppColors.primaryColor)),
           padding: const EdgeInsets.all(2),
-          child: const CircleAvatar(
+          child: CircleAvatar(
             radius: 22,
             backgroundColor: Colors.white,
             child: Text(
-              'S',
-              style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black87),
+              initial,
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                color: Colors.black87,
+              ),
             ),
           ),
         ),
         const SizedBox(width: 12),
-        const Expanded(
-          child: Text(
-            'Welcome, Student',
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(greeting,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  )),
+              const SizedBox(height: 2),
+              Text(
+                _capFirst(name),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+            ],
           ),
         ),
         InkWell(
@@ -327,18 +400,21 @@ class _Header extends StatelessWidget {
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(.18),
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: Colors.white.withOpacity(.25)),
-                ),
+                    color: Colors.white.withOpacity(.18),
+                    borderRadius: BorderRadius.circular(22),
+                    border:
+                        Border.all(width: 1, color: AppColors.primaryColor)),
                 child: Row(
                   children: [
-                    const Icon(Icons.monetization_on, size: 16, color: Colors.white),
+                    // const Icon(Icons.monetization_on,
+                    //     size: 16, color: Colors.white),
                     const SizedBox(width: 6),
+
                     Text(
-                      '$balance coins',
+                      '${balance == "0" ? "Upgrade" : "$balance coins"} ',
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
@@ -357,145 +433,6 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _CurvedGradient extends StatelessWidget {
-  const _CurvedGradient({required this.primary, required this.accent});
-  final Color primary;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipPath(
-      clipper: _BottomCurveClipper(),
-      child: Container(
-        height: 200,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [primary, accent],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomCurveClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final p = Path()..lineTo(0, size.height - 50);
-    p.quadraticBezierTo(size.width * 0.5, size.height, size.width, size.height - 50);
-    p.lineTo(size.width, 0);
-    p.close();
-    return p;
-  }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
-}
-
-/// ---------- Sections & cards
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title});
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style:
-          const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black87),
-    );
-  }
-}
-
-class _QuickStatsRow extends StatelessWidget {
-  const _QuickStatsRow();
-
-  @override
-  Widget build(BuildContext context) {
-    final primary = AppColors.primaryColor;
-    final accent = AppColors.accentColor;
-    return Row(
-      children: [
-        _StatChip(
-          icon: Icons.chat_bubble_outline,
-          label: 'Messages',
-          value: '3',
-          tint: primary,
-        ),
-        const SizedBox(width: 10),
-        _StatChip(
-          icon: Icons.verified_user_outlined,
-          label: 'Plan',
-          value: 'Basic',
-          tint: accent,
-        ),
-      ],
-    );
-  }
-}
-
-class _StatChip extends StatelessWidget {
-  const _StatChip({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.tint,
-  });
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color tint;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        height: 56,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: const [
-            BoxShadow(color: Color(0x11000000), blurRadius: 12, offset: Offset(0, 6))
-          ],
-          border: Border.all(color: Colors.black12.withOpacity(.05)),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [tint.withOpacity(.15), tint.withOpacity(.05)],
-                ),
-              ),
-              child: Icon(icon, size: 18, color: tint),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label, style: const TextStyle(fontSize: 11, color: Colors.black54)),
-                  Text(value,
-                      style:
-                          const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-                ],
-              ),
-            )
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _FeatureCard extends StatelessWidget {
   const _FeatureCard({
     required this.label,
@@ -503,7 +440,6 @@ class _FeatureCard extends StatelessWidget {
     required this.gradient,
     required this.onTap,
   });
-
   final String label;
   final IconData icon;
   final Gradient gradient;
@@ -519,16 +455,20 @@ class _FeatureCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           gradient: gradient,
           boxShadow: const [
-            BoxShadow(color: Color(0x12000000), blurRadius: 10, offset: Offset(0, 6))
+            BoxShadow(
+                color: Color(0x12000000), blurRadius: 10, offset: Offset(0, 6))
           ],
-          border: Border.all(color: Colors.black12.withOpacity(.04)),
+          border: Border.all(color: AppColors.primaryColor),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 28, color: Colors.black87),
+            Icon(icon, size: 28, color: AppColors.primaryColor),
             const SizedBox(height: 10),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(label,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primaryColor)),
           ],
         ),
       ),
@@ -563,9 +503,10 @@ class _BigActionCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           gradient: gradient,
           boxShadow: const [
-            BoxShadow(color: Color(0x14000000), blurRadius: 14, offset: Offset(0, 8))
+            BoxShadow(
+                color: Color(0x14000000), blurRadius: 14, offset: Offset(0, 8))
           ],
-          border: Border.all(color: Colors.black12.withOpacity(.05)),
+          border: Border.all(color: AppColors.primaryColor),
         ),
         child: Row(
           children: [
@@ -575,12 +516,15 @@ class _BigActionCard extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
-                  colors: [Colors.black.withOpacity(.06), Colors.white.withOpacity(.5)],
+                  colors: [
+                    Colors.black.withOpacity(.06),
+                    Colors.white.withOpacity(.5)
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
               ),
-              child: Icon(icon, size: 26, color: Colors.black87),
+              child: Icon(icon, size: 26, color: AppColors.primaryColor),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -589,14 +533,19 @@ class _BigActionCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(label,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                      style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primaryColor)),
                   const SizedBox(height: 6),
                   Text(subtitle,
-                      style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                      style:
+                          const TextStyle(fontSize: 12, color: Colors.black54)),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.black45),
+            const Icon(Icons.arrow_forward_ios,
+                size: 16, color: AppColors.primaryColor),
           ],
         ),
       ),

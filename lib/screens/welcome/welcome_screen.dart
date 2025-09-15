@@ -147,7 +147,7 @@ class WelcomeScreen extends StatelessWidget {
                       children: [
                         _roleButton(
                           context,
-                          'Student / Parent',
+                          'Student / Parents',
                           3,
                           FontAwesomeIcons.userGraduate,
                           Colors.deepPurpleAccent,

@@ -17,6 +17,12 @@ class ProfileUpdateController extends GetxController {
   var masterData = Rxn<MasterData>();
   var tutorprofileData = Rxn<TutorProfileData>();
 
+  @override
+  void onInit() {
+    super.onInit();
+    fetchProfileForStudent();
+  }
+
   Future<void> fetchMasterData() async {
     isLoading.value = true;
     try {
@@ -126,6 +132,40 @@ class ProfileUpdateController extends GetxController {
     try {
       final response =
           await _profileUpdateService.updateProfileForStudent(updateData);
+      debugPrint("✅ Profile updated successfully");
+      final int? profileStatus = await StorageService.getIsProfileStatus();
+      print("profilstatuse");
+      print(profileStatus);
+      Get.offAll(() => const StudentDashboardScreen());
+      Get.snackbar(
+        'Success',
+        response.message,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+      return true;
+    } catch (e) {
+      debugPrint("❌ Error in updateProfile: $e");
+      Get.snackbar(
+        'Error',
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      isLoading.value = false;
+      return false;
+    }
+  }
+
+  Future<bool> updateStudentProfile(data) async {
+    isLoading.value = true;
+    try {
+      final response =
+          await _profileUpdateService.updateStudentProfile(data);
       debugPrint("✅ Profile updated successfully");
       final int? profileStatus = await StorageService.getIsProfileStatus();
       print("profilstatuse");

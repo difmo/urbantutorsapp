@@ -143,6 +143,7 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
     return "data:image/${file.path.split('.').last};base64,${base64Encode(bytes)}";
   }
 
+
   Future<void> onSavePressed() async {
     String? userIdd = await StorageService.getUserId();
     // Basic guard

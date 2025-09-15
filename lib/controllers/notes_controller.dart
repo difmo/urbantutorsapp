@@ -20,7 +20,7 @@ class NotesController extends GetxController {
   Future<void> fetchClasses({required int boardId, String? type}) async {
     try {
       loadingClasses.value = true;
-      final result = await _svc.fetchClasses(boardId: boardId, type: type!);
+      final result = await _svc.fetchClasses(boardId: boardId, type: type!=null?"Note":"Note");
       classes.assignAll(result ?? []);
     } finally {
       loadingClasses.value = false;
@@ -37,7 +37,7 @@ class NotesController extends GetxController {
       final result = await _svc.fetchSubjects(
         // boardId: boardId,
         classId: classId,
-        type: type!,
+         type: type!=null?"Note":"Note"
       );
       subjects.assignAll(result ?? []);
     } finally {
@@ -49,7 +49,7 @@ class NotesController extends GetxController {
   Future<void> fetchChapters({required int subjectId, String? type}) async {
     try {
       loadingChapters.value = true;
-      final result = await _svc.fetchChapters(subjectId: subjectId, type: type!);
+      final result = await _svc.fetchChapters(subjectId: subjectId,  type:type!=null?"Note":"Note");
       chapters.assignAll(result ?? []);
     } finally {
       loadingChapters.value = false;
@@ -60,7 +60,7 @@ class NotesController extends GetxController {
   Future<void> fetchChapterDetails({required int chapterId, String? type}) async {
     try {
       loadingChapterDetails.value = true;
-      final result = await _svc.fetchChapterDetails(chapterId: chapterId, type: type!);
+      final result = await _svc.fetchChapterDetails(chapterId: chapterId, type: type!=null?"Note":"Note");
       chapterDetails.value = result;
     } finally {
       loadingChapterDetails.value = false;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/ChatScreen.dart';
+import 'package:urbantutorsapp/theme/theme_constants.dart';
 
 class ChatUserListScreen extends StatelessWidget {
   final List<Map<String, String>> chatUsers = [
@@ -53,15 +54,20 @@ class ChatUserListScreen extends StatelessWidget {
                     },
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 10),
-                    leading: CircleAvatar(
-                      radius: 26,
-                      backgroundColor: primaryColor.withOpacity(0.1),
-                      child: Text(
-                        user['profile']!,
-                        style: TextStyle(
-                          fontSize: 20,
-                          color: primaryColor,
-                          fontWeight: FontWeight.bold,
+                    leading: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.all(Radius.circular(50)),
+                        border: Border.all(color: AppColors.primaryColor)),
+                      child: CircleAvatar(
+                        radius: 26,
+                        backgroundColor: primaryColor.withOpacity(0.1),
+                        child: Text(
+                          user['profile']!,
+                          style: TextStyle(
+                            fontSize: 20,
+                            color: primaryColor,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),

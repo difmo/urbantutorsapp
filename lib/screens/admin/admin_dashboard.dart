@@ -48,7 +48,6 @@ class _AdminDashboardState extends State<AdminDashboard>
     _c = Get.isRegistered<CoinsController>()
         ? Get.find<CoinsController>()
         : Get.put(CoinsController());
-
     _c.refreshAll();
   }
 

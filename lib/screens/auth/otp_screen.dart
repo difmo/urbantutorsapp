@@ -167,7 +167,7 @@ class _OTPScreenState extends State<OTPScreen> {
                   style: const TextStyle(color: Colors.black87, fontSize: 16),
                   children: [
                     TextSpan(
-                      text: '+91-${widget.phone}',
+                      text: '+91${widget.phone}',
                       style: TextStyle(
                         color: primary,
                         fontWeight: FontWeight.bold,

@@ -53,7 +53,7 @@ class RoleIntroScreen extends StatelessWidget {
 
                 // Welcome Text
                 Text(
-                  'Welcome $formattedRole!',
+                  'Welcome $formattedRole.',
                   style: const TextStyle(
                     fontSize: 26,
                     color: Colors.white,
@@ -62,12 +62,11 @@ class RoleIntroScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Continue as $formattedRole to explore Urban Tutors.',
+                  'Continue as $formattedRole to Explore Urban Tutors.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.white70, fontSize: 16),
                 ),
                 const SizedBox(height: 40),
-
                 // Login and Register Buttons
                 Row(
                   children: [
@@ -100,7 +99,6 @@ class RoleIntroScreen extends StatelessWidget {
                     ),
 
                     const SizedBox(width: 16),
-
                     // Register Button
                     Expanded(
                       child: OutlinedButton.icon(
@@ -108,7 +106,8 @@ class RoleIntroScreen extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => RegisterScreen(role: role, roleId: roleId),
+                              builder: (_) =>
+                                  RegisterScreen(role: role, roleId: roleId),
                             ),
                           );
                         },

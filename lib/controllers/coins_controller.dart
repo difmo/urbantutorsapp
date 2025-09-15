@@ -60,6 +60,7 @@ class CoinsController extends GetxController {
     ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+
   /// Start Razorpay checkout
   Future<void> startRazorpayCheckout(
       BuildContext context, CoinPackage pack) async {

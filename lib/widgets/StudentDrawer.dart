@@ -1,6 +1,8 @@
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/feedback_student.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/notification_student.dart';
@@ -9,12 +11,9 @@ import 'package:urbantutorsapp/screens/student/childs_screens/term_condition_stu
 import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import '../theme/theme_constants.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:share_plus/share_plus.dart';
 
 class StudentDrawer extends StatefulWidget {
   final Function(String label) onMenuTap;
-
   const StudentDrawer({super.key, required this.onMenuTap});
 
   @override
@@ -23,19 +22,38 @@ class StudentDrawer extends StatefulWidget {
 
 class _StudentDrawerState extends State<StudentDrawer> {
   String selectedLabel = 'Term and Conditions';
-  final ProfileUpdateController _profileUpdateController =
-      Get.put(ProfileUpdateController());
+  // Reuse if already registered
+  final ProfileUpdateController _profile =
+      Get.isRegistered<ProfileUpdateController>()
+          ? Get.find<ProfileUpdateController>()
+          : Get.put(ProfileUpdateController());
+
+  @override
+  void initState() {
+    super.initState();
+    // Ensure profile is present
+    if (_profile.studentprofileData.value == null) {
+      _profile.fetchProfileForStudent();
+    }
+  }
+
+  String _capFirst(String s) {
+    final t = s.trim();
+    if (t.isEmpty) return '';
+    return t[0].toUpperCase() + t.substring(1);
+  }
 
   void handleTap(String label, {VoidCallback? onTap}) {
-    setState(() {
-      selectedLabel = label;
-    });
+    setState(() => selectedLabel = label);
+    Navigator.pop(context); // close drawer first
+    onTap?.call();
+  }
 
-    // ✅ Close the drawer first
-    Navigator.pop(context);
-
-    // ✅ Perform the action (navigation, share, etc.)
-    if (onTap != null) onTap();
+  String _firstName(String? name) {
+    final n = (name ?? '').trim();
+    if (n.isEmpty) return 'Student';
+    final parts = n.split(RegExp(r'\s+'));
+    return parts.first;
   }
 
   Widget _drawerItem(
@@ -45,9 +63,8 @@ class _StudentDrawerState extends State<StudentDrawer> {
     VoidCallback? onTap,
   }) {
     final bool isSelected = selectedLabel == label;
-
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
       child: Container(
         decoration: BoxDecoration(
           color: isSelected
@@ -79,31 +96,55 @@ class _StudentDrawerState extends State<StudentDrawer> {
 
   void _showDeleteDialog(BuildContext context) {
     showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Delete Account'),
-            content: const Text('Are you sure you want to delete your?'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primaryColor),
-                child: const Text('CANCEL'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primaryColor),
-                child: const Text('CONFIRM'),
-              ),
-            ],
-          );
-        });
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Account'),
+        content: const Text('Are you sure you want to delete your account?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.primaryColor,
+            ),
+            child: const Text('CANCEL'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // TODO: call delete endpoint if you have it
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.primaryColor,
+            ),
+            child: const Text('CONFIRM'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helpers
+  String _str(dynamic v, {String fallback = ''}) {
+    final s = (v?.toString() ?? '').trim();
+    return s.isEmpty ? fallback : s;
+  }
+
+  String _initialFrom(String? name) {
+    final s = (name ?? '').trim();
+    if (s.isEmpty) return 'U';
+    // simple & safe for Latin; adjust if you need complex scripts
+    return s[0].toUpperCase();
+  }
+
+  Future<void> _openTerms() async {
+    final Uri url = Uri.parse('https://urbantutors.pro/privacy-policy');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open Terms & Conditions')),
+      );
+    }
   }
 
   @override
@@ -116,161 +157,230 @@ class _StudentDrawerState extends State<StudentDrawer> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // Profile Header
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.shade200,
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    )
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Stack(
-                      clipBehavior: Clip.none,
+              // ===== Profile header =====
+              Obx(() {
+                final loading = _profile.isLoading.value &&
+                    _profile.studentprofileData.value == null;
+                final p = _profile.studentprofileData.value;
+
+                if (loading) {
+                  // Simple skeleton
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 20),
+                    child: Row(
                       children: [
-                        CircleAvatar(
-                          radius: 30,
-                          backgroundColor: primaryColor.withOpacity(0.1),
-                          child: const Text(
-                            "S",
-                            style: TextStyle(
-                              fontSize: 22,
-                              color: Colors.black87,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  width: 2, color: AppColors.accentColor)),
                         ),
-                        Positioned(
-                          bottom: -2,
-                          right: -2,
-                          child: GestureDetector(
-                            onTap: () {
-                              Get.to(() => StudentProfileScreen());
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 4,
-                                  ),
-                                ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                height: 16,
+                                width: 140,
+                                color: Colors.grey.shade200,
                               ),
-                              child: const Icon(
-                                Icons.edit,
-                                size: 16,
-                                color: Colors.black87,
+                              const SizedBox(height: 8),
+                              Container(
+                                height: 14,
+                                width: 100,
+                                color: Colors.grey.shade200,
                               ),
-                            ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  );
+                }
+
+                final name = _str(p?.studentName, fallback: 'User');
+                final mobile = _str(p?.mobile, fallback: '');
+                final course = _str(p?.courseName, fallback: '');
+                final profileId =
+                    _str(p?.profileId, fallback: ''); // if present in model
+                final displayName = _firstName(name);
+
+                return Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.shade200,
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      )
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Stack(
+                        clipBehavior: Clip.none,
                         children: [
-                          Obx(
-                            () => Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(_profileUpdateController.studentprofileData
-                                        .value!.studentName ??
-                                    "Unknown User"),
-                                SizedBox(height: 4),
-                                Text(
-                                  "Another text here",
-                                  style: TextStyle(
-                                      fontSize: 14, color: Colors.black),
+                          Container(
+                            decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    width: 2, color: AppColors.primaryColor)),
+                            child: CircleAvatar(
+                              radius: 30,
+                              backgroundColor: primaryColor.withOpacity(0.12),
+                              child: Text(
+                                _initialFrom(name),
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  color: Colors.black87,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                             _profileUpdateController.studentprofileData.value?.courseName ?? "Unknown User",
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.black54,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-              ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _capFirst(displayName),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                if (profileId.isNotEmpty) ...[
+                                  Flexible(
+                                    child: Text(
+                                      profileId,
+                                      style: const TextStyle(
+                                          fontSize: 13, color: Colors.black54),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ] else if (profileId.isNotEmpty) ...[
+                                  const Icon(Icons.badge,
+                                      size: 14, color: Colors.black54),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      profileId,
+                                      style: const TextStyle(
+                                          fontSize: 13, color: Colors.black54),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            // if (course.isNotEmpty) ...[
+                            //   const SizedBox(height: 4),
+                            //   Text(
+                            //     course,
+                            //     style: const TextStyle(
+                            //       fontSize: 13,
+                            //       color: Colors.black54,
+                            //     ),
+                            //     overflow: TextOverflow.ellipsis,
+                            //   ),
+                            // ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
 
               const SizedBox(height: 12),
 
-              // Menu Items
+              _drawerItem(
+                Icons.description,
+                'Profile',
+                onTap: () => Get.to(() => StudentProfileScreen()),
+              ),
+
+              _drawerItem(
+                Icons.feedback,
+                'Feedback',
+                onTap: () => Get.to(() => const FeedbackStudent()),
+              ),
+              _drawerItem(
+                Icons.notifications,
+                'Notifications',
+                onTap: () => Get.to(() => const NotificationStudent()),
+              ),
+              _drawerItem(
+                Icons.transcribe_sharp,
+                'Transactions',
+                onTap: () => Get.to(() => const NotificationStudent()),
+              ),
+
+              _drawerItem(
+                Icons.history,
+                'History',
+                onTap: () => Get.to(() => const NotificationStudent()),
+              ),
+              _drawerItem(
+                Icons.share,
+                'Share app',
+                onTap: _shareApp,
+              ),
+
+              // ===== Menu items =====
               _drawerItem(
                 Icons.description,
                 'Term and Conditions',
-                onTap: () {
-                  Get.to(() => const TermConditionStudent());
-                },
+                onTap: () => {_openTerms()},
               ),
               _drawerItem(
                 Icons.language,
-                'Connected Websites & Apps',
+                'Connected Websites',
                 onTap: () async {
                   final Uri url = Uri.parse('https://www.urbantutors.pro/');
                   if (await canLaunchUrl(url)) {
                     await launchUrl(url, mode: LaunchMode.externalApplication);
                   } else {
-                    throw 'Could not launch $url';
+                    Get.snackbar('Error', 'Could not launch $url');
                   }
                 },
               ),
               _drawerItem(
-                Icons.feedback,
-                'Feedback',
-                onTap: () {
-                  Get.to(() => FeedbackStudent());
-                },
-              ),
-              _drawerItem(
                 Icons.notifications,
-                'Notifications',
-                onTap: () {
-                  Get.to(() => NotificationStudent());
-                },
-              ),
-              _drawerItem(
-                Icons.share,
-                'Share app',
-                onTap: () {
-                  _shareApp();
-                },
+                'Get Support',
+                onTap: () => Get.to(() => const NotificationStudent()),
               ),
               _drawerItem(
                 Icons.delete_forever,
                 'Delete Account',
-                onTap: () {
-                  _showDeleteDialog(context);
-                },
+                onTap: () => _showDeleteDialog(context),
               ),
               _drawerItem(
                 Icons.logout,
                 'Logout',
                 color: Colors.red,
-                onTap: () {
-                  StorageService.clearTokenAndRole();
-                  StorageService.clear();
-                  Get.to(WelcomeScreen());
-                  // Add logout logic here
+                onTap: () async {
+                  await StorageService.clearTokenAndRole();
+                  await StorageService.clear();
+                  Get.offAll(() => const WelcomeScreen());
                 },
               ),
             ],

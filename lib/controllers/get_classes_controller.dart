@@ -8,17 +8,12 @@ class GetClassesController extends GetxController {
   var isLoading = false.obs;
   var classList = <ClassData>[].obs;
 
-  
-
   /// Call this method with a valid boardId (e.g. 1, 2, etc.)
   Future<void> fetchClasses({required int boardId}) async {
     isLoading.value = true;
-
     try {
       print('📡 Fetching class data for boardId: $boardId');
-
       final response = await getClassesService.fetchClasses(boardId: boardId);
-
       if (response.success) {
         classList.value = response.data;
 

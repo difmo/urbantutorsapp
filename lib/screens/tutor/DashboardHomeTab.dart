@@ -1,28 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/tutor_leads_controller.dart';
+import 'package:urbantutorsapp/models/grabbed_lead_model.dart';
 import 'package:urbantutorsapp/models/tutor_lead.dart';
+
 import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/enquiry_details_page_tutor.dart';
+import 'package:urbantutorsapp/screens/tutor/grabbed_lead_details_page.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
+
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/TutorDrawer.dart';
-
 import '../../theme/theme_constants.dart';
 
-/// ✅ Extracted Dashboard main tab (Nearby / Enquiry / Contacted)
 class DashboardHomeTab extends StatefulWidget {
   const DashboardHomeTab({super.key});
-
   @override
   State<DashboardHomeTab> createState() => _DashboardHomeTabState();
 }
 
 class _DashboardHomeTabState extends State<DashboardHomeTab> {
   RangeValues _currentRangeValues = const RangeValues(1, 10);
+
   final TutorLeadsController _leads = Get.put(TutorLeadsController());
+
+  late final CoinsController _coins;
+
+  @override
+  void initState() {
+    super.initState();
+    _coins = Get.isRegistered<CoinsController>()
+        ? Get.find<CoinsController>()
+        : Get.put(CoinsController());
+    _coins.refreshAll(); // loads coin packs + wallet
+  }
+
   Future<void> _handleMenuTap(String label) async {
     Navigator.of(context).pop();
     if (label == 'Logout') {
@@ -44,158 +59,166 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
     }
   }
 
-  late final CoinsController _c;
-
-  @override
-  void initState() {
-    super.initState();
-  
-    _c = Get.isRegistered<CoinsController>()
-        ? Get.find<CoinsController>()
-        : Get.put(CoinsController());
-
-    _c.refreshAll();
-
-  }
-
   num _toNum(dynamic v) {
     if (v == null) return 0;
     if (v is num) return v;
     return num.tryParse(v.toString()) ?? 0;
   }
 
+  bool _isGrabbed(TutorLead e) =>
+      _leads.grabbedLeads.any((g) => g.grabLeadId == e.id);
+
+  Future<void> _grabThisLead(TutorLead e) async {
+    final msg = await _leads.grabLead(e.id.toString());
+    if (!mounted) return;
+    if (msg != null) {
+      Get.snackbar('Success', msg,
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 2));
+    } else if (_leads.error.isNotEmpty) {
+      Get.snackbar('Error', _leads.error.value,
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 2));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final primaryColor = AppColors.primaryColor;
-    final accentColor = AppColors.accentColor;
+    final primary = AppColors.primaryColor;
+    final accent = AppColors.accentColor;
 
     return DefaultTabController(
-        length: 3,
-        child: Scaffold(
-          endDrawer: TutorDrawer(onMenuTap: _handleMenuTap),
-          appBar: AppBar(
-            backgroundColor: AppColors.primaryColor,
-            elevation: 2,
-            toolbarHeight: 75,
-            title: Obx(() {
-              final loading = _c.loadingCoins.value || _c.loadingMyCoins.value;
-              final wallet = _c.myCoins.value; 
-              final balanceNum = _toNum(wallet?.available);
-              final balanceText = balanceNum.toStringAsFixed(0);
+      length: 3,
+      child: Scaffold(
+        endDrawer: TutorDrawer(onMenuTap: _handleMenuTap),
+        appBar: AppBar(
+          backgroundColor: primary,
+          elevation: 2,
+          toolbarHeight: 75,
+          title: Obx(() {
+            final loading =
+                _coins.loadingCoins.value || _coins.loadingMyCoins.value;
+            final wallet = _coins.myCoins.value;
+            final balance = _toNum(wallet?.available).toStringAsFixed(0);
 
-              if (loading && wallet == null) {
-                return const SizedBox(
-                  height: 24,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: CircularProgressIndicator(color: Colors.white),
-                  ),
-                );
-              }
-              return Row(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [primaryColor, accentColor],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    padding: const EdgeInsets.all(2),
-                    child: const CircleAvatar(
-                      backgroundColor: Colors.transparent,
-                      radius: 24,
-                      child: Text(
-                        'S',
-                        style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text('Welcome, Tutor',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.white)),
-                  const Spacer(),
-                  const SizedBox(width: 8),
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => TutorCoinsScreen()));
-                      },
-                      borderRadius: BorderRadius.circular(20),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: accentColor.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.monetization_on,
-                                color: accentColor, size: 14),
-                            const SizedBox(width: 6),
-                            Text(
-                              "$balanceText coins",
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 10,
-                              ),
-                            )
-                          ],
-                        ),
-                      ),
-                    ),
-                  )
-                ],
-              );
-            }),
-            bottom: const TabBar(
-              labelColor: AppColors.accentColor,
-              unselectedLabelColor: Colors.white70,
-              indicatorColor: AppColors.accentColor,
-              tabs: [
-                Tab(text: "Nearby", icon: Icon(Icons.location_on)),
-                Tab(text: "ENQUIRY", icon: Icon(Icons.message)),
-                Tab(text: "CONTACTED", icon: Icon(Icons.check_circle)),
-              ],
-            ),
-          ),
-          body: Obx(() {
-            if (_leads.isLoading.value) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (_leads.error.isNotEmpty) {
-              return _ErrorRetry(
-                message: _leads.error.value,
-                onRetry: _leads.load,
+            if (loading && wallet == null) {
+              return const SizedBox(
+                height: 24,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: CircularProgressIndicator(color: Colors.white),
+                ),
               );
             }
 
-            return TabBarView(
+            return Row(
               children: [
-                _nearbyTab(context), // Offline only
-                _enquiryTab(context), // All leads
-                _contactedTab(context), // Marked as contacted
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [primary, accent],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(2),
+                  child: const CircleAvatar(
+                    backgroundColor: Colors.transparent,
+                    radius: 24,
+                    child: Text(
+                      'S',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Text('Welcome, Tutor',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.white)),
+                const Spacer(),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const TutorCoinsScreen()),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.18),
+                        borderRadius: BorderRadius.circular(20),
+                        border:
+                            Border.all(color: Colors.white.withOpacity(0.25)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.monetization_on,
+                              color: Colors.white, size: 14),
+                          const SizedBox(width: 6),
+                          Text(
+                            '$balance coins',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+                  ),
+                )
               ],
             );
           }),
-        ));
+          bottom: const TabBar(
+            labelColor: AppColors.accentColor,
+            unselectedLabelColor: Colors.white70,
+            indicatorColor: AppColors.accentColor,
+            tabs: [
+              Tab(text: "Nearby", icon: Icon(Icons.location_on)),
+              Tab(text: "ENQUIRY", icon: Icon(Icons.message)),
+              Tab(text: "CONTACTED", icon: Icon(Icons.check_circle)),
+            ],
+          ),
+        ),
+        body: Obx(() {
+          if (_leads.isLoading.value && _leads.leads.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (_leads.error.isNotEmpty && _leads.leads.isEmpty) {
+            return _ErrorRetry(
+                message: _leads.error.value, onRetry: _leads.loadAvailable);
+          }
+
+          return TabBarView(
+            children: [
+              _nearbyTab(context),
+              _enquiryTab(context),
+              _contactedTab(context),
+            ],
+          );
+        }),
+      ),
+    );
   }
 
-  // ---------- Nearby
+  // -------------------- Tabs --------------------
+
   Widget _nearbyTab(BuildContext context) {
-    final items = _leads.nearby;
+    final items = _leads.nearby; // offline only
     return RefreshIndicator(
-      onRefresh: _leads.refreshNow,
+      onRefresh: _leads.loadAvailable,
       child: ListView(
         padding: const EdgeInsets.only(top: 12),
         children: [
@@ -218,11 +241,7 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
                     "${_currentRangeValues.start.round()} km",
                     "${_currentRangeValues.end.round()} km",
                   ),
-                  onChanged: (RangeValues values) {
-                    setState(() {
-                      _currentRangeValues = values;
-                    });
-                  },
+                  onChanged: (v) => setState(() => _currentRangeValues = v),
                   activeColor: AppColors.accentColor,
                   inactiveColor: Colors.grey[300],
                 ),
@@ -234,11 +253,15 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
               padding: EdgeInsets.all(24),
               child: Center(child: Text('No nearby (offline) leads found')),
             ),
-          ...items.map((e) => _LeadCard(
-                lead: e,
-                isContacted: _leads.contactedIds.contains(e.id),
-                onContactToggle: () => _leads.toggleContacted(e.id),
-                onReadMore: () => _openDetails(e),
+          ...items.map((e) => GestureDetector(
+                onTap: () => _openDetails(e),
+                child: _LeadCard(
+                  lead: e,
+                  isContacted: _isGrabbed(e),
+                  onContactToggle:
+                      _isGrabbed(e) ? null : () => _grabThisLead(e),
+                  onReadMore: () => {_openDetails(e)},
+                ),
               )),
           const SizedBox(height: 24),
         ],
@@ -246,11 +269,10 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
     );
   }
 
-  // ---------- Enquiry (all)
   Widget _enquiryTab(BuildContext context) {
-    final items = _leads.enquiries;
+    final items = _leads.declinedLeads;
     return RefreshIndicator(
-      onRefresh: _leads.refreshNow,
+      onRefresh: _leads.loadDeclined,
       child: items.isEmpty
           ? const Center(child: Text('No leads yet'))
           : ListView.builder(
@@ -258,34 +280,41 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
               padding: const EdgeInsets.symmetric(vertical: 8),
               itemBuilder: (_, i) {
                 final e = items[i];
-                return _LeadCard(
-                  lead: e,
-                  isContacted: _leads.contactedIds.contains(e.id),
-                  onContactToggle: () => _leads.toggleContacted(e.id),
-                  onReadMore: () => _openDetails(e),
+                final grabbed = _isGrabbed(e);
+                return GestureDetector(
+                  onTap: () => _openDetails(e),
+                  child: _LeadCard(
+                    lead: e,
+                    isContacted: grabbed,
+                    onContactToggle: grabbed ? null : () => _grabThisLead(e),
+                    onReadMore: () => _openDetails(e),
+                  ),
                 );
               },
             ),
     );
   }
 
-  // ---------- Contacted (local toggle)
+  /// CONTACTED = grabbed leads from server
   Widget _contactedTab(BuildContext context) {
-    final items = _leads.contacted;
+    final items = _leads.grabbedLeads;
     return RefreshIndicator(
-      onRefresh: _leads.refreshNow,
+      onRefresh: _leads.loadGrabbed,
       child: items.isEmpty
-          ? const Center(child: Text('No contacted leads yet'))
+          ? const Center(child: Text('No contacted (grabbed) leads yet'))
           : ListView.builder(
               itemCount: items.length,
               padding: const EdgeInsets.symmetric(vertical: 8),
               itemBuilder: (_, i) {
                 final e = items[i];
-                return _LeadCard(
-                  lead: e,
-                  isContacted: true,
-                  onContactToggle: () => _leads.toggleContacted(e.id),
-                  onReadMore: () => _openDetails(e),
+                return GestureDetector(
+                  onTap: () => _openGrabDetails(e),
+                  child: _GrabbedLeadCard(
+                    lead: e,
+                    isContacted: true,
+                    onContactToggle: null, // already grabbed
+                    onReadMore: () => _openGrabDetails(e),
+                  ),
                 );
               },
             ),
@@ -297,14 +326,25 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
       context,
       MaterialPageRoute(
         builder: (_) => LeadDetailPage(
-          enquiry: e
-              .toMap()
-              .map((key, value) => MapEntry(key, value?.toString() ?? '')),
-        ), // your page expects a Map
+          enquiry: e.toMap().map((k, v) => MapEntry(k, v?.toString() ?? '')),
+        ),
+      ),
+    );
+  }
+
+  void _openGrabDetails(GrabLead e) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GrabbedLeadDetailsPage(
+          enquiry: e,
+        ),
       ),
     );
   }
 }
+
+// -------------------- helper widgets --------------------
 
 class _ErrorRetry extends StatelessWidget {
   const _ErrorRetry({required this.message, required this.onRetry});
@@ -326,9 +366,7 @@ class _ErrorRetry extends StatelessWidget {
             SizedBox(
               height: 44,
               child: ElevatedButton(
-                onPressed: onRetry,
-                child: const Text('Retry'),
-              ),
+                  onPressed: onRetry, child: const Text('Retry')),
             ),
           ],
         ),
@@ -347,7 +385,7 @@ class _LeadCard extends StatelessWidget {
 
   final TutorLead lead;
   final bool isContacted;
-  final VoidCallback onContactToggle;
+  final VoidCallback? onContactToggle; // null => disabled
   final VoidCallback onReadMore;
 
   @override
@@ -398,38 +436,36 @@ class _LeadCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text('₹${lead.price}',
                     style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textColor)),
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textColor,
+                    )),
                 const Spacer(),
-
-                // Contacted toggle (kept compact to avoid infinite width)
                 OutlinedButton.icon(
                   onPressed: onContactToggle,
                   icon: Icon(
-                      isContacted ? Icons.check_circle : Icons.circle_outlined,
-                      size: 18),
-                  label: Text(isContacted ? 'Contacted' : 'Mark Contacted'),
+                    isContacted ? Icons.check_circle : Icons.circle_outlined,
+                    size: 18,
+                  ),
+                  label: Text(isContacted ? 'Grabbed' : 'Mark Contacted'),
                   style: OutlinedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                     side: BorderSide(
-                        color:
-                            isContacted ? Colors.green : Colors.blue.shade200),
+                      color: isContacted ? Colors.green : Colors.blue.shade200,
+                    ),
                     foregroundColor:
                         isContacted ? Colors.green : AppColors.primaryColor,
                     minimumSize: const Size(0, 36),
                   ),
                 ),
                 const SizedBox(width: 8),
-
-                // Read more
-                ElevatedButton(
-                  onPressed: onReadMore,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(0, 36),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                  ),
-                  child: const Text('Read More'),
-                ),
+                // ElevatedButton(
+                //   onPressed: onReadMore,
+                //   style: ElevatedButton.styleFrom(
+                //     minimumSize: const Size(0, 36),
+                //     padding: const EdgeInsets.symmetric(horizontal: 12),
+                //   ),
+                //   child: const Text('Read More'),
+                // ),
               ],
             ),
           ],
@@ -443,14 +479,136 @@ class _LeadCard extends StatelessWidget {
       Icon(icon, color: AppColors.accentColor, size: 18),
       const SizedBox(width: 6),
       Expanded(
-        child:
-            Text('$k: $v', style: const TextStyle(color: AppColors.textColor)),
-      ),
+          child: Text('$k: $v',
+              style: const TextStyle(color: AppColors.textColor))),
     ]);
   }
 
   static String _fmtDate(DateTime d) {
-    // simple dd MMM yyyy
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    return '${d.day} ${months[d.month - 1]} ${d.year}';
+  }
+}
+
+class _GrabbedLeadCard extends StatelessWidget {
+  const _GrabbedLeadCard({
+    required this.lead,
+    required this.isContacted,
+    required this.onContactToggle,
+    required this.onReadMore,
+  });
+
+  final GrabLead lead;
+  final bool isContacted;
+  final VoidCallback? onContactToggle; // null => disabled
+  final VoidCallback onReadMore;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // header row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  lead.studentName.isEmpty
+                      ? 'Lead #${lead.leadId}'
+                      : lead.studentName,
+                  style: const TextStyle(
+                    color: AppColors.accentColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+
+            _kv(Icons.school, 'Class', lead.courseName),
+            const SizedBox(height: 4),
+            _kv(Icons.book, 'Subject', lead.subjectName),
+            const SizedBox(height: 4),
+            _kv(Icons.location_on, 'Location', lead.location),
+            const SizedBox(height: 4),
+            _kv(Icons.computer, 'Mode', lead.mode),
+            const SizedBox(height: 6),
+
+            Row(
+              children: [
+                const Icon(Icons.attach_money,
+                    size: 18, color: AppColors.accentColor),
+                const SizedBox(width: 4),
+                Text('₹${lead.price}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textColor,
+                    )),
+                const Spacer(),
+                OutlinedButton.icon(
+                  onPressed: onContactToggle,
+                  icon: Icon(
+                    isContacted ? Icons.check_circle : Icons.circle_outlined,
+                    size: 18,
+                  ),
+                  label: Text(isContacted ? 'Grabbed' : 'Mark Contacted'),
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    side: BorderSide(
+                      color: isContacted ? Colors.green : Colors.blue.shade200,
+                    ),
+                    foregroundColor:
+                        isContacted ? Colors.green : AppColors.primaryColor,
+                    minimumSize: const Size(0, 36),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // ElevatedButton(
+                //   onPressed: onReadMore,
+                //   style: ElevatedButton.styleFrom(
+                //     minimumSize: const Size(0, 36),
+                //     padding: const EdgeInsets.symmetric(horizontal: 12),
+                //   ),
+                //   child: const Text('Read More'),
+                // ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static Widget _kv(IconData icon, String k, String v) {
+    return Row(children: [
+      Icon(icon, color: AppColors.accentColor, size: 18),
+      const SizedBox(width: 6),
+      Expanded(
+          child: Text('$k: $v',
+              style: const TextStyle(color: AppColors.textColor))),
+    ]);
+  }
+
+  static String _fmtDate(DateTime d) {
     const months = [
       'Jan',
       'Feb',

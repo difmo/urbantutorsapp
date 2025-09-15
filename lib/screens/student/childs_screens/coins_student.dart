@@ -1,7 +1,12 @@
 // lib/screens/student/childs_screens/coins_student.dart
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
+import 'package:urbantutorsapp/controllers/pay_course_controller.dart';
+import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/models/coin_package.dart';
 import 'package:urbantutorsapp/models/my_coins.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
@@ -23,6 +28,16 @@ class _CoinsStudentScreenState extends State<CoinsStudentScreen> {
     return num.tryParse(v.toString()) ?? 0;
   }
 
+  final PayCourseController _payCourseController =
+      Get.find<PayCourseController>();
+
+  static const blue = Color(0xFF4A90E2);
+
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  int _currentIndex = 0;
+
+  late final ProfileUpdateController _p; // ⬅️ NEW
+
   @override
   void initState() {
     super.initState();
@@ -34,6 +49,43 @@ class _CoinsStudentScreenState extends State<CoinsStudentScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _c.refreshAll();
     });
+
+    print("Loaded courses:");
+    for (var course in _payCourseController.courses) {
+      print(course.toJson());
+    }
+
+    _p = Get.isRegistered<ProfileUpdateController>()
+        ? Get.find<ProfileUpdateController>()
+        : Get.put(ProfileUpdateController());
+    // Try to ensure profile is present
+    _p.fetchProfileForStudent();
+  }
+
+  num _toNum(dynamic v) {
+    if (v == null) return 0;
+    if (v is num) return v;
+    return num.tryParse(v.toString()) ?? 0;
+  }
+
+  String _initial(String? name) {
+    final n = (name ?? '').trim();
+    if (n.isEmpty) return 'S';
+    return n.characters.first.toUpperCase();
+  }
+
+  String _firstName(String? name) {
+    final n = (name ?? '').trim();
+    if (n.isEmpty) return 'Student';
+    final parts = n.split(RegExp(r'\s+'));
+    return parts.first;
+  }
+
+  String _greet() {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
   }
 
   @override
@@ -43,18 +95,62 @@ class _CoinsStudentScreenState extends State<CoinsStudentScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: primary,
-        title: const Text('Wallet'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        toolbarHeight: 76,
+        titleSpacing: 0,
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
         ),
-        actions: [
-          IconButton(
-            onPressed: () => _c.refreshAll(),
-            icon: const Icon(Icons.refresh),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [primary, accent],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
-        ],
+        ),
+        title: Obx(() {
+          // coins
+          final loadingCoins = _c.loadingCoins.value || _c.loadingMyCoins.value;
+          final wallet = _c.myCoins.value;
+          final balanceNum = _toNum(wallet?.available);
+          final balanceText = balanceNum.toStringAsFixed(0);
+
+          // profile
+          final prof = _p.studentprofileData.value;
+          final name = prof?.studentName?.trim();
+          final initial = _initial(name);
+          final greet = _greet();
+          final displayName = _firstName(name);
+
+          if (loadingCoins && wallet == null && prof == null) {
+            return const SizedBox(
+              height: 24,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+            );
+          }
+          return _Header(
+            primary: primary,
+            accent: accent,
+            initial: initial,
+            greeting: "Wallet",
+            name: displayName,
+            balance: balanceText,
+            onCoinTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CoinsStudentScreen()),
+              );
+            },
+          );
+        }),
       ),
       backgroundColor: Colors.white,
       body: Obx(() {
@@ -80,11 +176,11 @@ class _CoinsStudentScreenState extends State<CoinsStudentScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
-                      'Recharge your wallet : $available Coins left',
+                      'Kindly Upgrade Your Wallet : $available Coins Only /-',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 16,
-                        color: primary,
+                        color: Colors.green,
                       ),
                     ),
                   ),
@@ -104,24 +200,34 @@ class _CoinsStudentScreenState extends State<CoinsStudentScreen> {
                   else if (packs.isEmpty)
                     const Center(child: Text('No coin packs available'))
                   else if (!isWide)
-                    SizedBox(
-                      height: 130,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: packs.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 12),
-                        itemBuilder: (_, i) {
-                          final p = packs[i];
-                          return _PackTile(
+                    GridView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      shrinkWrap:
+                          true, // so it can live inside another scroll view
+                      physics:
+                          const NeverScrollableScrollPhysics(), // parent scrolls
+                      itemCount: packs.length,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2, // 🔹 two per row
+                        crossAxisSpacing: 12, // gap between columns
+                        mainAxisSpacing: 12, // gap between rows
+                        childAspectRatio:
+                            1.5, // tweak to fit your tile’s height
+                      ),
+                      itemBuilder: (_, i) {
+                        final p = packs[i];
+                        return LayoutBuilder(
+                          builder: (ctx, cons) => _PackTile(
                             pack: p,
                             primary: primary,
                             accent: accent,
-                            width: 170,
+                            width:
+                                cons.maxWidth, // give the tile its real width
                             onTap: () => _showCheckout(context, p, primary),
-                          );
-                        },
-                      ),
+                          ),
+                        );
+                      },
                     )
                   else
                     Padding(
@@ -347,7 +453,7 @@ class _PackTile extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [BoxShadow(color: Colors.grey.shade200, blurRadius: 6)],
-          border: Border.all(color: accent.withOpacity(0.3)),
+          border: Border.all(color: AppColors.primaryColor),
         ),
         child: DefaultTextStyle(
           style: const TextStyle(fontSize: 13, color: Colors.black87),
@@ -375,6 +481,14 @@ class _PackTile extends StatelessWidget {
                   ),
                 ),
               Text(
+                '${pack.coins} Coins @',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  color: Colors.green,
+                ),
+              ),
+              Text(
                 '₹${pack.effectiveAmount.toStringAsFixed(2)}',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
@@ -383,14 +497,6 @@ class _PackTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                '${pack.coins} Coins',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  color: accent,
-                ),
-              ),
               if ((pack.description ?? '').isNotEmpty) ...[
                 const SizedBox(height: 2),
                 Text(
@@ -420,12 +526,12 @@ class _TxnTile extends StatelessWidget {
     final date = tx.createdAt != null
         ? '${tx.createdAt!.toLocal()}'.split('.').first
         : '-';
-
+        
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: AppColors.primaryColor),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [BoxShadow(color: Colors.grey.shade100, blurRadius: 6)],
       ),
@@ -456,6 +562,103 @@ class _TxnTile extends StatelessWidget {
               style: TextStyle(color: color, fontWeight: FontWeight.w600)),
         ],
       ),
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.primary,
+    required this.accent,
+    required this.onCoinTap,
+    required this.balance,
+    required this.initial, // ⬅️ NEW
+    required this.greeting, // ⬅️ NEW
+    required this.name, // ⬅️ NEW
+  });
+
+  final Color primary;
+  final Color accent;
+  final VoidCallback onCoinTap;
+  final String balance;
+
+  final String initial;
+  final String greeting;
+  final String name;
+  String _capFirst(String s) {
+    final t = s.trim();
+    if (t.isEmpty) return '';
+    return t[0].toUpperCase() + t.substring(1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 8,
+        ),
+        // Avatar with gradient ring
+
+        const SizedBox(width: 12),
+
+        // Greeting + name (ellipsized)
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Wallet",
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Coins chip
+        InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: onCoinTap,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(22),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(.18),
+                    borderRadius: BorderRadius.circular(22),
+                    border:
+                        Border.all(width: 1, color: AppColors.primaryColor)),
+                child: Row(
+                  children: [
+                    // const Icon(Icons.monetization_on,
+                    //     size: 16, color: Colors.white),
+                    const SizedBox(width: 6),
+
+                    Text(
+                      '${balance == "0" ? "Upgrade" : "$balance coins"} ',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+      ],
     );
   }
 }

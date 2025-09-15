@@ -15,38 +15,51 @@ class SupportScreen extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           children: [
             const Text(
-              "Need Assistance?",
+              "Need Assistance, We're here to help !",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             const Text(
-              "We're here to help! Contact us through the options below or browse our FAQ.",
+              " Connect us through  below options below ...",
               style: TextStyle(color: Colors.black54),
             ),
             const SizedBox(height: 20),
 
-            // Contact Options
-            _contactOption(
-              icon: Icons.chat,
-              title: "Live Chat",
-              subtitle: "Get instant support from our team",
-              onTap: () {},
-              color: primaryColor,
+            Row(
+              children: [
+                Expanded(
+                  child: _contactOption(
+                    icon: Icons.chat,
+                    title: "Live Chat",
+                    subtitle: "Get instant support",
+                    onTap: () {
+                      // TODO: open your in-app chat screen
+                    },
+                    color: primaryColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _contactOption(
+                    icon: Icons.email_outlined,
+                    title: "Email Us",
+                    subtitle: "support@urbantutors.pro",
+                    onTap: () => {
+// launchUrl(Uri.parse('mailto:support@urbantutors.com')),
+                    },
+                    color: Colors.green,
+                  ),
+                ),
+              ],
             ),
-            _contactOption(
-              icon: Icons.email_outlined,
-              title: "Email Us",
-              subtitle: "support@urbantutors.com",
-              onTap: () {},
-              color: Colors.green,
-            ),
-            _contactOption(
-              icon: Icons.phone,
-              title: "Call Us",
-              subtitle: "+91 98765 43210",
-              onTap: () {},
-              color: Colors.green,
-            ),
+
+            // _contactOption(
+            //   icon: Icons.phone,
+            //   title: "Call Us",
+            //   subtitle: "+91 95826 99555",
+            //   onTap: () {},
+            //   color: Colors.green,
+            // ),
 
             const SizedBox(height: 30),
             const Divider(),
@@ -54,7 +67,7 @@ class SupportScreen extends StatelessWidget {
 
             // FAQ Section
             const Text(
-              "Frequently Asked Questions",
+              "Frequently Asked Questions...",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
@@ -69,7 +82,7 @@ class SupportScreen extends StatelessWidget {
 
             // Submit a Query
             const Text(
-              "Submit a Query",
+              "Submit Your Queries here...",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
@@ -111,16 +124,37 @@ class SupportScreen extends StatelessWidget {
   }) {
     return Card(
       elevation: 0.5,
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      child: ListTile(
-        onTap: onTap,
-        leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.1),
-          child: Icon(icon, color: color),
+      margin: EdgeInsets.symmetric(vertical: 6),
+      child: Container(
+        decoration: BoxDecoration(
+            borderRadius: BorderRadius.all(Radius.circular(8)),
+            gradient: LinearGradient(
+              colors: [AppColors.accentColor.withOpacity(.18), Colors.white],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border.all(width: 1, color: AppColors.primaryColor)),
+        padding: const EdgeInsets.all(2),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            children: [
+              CircleAvatar(
+                backgroundColor: color.withOpacity(0.1),
+                child: Icon(icon, color: color),
+              ),
+              Text(title,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 12)),
+              Text(subtitle,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 12)),
+              SizedBox(
+                height: 8,
+              )
+            ],
+          ),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
       ),
     );
   }

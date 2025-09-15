@@ -101,6 +101,14 @@ class StudentProfileDataNew {
     );
   }
 
+  get total_Available_coins => null;
+
+  get boardId => null;
+
+  get courseId => null;
+
+  get subjectId => null;
+
   Map<String, dynamic> toJson() {
     return {
       "id": id,

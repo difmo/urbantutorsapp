@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
+import 'package:urbantutorsapp/controllers/tutor_leads_controller.dart';
 
 class LeadDetailPage extends StatelessWidget {
   final Map<String, String> enquiry;
-  const LeadDetailPage({super.key, required this.enquiry});
+  LeadDetailPage({super.key, required this.enquiry});
+
+  // Access controller (use existing instance if already put)
+  TutorLeadsController get _leads => Get.isRegistered<TutorLeadsController>()
+      ? Get.find<TutorLeadsController>()
+      : Get.put(TutorLeadsController());
 
   // ----- helpers to read flexible keys -----
   String _val(List<String> keys, [String fallback = '']) {
@@ -15,6 +23,17 @@ class LeadDetailPage extends StatelessWidget {
       if (v != null && v.trim().isNotEmpty) return v.trim();
     }
     return fallback;
+  }
+
+  // Try to read the "grab record id" (required by decline API)
+  String? _grabId() {
+    // common possibilities coming from various payloads
+    final candidates = <String>[
+      'grab_lead_id', 'grab_id', 'grablead_id',
+      'id',
+    ];
+    final got = _val(candidates, '');
+    return got.isEmpty ? null : got;
   }
 
   void _shareLead(BuildContext context) {
@@ -62,7 +81,10 @@ $phone
   Widget build(BuildContext context) {
     final dateTime = _val(['date', 'created_at'], '—');
     final leadNo = _val(['lead', 'id'], '—');
-
+    final grabId = _grabId(); // if null → decline is not available
+  print("Grab ID: $grabId");
+  print ("Enquiry Data: $enquiry");
+  print("Enquiry Keys: ${enquiry.keys.toList()}");
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -94,7 +116,7 @@ $phone
                     style: TextStyle(fontWeight: FontWeight.bold)),
                 Text(
                   leadNo,
-                  style: const TextStyle(color: Color(0xffff9ba73)),
+                  style: const TextStyle(color: Colors.blueAccent),
                 ),
               ],
             ),
@@ -131,23 +153,50 @@ $phone
                 Icons.group, "Responded:", _val(['responded'], '0 out of 3')),
             const SizedBox(height: 24),
 
-            // Action Buttons
+            if (grabId != null)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.thumb_down_alt, color: Colors.red),
+                  label: const Text(
+                    "Decline Lead",
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.red),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: () => _promptDecline(context, grabId),
+                ),
+              )
+            else
+              const SizedBox.shrink(),
+            SizedBox(height: grabId != null ? 12 : 0),
+            // Action Buttons (Upgrade + Show contact)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildGreenButton(
+                _buildBlueButton(
                   context,
                   "Upgrade Wallet",
-                  () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => TutorCoinsScreen())),
+                  () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const TutorCoinsScreen())),
                 ),
-                _buildGreenButton(
+                _buildBlueButton(
                   context,
                   "Show Contact",
                   () => _showContactSheet(context),
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+
+            // Decline Lead (visible only if we have a grab record id)
+
             const SizedBox(height: 12),
 
             // VIP Button
@@ -171,7 +220,6 @@ $phone
           ],
         ),
       ),
-      // 🔥 Removed the 3-dot FAB menu you asked to drop
     );
   }
 
@@ -203,8 +251,8 @@ $phone
     );
   }
 
-  /// Green button with custom onTap
-  static Widget _buildGreenButton(
+  /// Primary blue button
+  static Widget _buildBlueButton(
       BuildContext context, String text, VoidCallback onTap) {
     return Expanded(
       child: Container(
@@ -220,6 +268,60 @@ $phone
           child: Text(text,
               style: const TextStyle(fontSize: 14, color: Colors.white)),
         ),
+      ),
+    );
+  }
+
+  // -------------------- Decline flow --------------------
+
+  void _promptDecline(BuildContext context, String grabLeadId) {
+    final txt = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Decline Lead'),
+        content: TextField(
+          controller: txt,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            hintText: 'Add a short remark (optional)',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child:
+                const Text('CANCEL', style: TextStyle(color: Colors.black54)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final remark =
+                  txt.text.trim().isEmpty ? 'Lead declined' : txt.text.trim();
+              try {
+                // API expects: user_id (from storage inside service), grab_lead_id, remark
+                final ss = await _leads.declineLead(
+                    grabLeadId: grabLeadId, remark: remark);
+                // Refresh both grabbed & declined lists
+                print(ss);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Lead declined successfully')),
+                  );
+                  Navigator.pop(context); // go back to list
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to decline: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('CONFIRM', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
   }
@@ -269,7 +371,7 @@ $phone
                   const SizedBox(width: 8),
                   Expanded(
                     child: _pillAction(
-                      icon: Icons.chat_bubble_outline, // generic chat icon
+                      icon: Icons.chat_bubble_outline,
                       label: 'WhatsApp',
                       onTap: phone.isEmpty
                           ? null
@@ -306,39 +408,39 @@ $phone
       },
     );
   }
-void _showVipSheet(BuildContext context) {
-  // Static VIP contact (change if you have dynamic values)
-  const String vipName = 'VIP Tutors Bureau';
-  const String vipPhone = '+919876543210';
 
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: false,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
-    builder: (_) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _sheetGrabber(),
-            const SizedBox(height: 6),
-            const Text(
-              'VIP Contact',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 12),
-            _contactTile(Icons.person, 'Name', vipName),
-            _contactTile(Icons.phone, 'Phone', vipPhone),
-            const SizedBox(height: 8),
-          ],
-        ),
-      );
-    },
-  );
-}
+  void _showVipSheet(BuildContext context) {
+    const String vipName = 'VIP Tutors Bureau';
+    const String vipPhone = '+919876543210';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: false,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _sheetGrabber(),
+              const SizedBox(height: 6),
+              const Text(
+                'VIP Contact',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 12),
+              _contactTile(Icons.person, 'Name', vipName),
+              _contactTile(Icons.phone, 'Phone', vipPhone),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   Widget _contactTile(IconData icon, String label, String value) {
     return Container(
@@ -369,19 +471,6 @@ void _showVipSheet(BuildContext context) {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _vipRow(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: Colors.blue),
-          const SizedBox(width: 10),
-          Expanded(child: Text(text)),
         ],
       ),
     );

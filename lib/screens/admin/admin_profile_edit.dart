@@ -26,7 +26,7 @@ class _AdminProfileEditState extends State<AdminProfileEdit> {
   final TextEditingController departmentController =
       TextEditingController(text: "Technology");
   final TextEditingController phoneController =
-      TextEditingController(text: "+91 9876543210");
+      TextEditingController(text: "+91 95826 99555");
   final TextEditingController emailController =
       TextEditingController(text: "nikhil@email.com");
 

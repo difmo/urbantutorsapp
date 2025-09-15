@@ -6,95 +6,98 @@ class ApiService {
   static final Dio _dio = Dio(
     BaseOptions(
       baseUrl: ApiConstants.BASE_URL,
-      connectTimeout: Duration(seconds: 10),
-      receiveTimeout: Duration(seconds: 15),
-      sendTimeout: Duration(seconds: 10),
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 20),
+      sendTimeout: const Duration(seconds: 15),
+      // Let 4xx still return to us for message parsing
+      validateStatus: (code) => code != null && code < 500,
     ),
   );
-  // ApiService() {
-  //   _dio = Dio(BaseOptions(baseUrl: 'https://urbantutors.pro/api/', connectTimeout:Duration(seconds: 10), receiveTimeout:Duration(seconds: 10)));
-  // }
 
+  /// `data` should be:
+  /// - `FormData()` (recommended for your APIs) OR
+  /// - plain Map<String, dynamic> (we'll wrap to FormData)
   static Future<Response> post(
     String path,
     dynamic data, {
     String? token,
-    bool isJson = false,
+    bool isJson = false, // keep for future JSON endpoints
   }) async {
-    final token1 = await StorageService.getToken();
-    if (token1 == null) {
-      print("token null hai yaha");
+    // Resolve Bearer token (explicit arg wins)
+    final authToken = token ?? await StorageService.getToken();
+
+    // Build headers safely
+    final headers = <String, String>{};
+    if (authToken != null && authToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $authToken';
     }
+    if (isJson) headers['Content-Type'] = 'application/json';
 
-    // print('fromapiservice' + token1.toString());
+    // Full URL or relative path – Dio handles both
+    final payload = (data is FormData)
+        ? data
+        : (isJson ? data : FormData.fromMap(((data as Map?)?.cast<String, dynamic>()) ?? const {}));
+
     try {
-      Options options = Options(
-        headers: {
-          'Authorization': 'Bearer $token1'
-
-          // 'Content-Type': isJson ? 'application/json' : 'multipart/form-data',
-        },
-      );
-      print(path);
-      return await _dio.post(path, data: data, options: options);
+      final res = await _dio.post(path, data: payload, options: Options(headers: headers));
+      return res;
     } on DioException catch (e) {
-      throw Exception(e.response?.data ?? 'Network error: ${e.message}');
-    } catch (e) {
-      print('Pritam$e');
-      rethrow;
-    }
-  }
-
-  static Future<Response> get(
-    String path, {
-    String? token,
-  }) async {
-    try {
-      Options options = Options(
-        headers: {
-          'Authorization': token != null ? 'Bearer $token' : null,
-        },
-      );
-      return await _dio.get(
-        path,
-        options: options,
-      );
-    } on DioException catch (e) {
-      throw Exception(e.response?.data ?? 'Network error: ${e.message}');
+      final server = e.response?.data;
+      final msg = (server is Map && server['message'] != null)
+          ? server['message'].toString()
+          : e.message ?? 'Network error';
+      throw Exception(msg);
     }
   }
 
-  static Future<Response> put(
-    String path,
-    dynamic data, {
-    String? token,
-  }) async {
+  static Future<Response> get(String path, {String? token}) async {
+    final authToken = token ?? await StorageService.getToken();
+    final headers = <String, String>{};
+    if (authToken != null && authToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $authToken';
+    }
     try {
-      Options options = Options(
-        headers: {
-          'Authorization': token != null ? 'Bearer $token' : null,
-          'Content-Type': 'application/json',
-        },
-      );
-      return await _dio.put(path, data: data, options: options);
+      return await _dio.get(path, options: Options(headers: headers));
     } on DioException catch (e) {
-      throw Exception(e.response?.data ?? 'Network error: ${e.message}');
+      final server = e.response?.data;
+      final msg = (server is Map && server['message'] != null)
+          ? server['message'].toString()
+          : e.message ?? 'Network error';
+      throw Exception(msg);
     }
   }
 
-  static Future<Response> delete(
-    String path, {
-    String? token,
-  }) async {
+  static Future<Response> put(String path, dynamic data, {String? token}) async {
+    final authToken = token ?? await StorageService.getToken();
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    if (authToken != null && authToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $authToken';
+    }
     try {
-      Options options = Options(
-        headers: {
-          'Authorization': token != null ? 'Bearer $token' : null,
-        },
-      );
-      return await _dio.delete(path, options: options);
+      return await _dio.put(path, data: data, options: Options(headers: headers));
     } on DioException catch (e) {
-      throw Exception(e.response?.data ?? 'Network error: ${e.message}');
+      final server = e.response?.data;
+      final msg = (server is Map && server['message'] != null)
+          ? server['message'].toString()
+          : e.message ?? 'Network error';
+      throw Exception(msg);
+    }
+  }
+
+  static Future<Response> delete(String path, {String? token}) async {
+    final authToken = token ?? await StorageService.getToken();
+    final headers = <String, String>{};
+    if (authToken != null && authToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $authToken';
+    }
+    try {
+      return await _dio.delete(path, options: Options(headers: headers));
+    } on DioException catch (e) {
+      final server = e.response?.data;
+      final msg = (server is Map && server['message'] != null)
+          ? server['message'].toString()
+          : e.message ?? 'Network error';
+      throw Exception(msg);
     }
   }
 }
