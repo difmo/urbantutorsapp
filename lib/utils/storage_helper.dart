@@ -6,6 +6,9 @@ class StorageService {
   static const String _roleIdKey = 'role_id';
   static const String _profileIdKey = 'is_profile_done';
   static const String _saveUserID = 'user_id';
+    static const String _name = 'name';
+        static const String _phone_number = 'phone_number';
+                static const String _lead_status = 'lead_status';
 
   /// Save token to local storage
   static Future<void> saveToken(String token) async {
@@ -16,6 +19,39 @@ class StorageService {
   static Future<void> saveUserId(int userId) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_saveUserID, userId.toString());
+  }
+   static Future<String?> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_saveUserID);
+  }
+
+
+   static Future<void> saveUserName(String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_name, name);
+  }
+   static Future<String?> getUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_name);
+  }
+
+
+   static Future<void> saveUserPhone(String phone) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_phone_number, phone);
+  }
+   static Future<String?> getUserPhoneNumber() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_phone_number);
+  }
+
+     static Future<void> saveUserLeadStatus(String phone) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lead_status, phone);
+  }
+   static Future<String?> getUserLeadStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_lead_status);
   }
 
   /// Save user role to local storage
@@ -39,10 +75,7 @@ class StorageService {
     return prefs.getInt(_roleIdKey);
   }
 
-  static Future<String?> getUserId() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_saveUserID);
-  }
+ 
 
   static Future<int?> getIsProfileStatus() async {
     final prefs = await SharedPreferences.getInstance();

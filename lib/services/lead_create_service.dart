@@ -18,10 +18,8 @@ class LeadCreateService {
     required String userId,
   }) async {
     try {
-      // ✅ Debug log before sending request
       print("📤 Sending lead with:");
       print("📦 class_id: $classId (${classId.runtimeType})");
-
       FormData formData = FormData.fromMap({
         'name': name,
         'mobile': mobile,
@@ -35,12 +33,10 @@ class LeadCreateService {
         'subject_id': subjectId,
         'user_id': userId,
       });
-
       Response response = await _dio.post(
         ApiConstants.LEAD_CREATE_URL,
         data: formData,
       );
-
       return response;
     } on DioException catch (e) {
       // 🔴 Handle error response

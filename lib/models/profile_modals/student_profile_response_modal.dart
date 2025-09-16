@@ -32,6 +32,7 @@ class StudentProfileDataNew {
   final int id;
   final int ? profile_status;
   final String? profileId;
+  final int ?leadStatus;
   final String? studentName;
   final String? mobile;
   final String? totalCoins;
@@ -55,6 +56,7 @@ class StudentProfileDataNew {
     required this.id,
     this.profile_status,
     this.profileId,
+    this.leadStatus,
     this.studentName,
     this.mobile,
     this.totalCoins,
@@ -80,6 +82,7 @@ class StudentProfileDataNew {
       id: json['id'] ?? 0,
       profile_status: json['profile_status'] ?? 0,
       profileId: json['profile_id'],
+      leadStatus: json['lead_status'],
       studentName: json['student_name'],
       mobile: json['mobile'],
       totalCoins: json['total_coins'],
@@ -114,6 +117,7 @@ class StudentProfileDataNew {
       "id": id,
       "profile_status": profile_status,
       "profile_id": profileId,
+      "lead_status":leadStatus,
       "student_name": studentName,
       "mobile": mobile,
       "total_coins": totalCoins,

@@ -10,14 +10,14 @@ import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 
-class NotificationStudent extends StatefulWidget {
-  const NotificationStudent({super.key});
+class HistoryStudent extends StatefulWidget {
+  const HistoryStudent({super.key});
 
   @override
-  State<NotificationStudent> createState() => _NotificationStudentState();
+  State<HistoryStudent> createState() => _NotificationStudentState();
 }
 
-class _NotificationStudentState extends State<NotificationStudent> {
+class _NotificationStudentState extends State<HistoryStudent> {
   late final CoinsController _c;
 
   // Safe number formatter
@@ -197,7 +197,7 @@ class _Header extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Notifications",
+                "History",
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(

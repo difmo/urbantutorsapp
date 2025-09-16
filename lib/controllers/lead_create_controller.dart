@@ -10,7 +10,6 @@ class LeadCreateController extends GetxController {
 
   Future<void> createOrUpdateLead(LeadCreateRequest request) async {
     isSubmitting.value = true;
-
     print('📤 Submitting Lead with data:');
       print('name: ${request.name}');
       print('mobile: ${request.mobile}');
@@ -23,7 +22,6 @@ class LeadCreateController extends GetxController {
       print('fee: ${request.fee}');
       print('userId: ${request.userId}');
       print('leadId: ${request.leadId}');
-
     try {
       print('request from controller try section');
       print('classId: ${request.classId}');

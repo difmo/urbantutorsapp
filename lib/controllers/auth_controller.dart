@@ -59,7 +59,7 @@ class AuthController extends GetxController {
       final res = await _authService.verifyOtp(
         mobile: mobile,
         otp: otp,
-        name: name,
+        name: name!,
         roleId: roleId,
         firebaseToken: fbToken,
       );
@@ -68,10 +68,18 @@ class AuthController extends GetxController {
       int roleIdd = res.data.userData!.roles[0].roleId;
       int userId = res.data.userData!.id;
       final profileStatus = res.data.userData!.profileStatus ?? 0;
+      String userName = res.data.userData!.name;
+      String phone = res.data.userData!.mobile;
+
       await StorageService.saveToken(token.value);
       await StorageService.saveIsProfileStatus(profileStatus);
       await StorageService.saveRoleId(roleIdd);
       await StorageService.saveUserId(userId);
+
+      await StorageService.saveUserName(userName);
+      await StorageService.saveUserPhone(phone);
+
+
       return res;
     } catch (e) {
       Get.snackbar('Error', e.toString());

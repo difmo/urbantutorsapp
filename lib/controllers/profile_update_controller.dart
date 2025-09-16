@@ -48,6 +48,8 @@ class ProfileUpdateController extends GetxController {
     try {
       final response = await _profileUpdateService.getProfileForStudent();
       setProfile(response.data);
+      final leadStatus = response.data!.leadStatus;
+      await StorageService.saveUserLeadStatus(leadStatus.toString());
       debugPrint("✅ Profile fetched successfully:  ${response.data}");
     } catch (e) {
       debugPrint("❌ Error in fetchProfileUpdate: $e");
@@ -164,8 +166,7 @@ class ProfileUpdateController extends GetxController {
   Future<bool> updateStudentProfile(data) async {
     isLoading.value = true;
     try {
-      final response =
-          await _profileUpdateService.updateStudentProfile(data);
+      final response = await _profileUpdateService.updateStudentProfile(data);
       debugPrint("✅ Profile updated successfully");
       final int? profileStatus = await StorageService.getIsProfileStatus();
       print("profilstatuse");
