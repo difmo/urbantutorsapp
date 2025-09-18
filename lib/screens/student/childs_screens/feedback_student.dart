@@ -115,8 +115,9 @@ class _FeedbackStudentState extends State<FeedbackStudent> {
                   validator: (v) {
                     final t = (v ?? '').trim();
                     if (t.isEmpty) return 'Title is required';
-                    if (t.length < 3)
+                    if (t.length < 3) {
                       return 'Title must be at least 3 characters';
+                    }
                     return null;
                   },
                 ),

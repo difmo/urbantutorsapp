@@ -72,7 +72,7 @@ class CoinsController extends GetxController {
     }
 
     final coinsId =
-        (pack.id is int) ? pack.id as int : int.tryParse('${pack.id}') ?? 0;
+        (pack.id is int) ? pack.id : int.tryParse('${pack.id}') ?? 0;
 
     // Amount in paise
     final amountPaise = (pack.total * 100).round();

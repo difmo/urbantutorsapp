@@ -10,7 +10,7 @@ import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 
 class GrabbedLeadDetailsPage extends StatelessWidget {
   final GrabLead enquiry;
-  GrabbedLeadDetailsPage({super.key, required this.enquiry});
+  const GrabbedLeadDetailsPage({super.key, required this.enquiry});
 
   TutorLeadsController get _leads => Get.isRegistered<TutorLeadsController>()
       ? Get.find<TutorLeadsController>()
@@ -165,8 +165,8 @@ ${_nz(enquiry.studentMobile)}
               try {
                 await _leads.declineLead(
                     grabLeadId: grabLeadId, remark: remark);
-                await _leads.grabbedLeads;
-                await _leads.declinedLeads;
+                _leads.grabbedLeads;
+                _leads.declinedLeads;
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Lead declined successfully')),

@@ -59,7 +59,7 @@ class AuthController extends GetxController {
       final res = await _authService.verifyOtp(
         mobile: mobile,
         otp: otp,
-        name: name!,
+        name: name,
         roleId: roleId,
         firebaseToken: fbToken,
       );

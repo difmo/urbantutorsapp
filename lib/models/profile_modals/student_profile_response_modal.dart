@@ -32,6 +32,7 @@ class StudentProfileDataNew {
   final int id;
   final int ? profile_status;
   final String? profileId;
+  final String?profile_picture;
   final int ?leadStatus;
   final String? studentName;
   final String? mobile;
@@ -55,6 +56,7 @@ class StudentProfileDataNew {
   StudentProfileDataNew({
     required this.id,
     this.profile_status,
+    this.profile_picture,
     this.profileId,
     this.leadStatus,
     this.studentName,
@@ -82,6 +84,7 @@ class StudentProfileDataNew {
       id: json['id'] ?? 0,
       profile_status: json['profile_status'] ?? 0,
       profileId: json['profile_id'],
+      profile_picture:json['profile_picture'],
       leadStatus: json['lead_status'],
       studentName: json['student_name'],
       mobile: json['mobile'],
@@ -104,19 +107,20 @@ class StudentProfileDataNew {
     );
   }
 
-  get total_Available_coins => null;
+  Null get total_Available_coins => null;
 
-  get boardId => null;
+  Null get boardId => null;
 
-  get courseId => null;
+  Null get courseId => null;
 
-  get subjectId => null;
+  Null get subjectId => null;
 
   Map<String, dynamic> toJson() {
     return {
       "id": id,
       "profile_status": profile_status,
       "profile_id": profileId,
+      "profile_picture":profile_picture,
       "lead_status":leadStatus,
       "student_name": studentName,
       "mobile": mobile,

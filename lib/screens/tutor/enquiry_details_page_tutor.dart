@@ -9,7 +9,7 @@ import 'package:urbantutorsapp/controllers/tutor_leads_controller.dart';
 
 class LeadDetailPage extends StatelessWidget {
   final Map<String, String> enquiry;
-  LeadDetailPage({super.key, required this.enquiry});
+  const LeadDetailPage({super.key, required this.enquiry});
 
   // Access controller (use existing instance if already put)
   TutorLeadsController get _leads => Get.isRegistered<TutorLeadsController>()

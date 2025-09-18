@@ -185,8 +185,8 @@ class _PyqScreenState extends State<PyqScreen> {
                           ),
                           items: classes
                               .map((c) => DropdownMenuItem<int>(
-                                    value: c.courseId,
-                                    child: Text(c.courseName,
+                                    value: c.classId,
+                                    child: Text(c.className,
                                         overflow: TextOverflow.ellipsis),
                                   ))
                               .toList(),

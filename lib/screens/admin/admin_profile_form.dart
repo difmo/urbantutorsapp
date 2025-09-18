@@ -499,7 +499,7 @@ class _AdminProfileFormState extends State<AdminProfileForm> {
                       value: selectedClassId,
                       items: classItems
                           .map((c) => DropdownMenuItem(
-                              value: c.courseId, child: Text(c.courseName)))
+                              value: c.classId, child: Text(c.className)))
                           .toList(),
                       onChanged: (selectedBoardId == null)
                           ? null

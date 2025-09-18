@@ -10,7 +10,6 @@ import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/feedback_student.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/notification_student.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/student_profile.dart';
-import 'package:urbantutorsapp/screens/student/childs_screens/term_condition_student.dart';
 import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import '../theme/theme_constants.dart';
@@ -354,6 +353,7 @@ class _StudentDrawerState extends State<StudentDrawer> {
                 'Term and Conditions',
                 onTap: () => {_openTerms()},
               ),
+
               _drawerItem(
                 Icons.language,
                 'Go to Website',

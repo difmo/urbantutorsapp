@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/pay_course_controller.dart';
 
@@ -13,9 +14,11 @@ import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
+import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
+import 'package:urbantutorsapp/widgets/StudentDrawer.dart';
 
 class StudentProfileScreen extends StatefulWidget {
   const StudentProfileScreen({super.key});
@@ -26,7 +29,8 @@ class StudentProfileScreen extends StatefulWidget {
 
 class _StudentProfileScreenState extends State<StudentProfileScreen> {
   // Controllers
-  final ProfileUpdateController _c = Get.isRegistered<ProfileUpdateController>()
+   ProfileUpdateController _p = Get.isRegistered<ProfileUpdateController>()
+
       ? Get.find<ProfileUpdateController>()
       : Get.put(ProfileUpdateController());
 
@@ -54,28 +58,46 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   // Selects
   int? _boardId;
   int? _classId;
-
+  late final CoinsController _c;
   // Image picker
   final ImagePicker _picker = ImagePicker();
   XFile? _profileImage;
+  String? _profileImageUrl; // from server
+  String? _resolveImageUrl(String? path) {
+    if (path == null || path.isEmpty) return null;
+    if (path.startsWith('http')) return path;
+    // TODO: replace with your API base:
+    const base = 'https://your.api.host/';
+    return '$base$path';
+  }
 
-  void _hydrate() {
-    final p = _c.studentprofileData.value;
+  Future<void> _hydrate() async {
+    final p = _p.studentprofileData.value;
     if (p == null) return;
 
+    // Text fields
     _nameCtrl.text = (p.studentName ?? '').trim();
     _mobileCtrl.text = (p.mobile ?? '').trim();
     _localityCtrl.text = p.location ?? '';
 
-    try {
-      _boardId =
-          p.boardId is int ? p.boardId : int.tryParse('${p.boardId ?? ''}');
-      _classId =
-          p.courseId is int ? p.courseId : int.tryParse('${p.courseId ?? ''}');
-    } catch (_) {}
+    // Image from server
+    _profileImageUrl = _resolveImageUrl(p.profile_picture);
 
-    if (_boardId != null) _leadMeta.loadClasses(_boardId!);
-    setState(() {});
+    // IDs
+    final nextBoardId =
+        (p.boardId is int) ? p.boardId : int.tryParse('${p.boardId ?? ''}');
+    final nextClassId =
+        (p.courseId is int) ? p.courseId : int.tryParse('${p.courseId ?? ''}');
+
+    // Load classes for the board first, then set class id
+    if (nextBoardId != null) {
+      await _leadMeta.loadClasses(nextBoardId);
+    }
+
+    setState(() {
+      _boardId = nextBoardId;
+      _classId = nextClassId;
+    });
   }
 
   @override
@@ -138,7 +160,6 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-
     if (_boardId == null || _classId == null) {
       Get.snackbar('Missing info', 'Please select Board and Class',
           snackPosition: SnackPosition.BOTTOM,
@@ -160,44 +181,37 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       }
 
       final profileBase64 = await _fileToBase64(_profileImage);
-
-      // Send both snake_case and camelCase keys if your API has mixed expectations.
       final req = {
         'user_id': userId,
-        'userId': userId,
+        'student_name': _nameCtrl.text.trim(),
         'board_id': _boardId,
-        'boardId': _boardId,
-        'course_id': _classId,
-        'courseId': _classId,
+        'course_id': _classId, // ✅ correct class id
+        'price': 800, // send as number if API accepts number
         'location': _localityCtrl.text.trim(),
-        'profilePicture': profileBase64 ?? '', // ⬅️ now included
+        'state': 'Delhi',
+        'remark': '',
+        'profile_picture': profileBase64 ?? '',
+        'place_id': 'placeid',
+        'latitude': '10.666',
+        'longitude': '11.6666',
       };
 
-      final ok = await _c.updateStudentProfile(req);
-
-      if (_nameCtrl.text.trim().isNotEmpty ||
-          _mobileCtrl.text.trim().isNotEmpty) {
-        if (ok) {
-          Get.snackbar(
-            'Note',
-            'Name/Mobile changes are not saved by this form (API does not accept them).',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.black87,
-            colorText: Colors.white,
-            duration: const Duration(seconds: 3),
-          );
-        }
-      }
-
+      final ok = await _p.updateStudentProfile(req);
       if (ok) {
-        await _c.fetchProfileForStudent();
-        if (mounted) Get.back();
+        Get.snackbar('Success', 'Student Profile Updated Successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green,
+            colorText: Colors.white);
+
+        // re-fetch and re-hydrate (POST state)
+        await _p.fetchProfileForStudent();
+        await _hydrate();
+
+        // Clear local pick so we see the server image
+        setState(() => _profileImage = null);
       }
     } catch (e) {
-      Get.snackbar('Failed', e.toString(),
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.redAccent,
-          colorText: Colors.white);
+      debugPrint('Failed $e');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -230,7 +244,6 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     );
   }
 
-  late final CoinsController _cc;
 
   // Safe number formatter
   num _numVal(dynamic v) {
@@ -245,44 +258,43 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   static const blue = Color(0xFF4A90E2);
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  int _currentIndex = 0;
+  final int _currentIndex = 0;
 
-  late final ProfileUpdateController _p; // ⬅️ NEW
+  ImageProvider? _avatarProvider() {
+    if (_profileImage != null) return FileImage(File(_profileImage!.path));
+    if (_profileImageUrl != null && _profileImageUrl!.isNotEmpty) {
+      return NetworkImage(_profileImageUrl!);
+    }
+    return null;
+  }
 
   @override
   void initState() {
     super.initState();
 
-    _cc = Get.isRegistered<CoinsController>()
+
+    _c = Get.isRegistered<CoinsController>()
         ? Get.find<CoinsController>()
         : Get.put(CoinsController());
-
-    // 👇 Schedule after first frame to avoid "setState during build" from Obx
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _cc.refreshAll();
-    });
-
-    print("Loaded courses:");
-    for (var course in _payCourseController.courses) {
-      print(course.toJson());
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) => _c.refreshAll());
 
     _p = Get.isRegistered<ProfileUpdateController>()
         ? Get.find<ProfileUpdateController>()
         : Get.put(ProfileUpdateController());
-    // Try to ensure profile is present
     _p.fetchProfileForStudent();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (_master.masterData.value == null) {
         await _master.fetchMasterData();
       }
-      if (_c.studentprofileData.value == null && !_c.isLoading.value) {
-        await _c.fetchProfileForStudent();
+      if (_p.studentprofileData.value == null && !_p.isLoading.value) {
+        await _p.fetchProfileForStudent();
       }
-      _hydrate();
+      await _hydrate();
     });
-    ever(_c.studentprofileData, (_) => _hydrate());
+
+    // Re-hydrate whenever the profile RX changes
+    ever(_p.studentprofileData, (_) async => await _hydrate());
   }
 
   num _toNum(dynamic v) {
@@ -318,6 +330,34 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      key: _scaffoldKey,
+      extendBodyBehindAppBar: true,
+      endDrawer: StudentDrawer(onMenuTap: (label) async {
+        if (label == 'Logout') {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isLoggedIn', false);
+          await prefs.remove('user_name');
+          await prefs.remove('user_phone');
+          await prefs.remove('user_role');
+          await StorageService.clearTokenAndRole();
+          await StorageService.clear();
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Logged out successfully')),
+          );
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const SplashScreen()),
+            (route) => false,
+          );
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Navigating to $label')),
+          );
+        }
+      }),
+
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -339,9 +379,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
         ),
         title: Obx(() {
           // coins
-          final loadingCoins =
-              _cc.loadingCoins.value || _cc.loadingMyCoins.value;
-          final wallet = _cc.myCoins.value;
+          final loadingCoins = _c.loadingCoins.value || _c.loadingMyCoins.value;
+          final wallet = _c.myCoins.value;
           final balanceNum = _toNum(wallet?.available);
           final balanceText = balanceNum.toStringAsFixed(0);
 
@@ -349,7 +388,6 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
           final prof = _p.studentprofileData.value;
           final name = prof?.studentName?.trim();
           final initial = _initial(name);
-          final greet = _greet();
           final displayName = _firstName(name);
 
           if (loadingCoins && wallet == null && prof == null) {
@@ -376,6 +414,18 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
             },
           );
         }),
+        actions: [
+          Builder(
+            builder: (ctx) => IconButton(
+              icon: const Icon(
+                Icons.menu,
+                color: Colors.white,
+                size: 45,
+              ),
+              onPressed: () => Scaffold.maybeOf(ctx)?.openEndDrawer(),
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -403,12 +453,12 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       ),
       body: Obx(() {
         final loading =
-            _c.isLoading.value && _c.studentprofileData.value == null;
+            _p.isLoading.value && _p.studentprofileData.value == null;
         if (loading) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final prof = _c.studentprofileData.value;
+        final prof = _p.studentprofileData.value;
 
         return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -432,21 +482,18 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                         ),
                         child: CircleAvatar(
                           radius: 44,
-                          backgroundImage: _profileImage != null
-                              ? FileImage(File(_profileImage!.path))
-                              : null,
+                          backgroundImage: _avatarProvider(),
                           backgroundColor: Colors.grey.shade300,
-                          child: _profileImage == null
+                          child: _avatarProvider() == null
                               ? Text(
                                   ((prof?.studentName ?? 'U').trim().isEmpty
                                           ? 'U'
                                           : prof!.studentName!.trim()[0])
                                       .toUpperCase(),
                                   style: const TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white,
-                                  ),
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white),
                                 )
                               : null,
                         ),
@@ -537,8 +584,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                 : null),
                         items: classes
                             .map((c) => DropdownMenuItem<int>(
-                                  value: c.courseId,
-                                  child: Text(c.courseName),
+                                  value: c.classId,
+                                  child: Text(c.className),
                                 ))
                             .toList(),
                         onChanged: (_boardId == null)

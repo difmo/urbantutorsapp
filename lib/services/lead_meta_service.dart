@@ -1,23 +1,53 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:urbantutorsapp/models/notes_models.dart.dart';
-
 class LeadClass {
-  final int courseId;
-  final String courseName;
-  LeadClass({required this.courseId, required this.courseName});
+  final int classId;
+  final String className;
 
+  const LeadClass({
+    required this.classId,
+    required this.className,
+  });
 
-  factory LeadClass.fromJson(Map<String, dynamic> j) {
-    final rawId = j['course_id'] ?? j['id'] ?? j['class_id'] ?? j['courseId'];
-    final rawName = j['course_name'] ??
-        j['name'] ??
-        j['class_name'] ??
-        j['coursename'] ??
-        j['label'] ??
-        j['title'];
+  factory LeadClass.fromJson(Map<String, dynamic> json) {
+    int parseInt(dynamic v) {
+      if (v is int) return v;
+      if (v is String) return int.tryParse(v) ?? 0;
+      return 0;
+    }
+
+    String parseStr(dynamic v) => (v ?? '').toString();
+
+    final id = json.containsKey('class_id')
+        ? parseInt(json['class_id'])
+        : parseInt(json['classId']);
+
+    final name = json['ClassName'] ??
+        json['class_name'] ??
+        json['className'] ??
+        '';
+
     return LeadClass(
-        courseId: int.tryParse('$rawId') ?? 0, courseName: (rawName ?? '').toString());
+      classId: id,
+      className: parseStr(name),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        // keep the original API keys
+        'class_id': classId,
+        'ClassName': className,
+      };
+
+  LeadClass copyWith({
+    int? classId,
+    String? className,
+  }) {
+    return LeadClass(
+      classId: classId ?? this.classId,
+      className: className ?? this.className,
+    );
   }
 }
 

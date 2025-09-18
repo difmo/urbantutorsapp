@@ -4,12 +4,16 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/pay_course_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/models/pay_course_models.dart';
+import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
+import 'package:urbantutorsapp/widgets/StudentDrawer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class PDFCoursesScreen extends StatefulWidget {
@@ -26,7 +30,7 @@ class _PDFCoursesScreenState extends State<PDFCoursesScreen> {
   static const blue = Color(0xFF4A90E2);
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  int _currentIndex = 0;
+  final int _currentIndex = 0;
 
   late final CoinsController _c;
   late final ProfileUpdateController _p; // ⬅️ NEW
@@ -82,6 +86,33 @@ class _PDFCoursesScreenState extends State<PDFCoursesScreen> {
     final accent = AppColors.accentColor;
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
+      key: _scaffoldKey,
+      extendBodyBehindAppBar: true,
+      endDrawer: StudentDrawer(onMenuTap: (label) async {
+        if (label == 'Logout') {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isLoggedIn', false);
+          await prefs.remove('user_name');
+          await prefs.remove('user_phone');
+          await prefs.remove('user_role');
+          await StorageService.clearTokenAndRole();
+          await StorageService.clear();
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Logged out successfully')),
+          );
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const SplashScreen()),
+            (route) => false,
+          );
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Navigating to $label')),
+          );
+        }
+      }),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -112,7 +143,6 @@ class _PDFCoursesScreenState extends State<PDFCoursesScreen> {
           final prof = _p.studentprofileData.value;
           final name = prof?.studentName?.trim();
           final initial = _initial(name);
-          final greet = _greet();
           final displayName = _firstName(name);
 
           if (loadingCoins && wallet == null && prof == null) {
@@ -139,8 +169,19 @@ class _PDFCoursesScreenState extends State<PDFCoursesScreen> {
             },
           );
         }),
+        actions: [
+          Builder(
+            builder: (ctx) => IconButton(
+              icon: const Icon(
+                Icons.menu,
+                color: Colors.white,
+                size: 45,
+              ),
+              onPressed: () => Scaffold.maybeOf(ctx)?.openEndDrawer(),
+            ),
+          ),
+        ],
       ),
-     
       body: Obx(() {
         if (_payCourseController.isLoading.value) {
           return const Center(child: CircularProgressIndicator());
@@ -169,142 +210,151 @@ class _PDFCoursesScreenState extends State<PDFCoursesScreen> {
 
         return RefreshIndicator(
           onRefresh: _payCourseController.refreshNow,
-          child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            itemCount: _payCourseController.courses.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, i) {
-              final item = _payCourseController.courses[i];
-              return Container(
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.all(Radius.circular(8)),
-                    border:
-                        Border.all(width: 1, color: AppColors.primaryColor)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            item.courseName,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF222B45),
+          child: SafeArea(
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              itemCount: _payCourseController.courses.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, i) {
+                final item = _payCourseController.courses[i];
+                return Container(
+                  decoration: BoxDecoration(
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                      border:
+                          Border.all(width: 1, color: AppColors.primaryColor)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              item.courseName,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF222B45),
+                              ),
                             ),
-                          ),
-                          Spacer(),
-                          const Icon(Icons.star, color: Colors.amber, size: 18),
-                          const SizedBox(width: 4),
-                          Text(
-                            item.rating.toStringAsFixed(1),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF222B45),
+                            Spacer(),
+                            const Icon(Icons.star,
+                                color: Colors.amber, size: 18),
+                            const SizedBox(width: 4),
+                            Text(
+                              item.rating.toStringAsFixed(1),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF222B45),
+                              ),
                             ),
-                          ),
-                          SizedBox(
-                            width: 8,
-                          ),
-                          _CoinsChip(coins: item.coins),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        item.description,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          color: Color(0xFF6E7A8A),
+                            SizedBox(
+                              width: 8,
+                            ),
+                            _CoinsChip(coins: item.coins),
+                          ],
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 10),
-                      const SizedBox(height: 12),
-                      (item.pdf?.isNotEmpty ?? false)
-                          ? Row(
-                              children: [
-                                // PREVIEW
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF4A90E2),
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
+                        const SizedBox(height: 6),
+                        Text(
+                          item.description,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            color: Color(0xFF6E7A8A),
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
+                        (item.pdf?.isNotEmpty ?? false)
+                            ? Row(
+                                children: [
+                                  // PREVIEW
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            const Color(0xFF4A90E2),
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
                                       ),
+                                      icon: const Icon(Icons.picture_as_pdf),
+                                      label: const Text('Preview'),
+                                      onPressed: () => _openPdf(item.pdf!),
                                     ),
-                                    icon: const Icon(Icons.picture_as_pdf),
-                                    label: const Text('Preview'),
-                                    onPressed: () => _openPdf(item.pdf!),
                                   ),
-                                ),
-                                const SizedBox(width: 10),
+                                  const SizedBox(width: 10),
 
-                                // BUY NOW
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(
-                                          0xFF27AE60), // a distinct color
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
+                                  // BUY NOW
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(
+                                            0xFF27AE60), // a distinct color
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
                                       ),
+                                      icon: const Icon(
+                                          Icons.shopping_cart_checkout),
+                                      label: const Text('Buy now'),
+                                      onPressed: () => _onBuy(item),
                                     ),
-                                    icon: const Icon(
-                                        Icons.shopping_cart_checkout),
-                                    label: const Text('Buy now'),
-                                    onPressed: () => _onBuy(item),
                                   ),
-                                ),
-                              ],
-                            )
-                          : Row(
-                              children: [
-                                // PREVIEW
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF4A90E2),
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
+                                ],
+                              )
+                            : Row(
+                                children: [
+                                  // PREVIEW
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            const Color(0xFF4A90E2),
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
                                       ),
+                                      icon: const Icon(Icons.picture_as_pdf),
+                                      label: const Text('Preview'),
+                                      onPressed: () => _openPdf(item.pdf!),
                                     ),
-                                    icon: const Icon(Icons.picture_as_pdf),
-                                    label: const Text('Preview'),
-                                    onPressed: () => _openPdf(item.pdf!),
                                   ),
-                                ),
-                                const SizedBox(width: 10),
+                                  const SizedBox(width: 10),
 
-                                // BUY NOW
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(
-                                          0xFF27AE60), // a distinct color
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
+                                  // BUY NOW
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(
+                                            0xFF27AE60), // a distinct color
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
                                       ),
+                                      icon: const Icon(
+                                          Icons.shopping_cart_checkout),
+                                      label: const Text('Buy now'),
+                                      onPressed: () => _onBuy(item),
                                     ),
-                                    icon: const Icon(
-                                        Icons.shopping_cart_checkout),
-                                    label: const Text('Buy now'),
-                                    onPressed: () => _onBuy(item),
                                   ),
-                                ),
-                              ],
-                            )
-                    ],
+                                ],
+                              )
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         );
       }),

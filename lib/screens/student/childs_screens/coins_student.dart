@@ -34,7 +34,7 @@ class _CoinsStudentScreenState extends State<CoinsStudentScreen> {
   static const blue = Color(0xFF4A90E2);
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  int _currentIndex = 0;
+  final int _currentIndex = 0;
 
   late final ProfileUpdateController _p; // ⬅️ NEW
 

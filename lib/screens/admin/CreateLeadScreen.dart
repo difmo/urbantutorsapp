@@ -147,11 +147,11 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
 
       final classMatch = _firstWhereOrNull(
         _lead.classes,
-        (c) => _norm(c.courseName) == _norm(l.courseName),
+        (c) => _norm(c.className) == _norm(l.courseName),
       );
 
       if (classMatch != null) {
-        classId = classMatch.courseId;
+        classId = classMatch.classId;
         setState(() {});
         await _lead.loadSubjects(classId: classId!, boardId: boardId!);
 
@@ -226,6 +226,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
       // IMPORTANT: pass leadId when editing so backend updates the same lead
       leadId: widget.lead?.id?.toString() ?? '',
     );
+
 
     if (_submitting) return;
     setState(() => _submitting = true);
@@ -429,8 +430,8 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                     ),
                     items: classes
                         .map((c) => DropdownMenuItem<int>(
-                              value: c.courseId,
-                              child: Text(c.courseName),
+                              value: c.classId,
+                              child: Text(c.className),
                             ))
                         .toList(),
                     onChanged: (boardId == null)

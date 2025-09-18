@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
+import 'package:urbantutorsapp/services/ApiService.dart';
 import 'package:urbantutorsapp/utils/api_constants.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class LeadCreateService {
   final Dio _dio = Dio();
@@ -18,6 +20,8 @@ class LeadCreateService {
     required String userId,
   }) async {
     try {
+      final token = await StorageService.getToken();
+      final userId = await StorageService.getUserId();
       print("📤 Sending lead with:");
       print("📦 class_id: $classId (${classId.runtimeType})");
       FormData formData = FormData.fromMap({
@@ -33,11 +37,9 @@ class LeadCreateService {
         'subject_id': subjectId,
         'user_id': userId,
       });
-      Response response = await _dio.post(
-        ApiConstants.LEAD_CREATE_URL,
-        data: formData,
-      );
-      return response;
+      final res = await ApiService.post(ApiConstants.LEAD_CREATE_URL, formData,
+          token: token);
+      return res;
     } on DioException catch (e) {
       // 🔴 Handle error response
       if (e.response != null) {
