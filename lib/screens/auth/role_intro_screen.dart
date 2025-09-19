@@ -53,7 +53,7 @@ class RoleIntroScreen extends StatelessWidget {
 
                 // Welcome Text
                 Text(
-                  'Welcome $formattedRole.',
+                  'Welcome ${formattedRole == "Private Tutor" ? "Sir / Ma'am" : formattedRole}.',
                   style: const TextStyle(
                     fontSize: 26,
                     color: Colors.white,
@@ -61,11 +61,15 @@ class RoleIntroScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text(
-                  'Continue as $formattedRole to Explore Urban Tutors.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white70, fontSize: 16),
-                ),
+                formattedRole == "Private Tutor"
+                    ? Text(
+                        'Continue as a Private Tutor to Explore www.urbantutors.pro',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 16),
+                      )
+                    : Text(
+                        "Continue as $formattedRole to Explore Urban Tutors."),
                 const SizedBox(height: 40),
                 // Login and Register Buttons
                 Row(

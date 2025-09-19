@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
+import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/controllers/tutor_leads_controller.dart';
 import 'package:urbantutorsapp/models/grabbed_lead_model.dart';
 import 'package:urbantutorsapp/models/tutor_lead.dart';
@@ -26,8 +28,8 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
   RangeValues _currentRangeValues = const RangeValues(1, 10);
 
   final TutorLeadsController _leads = Get.put(TutorLeadsController());
-
   late final CoinsController _coins;
+  late final ProfileUpdateController _p; // ⬅️ NEW
 
   @override
   void initState() {
@@ -35,7 +37,33 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
     _coins = Get.isRegistered<CoinsController>()
         ? Get.find<CoinsController>()
         : Get.put(CoinsController());
-    _coins.refreshAll(); // loads coin packs + wallet
+    _coins.refreshAll();
+
+    _p = Get.isRegistered<ProfileUpdateController>()
+        ? Get.find<ProfileUpdateController>()
+        : Get.put(ProfileUpdateController());
+    // Try to ensure profile is present
+    _p.fetchProfileForStudent();
+  }
+
+  String _initial(String? name) {
+    final n = (name ?? '').trim();
+    if (n.isEmpty) return 'S';
+    return n.characters.first.toUpperCase();
+  }
+
+  String _firstName(String? name) {
+    final n = (name ?? '').trim();
+    if (n.isEmpty) return 'Student';
+    final parts = n.split(RegExp(r'\s+'));
+    return parts.first;
+  }
+
+  String _greet() {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
   }
 
   Future<void> _handleMenuTap(String label) async {
@@ -46,7 +74,8 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
       await StorageService.clear();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Logged out successfully')));
+        const SnackBar(content: Text('Logged out successfully')),
+      );
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const SplashScreen()),
@@ -54,8 +83,9 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
       );
     } else {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Navigating to $label')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Navigating to $label')),
+      );
     }
   }
 
@@ -72,13 +102,19 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
     final msg = await _leads.grabLead(e.id.toString());
     if (!mounted) return;
     if (msg != null) {
-      Get.snackbar('Success', msg,
-          snackPosition: SnackPosition.BOTTOM,
-          duration: const Duration(seconds: 2));
+      Get.snackbar(
+        'Success',
+        msg,
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+      );
     } else if (_leads.error.isNotEmpty) {
-      Get.snackbar('Error', _leads.error.value,
-          snackPosition: SnackPosition.BOTTOM,
-          duration: const Duration(seconds: 2));
+      Get.snackbar(
+        'Error',
+        _leads.error.value,
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+      );
     }
   }
 
@@ -92,15 +128,35 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
       child: Scaffold(
         endDrawer: TutorDrawer(onMenuTap: _handleMenuTap),
         appBar: AppBar(
-          backgroundColor: primary,
-          elevation: 2,
+          elevation: 3,
+          backgroundColor: Colors.transparent,
           toolbarHeight: 75,
+          titleSpacing: 0,
+          systemOverlayStyle: const SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.light,
+            statusBarBrightness: Brightness.dark,
+          ),
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [primary, accent],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
           title: Obx(() {
             final loading =
                 _coins.loadingCoins.value || _coins.loadingMyCoins.value;
             final wallet = _coins.myCoins.value;
             final balance = _toNum(wallet?.available).toStringAsFixed(0);
-
+            // profile
+            final prof = _p.studentprofileData.value;
+            final name = prof?.studentName?.trim();
+            final initial = _initial(name);
+            final greet = _greet();
+            final displayName = _firstName(name);
             if (loading && wallet == null) {
               return const SizedBox(
                 height: 24,
@@ -113,9 +169,11 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
 
             return Row(
               children: [
+                const SizedBox(width: 8),
                 Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
+                    border: Border.all(width: 2, color: AppColors.primaryColor),
                     gradient: LinearGradient(
                       colors: [primary, accent],
                       begin: Alignment.topLeft,
@@ -125,21 +183,50 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
                   padding: const EdgeInsets.all(2),
                   child: const CircleAvatar(
                     backgroundColor: Colors.transparent,
-                    radius: 24,
+                    radius: 20,
                     child: Text(
                       'S',
                       style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11),
                     ),
                   ),
                 ),
+
                 const SizedBox(width: 12),
-                const Text('Welcome, Tutor',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.white)),
-                const Spacer(),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start, // <-- key for left align
+                    children: [
+                      const Text(
+                        'Welcome,',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        displayName, // from your state
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Coins chip
+                SizedBox(
+                  height: 8,
+                ),
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
@@ -152,45 +239,77 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
                     },
                     borderRadius: BorderRadius.circular(20),
                     child: Container(
+                      margin: EdgeInsets.only(top: 8),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.18),
                         borderRadius: BorderRadius.circular(20),
                         border:
-                            Border.all(color: Colors.white.withOpacity(0.25)),
+                            Border.all(width: 2, color: AppColors.primaryColor),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.monetization_on,
-                              color: Colors.white, size: 14),
                           const SizedBox(width: 6),
                           Text(
-                            '$balance coins',
+                            '${balance == "0" ? "Upgrade" : "coins"} ',
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
                               fontSize: 11,
                             ),
-                          )
+                          ),
                         ],
                       ),
                     ),
                   ),
+                ),
+                SizedBox(
+                  width: 8,
                 )
               ],
             );
           }),
-          bottom: const TabBar(
-            labelColor: AppColors.accentColor,
-            unselectedLabelColor: Colors.white70,
-            indicatorColor: AppColors.accentColor,
-            tabs: [
-              Tab(text: "Nearby", icon: Icon(Icons.location_on)),
-              Tab(text: "ENQUIRY", icon: Icon(Icons.message)),
-              Tab(text: "CONTACTED", icon: Icon(Icons.check_circle)),
-            ],
+          bottom: PreferredSize(
+            preferredSize:
+                const Size.fromHeight(48 + 1), // TabBar height + divider
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: Colors.white
+                      .withOpacity(0.25), // subtle line over gradient
+                ),
+                const TabBar(
+                  labelColor: Colors.white,
+                  unselectedLabelColor: Colors.white70,
+                  indicatorColor: Colors.white,
+                  tabs: [
+                    Tab(text: "Nearby", icon: Icon(Icons.location_on)),
+                    Tab(text: "ENQUIRY", icon: Icon(Icons.message)),
+                    Tab(text: "CONTACTED", icon: Icon(Icons.check_circle)),
+                  ],
+                ),
+              ],
+            ),
           ),
+          actions: [
+            Builder(
+              builder: (ctx) => IconButton(
+                icon: const Icon(
+                  Icons.menu,
+                  color: Colors.white,
+                  size: 45,
+                ),
+                onPressed: () => Scaffold.maybeOf(ctx)?.openEndDrawer(),
+              ),
+            ),
+            SizedBox(
+              height: 8,
+            )
+          ],
         ),
         body: Obx(() {
           if (_leads.isLoading.value && _leads.leads.isEmpty) {
@@ -198,7 +317,9 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
           }
           if (_leads.error.isNotEmpty && _leads.leads.isEmpty) {
             return _ErrorRetry(
-                message: _leads.error.value, onRetry: _leads.loadAvailable);
+              message: _leads.error.value,
+              onRetry: _leads.loadAvailable,
+            );
           }
 
           return TabBarView(
@@ -230,7 +351,9 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
                 Text(
                   "Selected Range: ${_currentRangeValues.start.round()} km - ${_currentRangeValues.end.round()} km",
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
                 RangeSlider(
                   values: _currentRangeValues,
@@ -253,16 +376,17 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
               padding: EdgeInsets.all(24),
               child: Center(child: Text('No nearby (offline) leads found')),
             ),
-          ...items.map((e) => GestureDetector(
-                onTap: () => _openDetails(e),
-                child: _LeadCard(
-                  lead: e,
-                  isContacted: _isGrabbed(e),
-                  onContactToggle:
-                      _isGrabbed(e) ? null : () => _grabThisLead(e),
-                  onReadMore: () => {_openDetails(e)},
-                ),
-              )),
+          ...items.map(
+            (e) => GestureDetector(
+              onTap: () => _openDetails(e),
+              child: _LeadCard(
+                lead: e,
+                isContacted: _isGrabbed(e),
+                onContactToggle: _isGrabbed(e) ? null : () => _grabThisLead(e),
+                onReadMore: () => _openDetails(e),
+              ),
+            ),
+          ),
           const SizedBox(height: 24),
         ],
       ),
@@ -312,7 +436,7 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
                   child: _GrabbedLeadCard(
                     lead: e,
                     isContacted: true,
-                    onContactToggle: null, // already grabbed
+                    onContactToggle: null,
                     onReadMore: () => _openGrabDetails(e),
                   ),
                 );
@@ -326,7 +450,9 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
       context,
       MaterialPageRoute(
         builder: (_) => LeadDetailPage(
-          enquiry: e.toMap().map((k, v) => MapEntry(k, v?.toString() ?? '')),
+          enquiry: e.toMap().map(
+                (k, v) => MapEntry(k, v?.toString() ?? ''),
+              ),
         ),
       ),
     );
@@ -336,9 +462,7 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => GrabbedLeadDetailsPage(
-          enquiry: e,
-        ),
+        builder: (_) => GrabbedLeadDetailsPage(enquiry: e),
       ),
     );
   }
@@ -366,7 +490,9 @@ class _ErrorRetry extends StatelessWidget {
             SizedBox(
               height: 44,
               child: ElevatedButton(
-                  onPressed: onRetry, child: const Text('Retry')),
+                onPressed: onRetry,
+                child: const Text('Retry'),
+              ),
             ),
           ],
         ),
@@ -434,11 +560,13 @@ class _LeadCard extends StatelessWidget {
                 const Icon(Icons.attach_money,
                     size: 18, color: AppColors.accentColor),
                 const SizedBox(width: 4),
-                Text('₹${lead.price}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textColor,
-                    )),
+                Text(
+                  '₹${lead.price}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textColor,
+                  ),
+                ),
                 const Spacer(),
                 OutlinedButton.icon(
                   onPressed: onContactToggle,
@@ -475,13 +603,16 @@ class _LeadCard extends StatelessWidget {
   }
 
   static Widget _kv(IconData icon, String k, String v) {
-    return Row(children: [
-      Icon(icon, color: AppColors.accentColor, size: 18),
-      const SizedBox(width: 6),
-      Expanded(
+    return Row(
+      children: [
+        Icon(icon, color: AppColors.accentColor, size: 18),
+        const SizedBox(width: 6),
+        Expanded(
           child: Text('$k: $v',
-              style: const TextStyle(color: AppColors.textColor))),
-    ]);
+              style: const TextStyle(color: AppColors.textColor)),
+        ),
+      ],
+    );
   }
 
   static String _fmtDate(DateTime d) {
@@ -558,11 +689,13 @@ class _GrabbedLeadCard extends StatelessWidget {
                 const Icon(Icons.attach_money,
                     size: 18, color: AppColors.accentColor),
                 const SizedBox(width: 4),
-                Text('₹${lead.price}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textColor,
-                    )),
+                Text(
+                  '₹${lead.price}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textColor,
+                  ),
+                ),
                 const Spacer(),
                 OutlinedButton.icon(
                   onPressed: onContactToggle,
@@ -599,30 +732,15 @@ class _GrabbedLeadCard extends StatelessWidget {
   }
 
   static Widget _kv(IconData icon, String k, String v) {
-    return Row(children: [
-      Icon(icon, color: AppColors.accentColor, size: 18),
-      const SizedBox(width: 6),
-      Expanded(
+    return Row(
+      children: [
+        Icon(icon, color: AppColors.accentColor, size: 18),
+        const SizedBox(width: 6),
+        Expanded(
           child: Text('$k: $v',
-              style: const TextStyle(color: AppColors.textColor))),
-    ]);
-  }
-
-  static String _fmtDate(DateTime d) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    return '${d.day} ${months[d.month - 1]} ${d.year}';
+              style: const TextStyle(color: AppColors.textColor)),
+        ),
+      ],
+    );
   }
 }

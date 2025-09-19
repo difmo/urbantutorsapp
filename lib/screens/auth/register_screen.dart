@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 import 'package:url_launcher/url_launcher.dart'; // ⬅️ Added for opening link
 import 'package:urbantutorsapp/controllers/auth_controller.dart';
 import 'package:urbantutorsapp/widgets/custom_button.dart';
@@ -82,12 +84,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     final formattedRole =
         '${widget.role[0].toUpperCase()}${widget.role.substring(1)}';
-
+    final primary = AppColors.primaryColor;
+    final accent = AppColors.accentColor;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.primaryColor,
-        title: Text('$formattedRole Registration'),
-      ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          toolbarHeight: 76,
+          titleSpacing: 0,
+          systemOverlayStyle: const SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.light,
+            statusBarBrightness: Brightness.dark,
+          ),
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [primary, accent],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          title: _Header(
+            primary: primary,
+            accent: accent,
+            initial: "initial",
+            greeting: "Wallet",
+            name: " $formattedRole Registration",
+            balance: "balanceText",
+            onCoinTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TutorCoinsScreen()),
+              );
+            },
+          )),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Center(
@@ -176,6 +208,66 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.primary,
+    required this.accent,
+    required this.onCoinTap,
+    required this.balance,
+    required this.initial, // ⬅️ NEW
+    required this.greeting, // ⬅️ NEW
+    required this.name, // ⬅️ NEW
+  });
+
+  final Color primary;
+  final Color accent;
+  final VoidCallback onCoinTap;
+  final String balance;
+
+  final String initial;
+  final String greeting;
+  final String name;
+  String _capFirst(String s) {
+    final t = s.trim();
+    if (t.isEmpty) return '';
+    return t[0].toUpperCase() + t.substring(1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 8,
+        ),
+
+        const SizedBox(width: 12),
+        // Greeting + name (ellipsized)
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Coins chip
+        const SizedBox(width: 8),
+      ],
     );
   }
 }

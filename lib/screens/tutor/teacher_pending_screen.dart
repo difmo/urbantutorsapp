@@ -55,7 +55,7 @@ class TeacherPendingScreen extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                "Kindly Wait",
+                "Kindly Wait...",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,

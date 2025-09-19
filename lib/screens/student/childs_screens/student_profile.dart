@@ -22,7 +22,7 @@ import 'package:urbantutorsapp/widgets/StudentDrawer.dart';
 
 class StudentProfileScreen extends StatefulWidget {
   const StudentProfileScreen({super.key});
-
+  
   @override
   State<StudentProfileScreen> createState() => _StudentProfileScreenState();
 }

@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:developer' as dev;
-
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/models/profile_modals/tutor_profile_request_modal.dart';
 import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart'
@@ -13,14 +13,15 @@ import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart'
 import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
 import 'package:urbantutorsapp/screens/tutor/teacher_pending_screen.dart';
+import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
 import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
+import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/app_log.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class TutorProfileFormScreen extends StatefulWidget {
   const TutorProfileFormScreen({super.key});
-
   @override
   State<TutorProfileFormScreen> createState() => _TutorProfileFormScreenState();
 }
@@ -32,6 +33,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
   final TextEditingController localityController = TextEditingController();
   final TextEditingController remarkController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
+  final TextEditingController experienceController = TextEditingController();
 
   // External controllers
   final LocationController _locationController = Get.find<LocationController>();
@@ -48,6 +50,18 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
   String? selectedState;
   String? selectedIdType;
+  String? selectedIdMode;
+  String? selectedIdExperienceInYears;
+
+// --- in your State ---
+  int? selectedFeeMin; // 100..700
+  int? selectedFeeMax; // 700..3000
+
+  final List<int> minOptions = [for (int v = 100; v <= 1000; v += 100) v];
+  final List<int> maxOptionsBase = [for (int v = 300; v <= 3000; v += 100) v];
+
+// (optional) if you're inside a Form and want validation:
+// GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   final ImagePicker _picker = ImagePicker();
   XFile? _profileImage;
@@ -73,7 +87,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
       AppLog.i('[UI] studentprofileData changed');
       if (!mounted || student == null) return;
       nameController.text = student.studentName ?? '';
-      emailController.text = student.mobile?.toString() ?? '';
+      // emailController.text = student.mobile?.toString() ?? '';
       priceController.text = student.price?.toString() ?? '';
       localityController.text = student.location ?? '';
       selectedState = student.state;
@@ -202,6 +216,11 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
   }
 
   void _refreshTutorProfile() {
+     Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => TeacherPendingScreen()),
+        (route) => false,
+      );
     // Only triggers fetch; DOES NOT add any listeners.
     profileUpdateController.fetchProfileForTutor();
   }
@@ -238,9 +257,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
         boardId: selectedBoardId!,
         courseId: selectedClassId!,
         subjectId: selectedSubjectId!,
-        price: double.tryParse(priceController.text.trim())
-                ?.clamp(0, double.infinity) ??
-            0.0,
+        price: double.tryParse(selectedFeeMax.toString()) ?? 0.0,
         location: localityController.text.trim(),
         state: selectedState ?? "",
         idType: selectedIdType ?? "",
@@ -265,12 +282,42 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
   Widget build(BuildContext context) {
     final boards =
         _masterDataController.masterData.value?.data?.boardLead ?? [];
-
+    final primary = AppColors.primaryColor;
+    final accent = AppColors.accentColor;
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Profile"),
-        backgroundColor: Theme.of(context).primaryColor,
-      ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          toolbarHeight: 76,
+          titleSpacing: 0,
+          systemOverlayStyle: const SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.light,
+            statusBarBrightness: Brightness.dark,
+          ),
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [primary, accent],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          title: _Header(
+            primary: primary,
+            accent: accent,
+            initial: "initial",
+            greeting: "Wallet",
+            name: " displayName",
+            balance: "balanceText",
+            onCoinTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TutorCoinsScreen()),
+              );
+            },
+          )),
       body: Stack(
         children: [
           SafeArea(
@@ -324,8 +371,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
                   TextField(
                     controller: emailController,
-                    decoration:
-                        const InputDecoration(labelText: "Email / Mobile"),
+                    decoration: const InputDecoration(labelText: "Email ID"),
                   ),
                   const SizedBox(height: 16),
 
@@ -418,141 +464,16 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                   const SizedBox(height: 16),
 
                   // Simple debug readouts
-                  Obx(() => Text(
-                      'Location results: ${_locationController.suggestions.length}',
-                      style:
-                          const TextStyle(fontSize: 12, color: Colors.grey))),
-                  Obx(() => _locationController.error.isNotEmpty
-                      ? Text(
-                          'Location error: ${_locationController.error.value}',
-                          style:
-                              const TextStyle(fontSize: 12, color: Colors.red))
-                      : const SizedBox.shrink()),
-
-                  // Board
-                  Obx(() {
-                    final boardsRx = _masterDataController
-                            .masterData.value?.data?.boardLead ??
-                        [];
-                    dev.log('[UI] Boards count: ${boardsRx.length}',
-                        name: 'StudentProfile');
-
-                    return DropdownButtonFormField<int>(
-                      decoration: InputDecoration(
-                        labelText: "Board",
-                        suffixIcon: Obx(
-                            () => _leadMetaController.isFetchingClasses.value
-                                ? const Padding(
-                                    padding: EdgeInsets.all(12.0),
-                                    child: SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2)),
-                                  )
-                                : const SizedBox.shrink()),
-                      ),
-                      value: selectedBoardId,
-                      items: boardsRx
-                          .map((b) => DropdownMenuItem<int>(
-                                value: b.boardId,
-                                child: Text(b.boardLabel?.toString() ?? ''),
-                              ))
-                          .toList(),
-                      onChanged: (val) {
-                        dev.log('[UI] Board changed → $val',
-                            name: 'StudentProfile');
-                        setState(() {
-                          selectedBoardId = val;
-                          selectedClassId = null;
-                          selectedSubjectId = null;
-                        });
-                        if (val != null) {
-                          _leadMetaController.loadClasses(val);
-                        }
-                      },
-                    );
-                  }),
-
-                  const SizedBox(height: 16),
-
-                  // Class
-                  Obx(() {
-                    final classItems = _leadMetaController.classes;
-                    dev.log('[UI] Classes count: ${classItems.length}',
-                        name: 'StudentProfile');
-
-                    return DropdownButtonFormField<int>(
-                      decoration: InputDecoration(
-                        labelText: "Class",
-                        suffixIcon: _leadMetaController.isFetchingClasses.value
-                            ? const Padding(
-                                padding: EdgeInsets.all(12.0),
-                                child: SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2)),
-                              )
-                            : null,
-                      ),
-                      value: selectedClassId,
-                      items: classItems
-                          .map((c) => DropdownMenuItem(
-                              value: c.classId, child: Text(c.className)))
-                          .toList(),
-                      onChanged: (selectedBoardId == null)
-                          ? null
-                          : (val) {
-                              dev.log('[UI] Class changed → $val',
-                                  name: 'StudentProfile');
-                              setState(() {
-                                selectedClassId = val;
-                                selectedSubjectId = null;
-                              });
-                              if (val != null && selectedBoardId != null) {
-                                _leadMetaController.loadSubjects(
-                                    classId: val, boardId: selectedBoardId!);
-                              }
-                            },
-                    );
-                  }),
-
-                  const SizedBox(height: 16),
-
-                  // Subject
-                  Obx(() {
-                    final subjectItems = _leadMetaController.subjects;
-                    dev.log('[UI] Subjects count: ${subjectItems.length}',
-                        name: 'StudentProfile');
-                    return DropdownButtonFormField<int>(
-                      decoration: InputDecoration(
-                        labelText: "Subject",
-                        suffixIcon: _leadMetaController.isFetchingSubjects.value
-                            ? const Padding(
-                                padding: EdgeInsets.all(12.0),
-                                child: SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2)),
-                              )
-                            : null,
-                      ),
-                      value: selectedSubjectId,
-                      items: subjectItems
-                          .map((s) => DropdownMenuItem(
-                              value: s.subjectId, child: Text(s.subjectName)))
-                          .toList(),
-                      onChanged: (selectedClassId == null ||
-                              selectedBoardId == null)
-                          ? null
-                          : (val) => setState(() => selectedSubjectId = val),
-                    );
-                  }),
-
-                  const SizedBox(height: 16),
-
+                  // Obx(() => Text(
+                  //     'Location results: ${_locationController.suggestions.length}',
+                  //     style:
+                  //         const TextStyle(fontSize: 12, color: Colors.grey))),
+                  // Obx(() => _locationController.error.isNotEmpty
+                  //     ? Text(
+                  //         'Location error: ${_locationController.error.value}',
+                  //         style:
+                  //             const TextStyle(fontSize: 12, color: Colors.red))
+                  //     : const SizedBox.shrink()),
                   // State
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(labelText: "State"),
@@ -596,19 +517,245 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
                   const SizedBox(height: 16),
 
-                  TextField(
-                    controller: priceController,
-                    decoration:
-                        const InputDecoration(labelText: "Budget (Price)"),
-                    keyboardType: TextInputType.number,
-                  ),
+                  // Board
+                  Obx(() {
+                    final boardsRx = _masterDataController
+                            .masterData.value?.data?.boardLead ??
+                        [];
+                    dev.log('[UI] Boards count: ${boardsRx.length}',
+                        name: 'StudentProfile');
+
+                    return DropdownButtonFormField<int>(
+                      decoration: InputDecoration(
+                        labelText: "Selects Boards",
+                        suffixIcon: _leadMetaController.isFetchingSubjects.value
+                            ? const Padding(
+                                padding: EdgeInsets.all(12.0),
+                                child: SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2)),
+                              )
+                            : null,
+                      ),
+                      value: selectedBoardId,
+                      items: boardsRx
+                          .map((b) => DropdownMenuItem<int>(
+                                value: b.boardId,
+                                child: Text(b.boardLabel?.toString() ?? ''),
+                              ))
+                          .toList(),
+                      onChanged: (val) {
+                        dev.log('[UI] Board changed → $val',
+                            name: 'StudentProfile');
+                        setState(() {
+                          selectedBoardId = val;
+                          selectedClassId = null;
+                          selectedSubjectId = null;
+                        });
+                        if (val != null) {
+                          _leadMetaController.loadClasses(val);
+                        }
+                      },
+                    );
+                  }),
+
+                  const SizedBox(height: 16),
+                  // Class
+                  Obx(() {
+                    final classItems = _leadMetaController.classes;
+                    dev.log('[UI] Classes count: ${classItems.length}',
+                        name: 'StudentProfile');
+
+                    return DropdownButtonFormField<int>(
+                      decoration: InputDecoration(
+                        labelText: "Select Classes",
+                        suffixIcon: _leadMetaController.isFetchingClasses.value
+                            ? const Padding(
+                                padding: EdgeInsets.all(12.0),
+                                child: SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2)),
+                              )
+                            : null,
+                      ),
+                      value: selectedClassId,
+                      items: classItems
+                          .map((c) => DropdownMenuItem(
+                              value: c.classId, child: Text(c.className)))
+                          .toList(),
+                      onChanged: (selectedBoardId == null)
+                          ? null
+                          : (val) {
+                              dev.log('[UI] Class changed → $val',
+                                  name: 'StudentProfile');
+                              setState(() {
+                                selectedClassId = val;
+                                selectedSubjectId = null;
+                              });
+                              if (val != null && selectedBoardId != null) {
+                                _leadMetaController.loadSubjects(
+                                    classId: val, boardId: selectedBoardId!);
+                              }
+                            },
+                    );
+                  }),
 
                   const SizedBox(height: 16),
 
+                  // Subject
+                  Obx(() {
+                    final subjectItems = _leadMetaController.subjects;
+                    dev.log('[UI] Subjects count: ${subjectItems.length}',
+                        name: 'StudentProfile');
+                    return DropdownButtonFormField<int>(
+                      decoration: InputDecoration(
+                        labelText: "Select Subjects",
+                        suffixIcon: _leadMetaController.isFetchingSubjects.value
+                            ? const Padding(
+                                padding: EdgeInsets.all(12.0),
+                                child: SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2)),
+                              )
+                            : null,
+                      ),
+                      value: selectedSubjectId,
+                      items: subjectItems
+                          .map((s) => DropdownMenuItem(
+                              value: s.subjectId, child: Text(s.subjectName)))
+                          .toList(),
+                      onChanged: (selectedClassId == null ||
+                              selectedBoardId == null)
+                          ? null
+                          : (val) => setState(() => selectedSubjectId = val),
+                    );
+                  }),
+
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    decoration:
+                        const InputDecoration(labelText: "Experience in Years"),
+                    value: selectedIdExperienceInYears,
+                    items: const [
+                      "Fresher",
+                      "1",
+                      "2",
+                      "3",
+                      "4",
+                      "5",
+                      "6",
+                      "7",
+                      "8",
+                      "9",
+                      "10",
+                      "10+"
+                    ]
+                        .map((id) =>
+                            DropdownMenuItem(value: id, child: Text(id)))
+                        .toList(),
+                    onChanged: (val) =>
+                        setState(() => selectedIdExperienceInYears = val),
+                  ),
+
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    decoration:
+                        const InputDecoration(labelText: "Select Modes"),
+                    value: selectedIdMode,
+                    items: const ["Online", "Offline", "Both"]
+                        .map((id) =>
+                            DropdownMenuItem(value: id, child: Text(id)))
+                        .toList(),
+                    onChanged: (val) => setState(() => selectedIdMode = val),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    child: Row(
+                      children: [
+                        // MIN: 100..700
+                        Expanded(
+                          child: DropdownButtonFormField<int>(
+                            decoration: const InputDecoration(
+                                labelText: "Select Fee Range (min)"),
+                            value: selectedFeeMin,
+                            isExpanded: true,
+                            items: minOptions
+                                .map((v) => DropdownMenuItem(
+                                    value: v, child: Text('₹$v/Hr')))
+                                .toList(),
+                            onChanged: (val) {
+                              setState(() {
+                                selectedFeeMin = val;
+
+                                // Ensure max respects both constraints:
+                                // - must be >= 700 (range rule)
+                                // - must be >= selected min
+                                final clampMinForMax = (val == null)
+                                    ? 700
+                                    : (val < 700 ? 700 : val);
+                                if (selectedFeeMax != null &&
+                                    selectedFeeMax! < clampMinForMax) {
+                                  selectedFeeMax = clampMinForMax;
+                                }
+                              });
+                            },
+                            validator: (v) => v == null ? 'Required' : null,
+                          ),
+                        ),
+                        const SizedBox(width: 20),
+
+                        // MAX: 700..3000, but filtered to >= max(700, selectedMin)
+                        Expanded(
+                          child: DropdownButtonFormField<int>(
+                            decoration: const InputDecoration(
+                                labelText: "Select Fee Range (max)"),
+                            value: selectedFeeMax,
+                            isExpanded: true,
+                            items: maxOptionsBase
+                                .where((v) =>
+                                    v >=
+                                    ((selectedFeeMin == null)
+                                        ? 300
+                                        : (selectedFeeMin! < 300
+                                            ? 300
+                                            : selectedFeeMin!)))
+                                .map((v) => DropdownMenuItem(
+                                    value: v, child: Text('₹$v/Hr')))
+                                .toList(),
+                            onChanged: (val) =>
+                                setState(() => selectedFeeMax = val),
+                            validator: (v) {
+                              if (v == null) return 'Required';
+                              final minAllowed = (selectedFeeMin == null)
+                                  ? 300
+                                  : (selectedFeeMin! < 300
+                                      ? 300
+                                      : selectedFeeMin!);
+                              if (v < minAllowed)
+                                return 'Must be ≥ ₹$minAllowed';
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(labelText: "ID Type"),
                     value: selectedIdType,
-                    items: const ["Aadhar", "PAN", "Voter ID"]
+                    items: const [
+                      "Aadhar",
+                      "Voter ID",
+                      "Passport",
+                    ]
                         .map((id) =>
                             DropdownMenuItem(value: id, child: Text(id)))
                         .toList(),
@@ -618,10 +765,13 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                   const SizedBox(height: 16),
 
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _idUploadBox("Front ID", _frontIdImage, "front"),
-                      _idUploadBox("Back ID", _backIdImage, "back"),
+                      Expanded(
+                          child:
+                              _idUploadBox("Front ID", _frontIdImage, "front")),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: _idUploadBox("Back ID", _backIdImage, "back")),
                     ],
                   ),
 
@@ -650,26 +800,89 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
   Widget _idUploadBox(String label, XFile? file, String type) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         GestureDetector(
           onTap: () => _showPickerOptions(type),
           child: Container(
-            width: 120,
-            height: 100,
+            width: double.infinity, // fill the Expanded width
+            height: 120,
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey),
+              border: Border.all(color: Colors.grey.shade400),
               borderRadius: BorderRadius.circular(8),
             ),
+            clipBehavior: Clip.antiAlias,
             child: file == null
-                ? const Icon(Icons.image, size: 40, color: Colors.black54)
-                : ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.file(File(file.path), fit: BoxFit.cover),
-                  ),
+                ? const Center(
+                    child: Icon(Icons.image, size: 40, color: Colors.black54),
+                  )
+                : Image.file(File(file.path), fit: BoxFit.cover),
           ),
         ),
+      ],
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.primary,
+    required this.accent,
+    required this.onCoinTap,
+    required this.balance,
+    required this.initial, // ⬅️ NEW
+    required this.greeting, // ⬅️ NEW
+    required this.name, // ⬅️ NEW
+  });
+
+  final Color primary;
+  final Color accent;
+  final VoidCallback onCoinTap;
+  final String balance;
+
+  final String initial;
+  final String greeting;
+  final String name;
+  String _capFirst(String s) {
+    final t = s.trim();
+    if (t.isEmpty) return '';
+    return t[0].toUpperCase() + t.substring(1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 8,
+        ),
+        // Avatar with gradient ring
+
+        const SizedBox(width: 12),
+
+        // Greeting + name (ellipsized)
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Profile",
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Coins chip
+        const SizedBox(width: 8),
       ],
     );
   }
