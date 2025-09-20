@@ -25,11 +25,11 @@ class DashboardHomeTab extends StatefulWidget {
 }
 
 class _DashboardHomeTabState extends State<DashboardHomeTab> {
-  RangeValues _currentRangeValues = const RangeValues(1, 10);
+  RangeValues _currentRangeValues = const RangeValues(5, 10);
 
   final TutorLeadsController _leads = Get.put(TutorLeadsController());
   late final CoinsController _coins;
-  late final ProfileUpdateController _p; // ⬅️ NEW
+  late final ProfileUpdateController _p;
 
   @override
   void initState() {
@@ -271,25 +271,40 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
             );
           }),
           bottom: PreferredSize(
-            preferredSize:
-                const Size.fromHeight(48 + 1), // TabBar height + divider
+            preferredSize: const Size.fromHeight(40), // smaller than default
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Divider(
                   height: 1,
                   thickness: 1,
-                  color: Colors.white
-                      .withOpacity(0.25), // subtle line over gradient
+                  color: Colors.white.withOpacity(0.25),
                 ),
-                const TabBar(
+                TabBar(
                   labelColor: Colors.white,
                   unselectedLabelColor: Colors.white70,
                   indicatorColor: Colors.white,
-                  tabs: [
-                    Tab(text: "Nearby", icon: Icon(Icons.location_on)),
-                    Tab(text: "ENQUIRY", icon: Icon(Icons.message)),
-                    Tab(text: "CONTACTED", icon: Icon(Icons.check_circle)),
+                  labelPadding: EdgeInsets.zero, // no extra vertical padding
+                  indicatorPadding: EdgeInsets.zero, // keep indicator tight
+                  tabs: const [
+                    Tab(
+                      height: 48, // <— reduce tab height
+                      iconMargin: EdgeInsets.only(bottom: 2),
+                      icon: Icon(Icons.location_on, size: 18),
+                      text: "Nearby Enquiries",
+                    ),
+                    Tab(
+                      height: 48,
+                      iconMargin: EdgeInsets.only(bottom: 2),
+                      icon: Icon(Icons.message, size: 18),
+                      text: "All Enquiries",
+                    ),
+                    Tab(
+                      height: 48,
+                      iconMargin: EdgeInsets.only(bottom: 2),
+                      icon: Icon(Icons.check_circle, size: 18),
+                      text: "Connected",
+                    ),
                   ],
                 ),
               ],
@@ -311,25 +326,97 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
             )
           ],
         ),
-        body: Obx(() {
-          if (_leads.isLoading.value && _leads.leads.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (_leads.error.isNotEmpty && _leads.leads.isEmpty) {
-            return _ErrorRetry(
-              message: _leads.error.value,
-              onRetry: _leads.loadAvailable,
-            );
-          }
+        body: Column(
+          children: [
+            // Range header (no extra padding)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Select Range:',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${_currentRangeValues.start.round()} Km',
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(width: 6),
 
-          return TabBarView(
-            children: [
-              _nearbyTab(context),
-              _enquiryTab(context),
-              _contactedTab(context),
-            ],
-          );
-        }),
+                  // Slider (slim track + small thumbs + no overlay circle)
+                  Expanded(
+                    child: SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: 2,
+                        rangeThumbShape: const RoundRangeSliderThumbShape(
+                          enabledThumbRadius: 5,
+                          elevation: 0,
+                          pressedElevation: 0,
+                        ),
+                        overlayShape:
+                            const RoundSliderOverlayShape(overlayRadius: 0),
+                        overlayColor: Colors.transparent,
+                        activeTrackColor: AppColors.accentColor,
+                        inactiveTrackColor: Colors.grey,
+                        thumbColor: AppColors.accentColor,
+                      ),
+                      child: RangeSlider(
+                        values: _currentRangeValues,
+                        min: 5,
+                        max: 50,
+                        divisions: 45,
+                        labels: RangeLabels(
+                          '${_currentRangeValues.start.round()} km',
+                          '${_currentRangeValues.end.round()} km',
+                        ),
+                        onChanged: (v) => setState(() {
+                          _currentRangeValues = RangeValues(
+                            v.start.clamp(5.0, 50.0),
+                            v.end.clamp(5.0, 50.0),
+                          );
+                        }),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    '50 km',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 4),
+
+            // Tabs content (MUST be Expanded)
+            Expanded(
+              child: Obx(() {
+                if (_leads.isLoading.value && _leads.leads.isEmpty) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (_leads.error.isNotEmpty && _leads.leads.isEmpty) {
+                  return _ErrorRetry(
+                    message: _leads.error.value,
+                    onRetry: _leads.loadAvailable,
+                  );
+                }
+                return TabBarView(
+                  children: [
+                    _nearbyTab(context),
+                    _enquiryTab(context),
+                    _contactedTab(context),
+                  ],
+                );
+              }),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -341,36 +428,8 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
     return RefreshIndicator(
       onRefresh: _leads.loadAvailable,
       child: ListView(
-        padding: const EdgeInsets.only(top: 12),
+        padding: const EdgeInsets.only(top: 0),
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Selected Range: ${_currentRangeValues.start.round()} km - ${_currentRangeValues.end.round()} km",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                RangeSlider(
-                  values: _currentRangeValues,
-                  min: 1,
-                  max: 50,
-                  divisions: 49,
-                  labels: RangeLabels(
-                    "${_currentRangeValues.start.round()} km",
-                    "${_currentRangeValues.end.round()} km",
-                  ),
-                  onChanged: (v) => setState(() => _currentRangeValues = v),
-                  activeColor: AppColors.accentColor,
-                  inactiveColor: Colors.grey[300],
-                ),
-              ],
-            ),
-          ),
           if (items.isEmpty)
             const Padding(
               padding: EdgeInsets.all(24),
@@ -387,7 +446,6 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
         ],
       ),
     );
@@ -516,27 +574,33 @@ class _LeadCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 2,
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+          border: Border.all(width: 1, color: AppColors.primaryColor),
+          borderRadius: BorderRadius.all(Radius.circular(8))),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // header row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  lead.studentName.isEmpty
-                      ? 'Lead #${lead.id}'
-                      : lead.studentName,
-                  style: const TextStyle(
-                    color: AppColors.accentColor,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      'Lead No: ',
+                      style: const TextStyle(
+                        color: AppColors.textColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      "${lead.id}",
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ],
                 ),
                 Text(
                   lead.createdAt != null ? _fmtDate(lead.createdAt!) : '',
@@ -545,55 +609,44 @@ class _LeadCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 6),
-
+            _kv(Icons.school, 'Name', lead.studentName),
+            const SizedBox(height: 6),
             _kv(Icons.school, 'Class', lead.courseName),
             const SizedBox(height: 4),
             _kv(Icons.book, 'Subject', lead.subjectName),
             const SizedBox(height: 4),
-            _kv(Icons.location_on, 'Location', lead.location),
-            const SizedBox(height: 4),
-            _kv(Icons.computer, 'Mode', lead.mode),
+            _kv(Icons.location_on, 'Location',
+                "${lead.location},${lead.state}"),
             const SizedBox(height: 6),
-
-            Row(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.attach_money,
-                    size: 18, color: AppColors.accentColor),
-                const SizedBox(width: 4),
-                Text(
-                  '₹${lead.price}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textColor,
-                  ),
+                // Row 1: Mode + 0/3 pill
+                LeadMetaRow(
+                  icon: Icons.switch_video, // pick any icon you prefer
+                  label: 'Mode',
+                  value: lead.mode,
+                  iconColor: AppColors.accentColor,
+                  trailing: leadCountPill('0/3'),
                 ),
-                const Spacer(),
-                OutlinedButton.icon(
-                  onPressed: onContactToggle,
-                  icon: Icon(
-                    isContacted ? Icons.check_circle : Icons.circle_outlined,
-                    size: 18,
-                  ),
-                  label: Text(isContacted ? 'Grabbed' : 'Mark Contacted'),
-                  style: OutlinedButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    side: BorderSide(
-                      color: isContacted ? Colors.green : Colors.blue.shade200,
+                const SizedBox(height: 6),
+
+                // Row 2: Fee + "(Read more)" + right-aligned status
+                LeadMetaRow(
+                  icon: Icons.attach_money,
+                  label: 'Fee',
+                  value: "₹${lead.price}/Hr",
+                  iconColor: AppColors.accentColor,
+                  inlineLinkText: '(Read more)',
+                  onInlineLinkTap: onContactToggle,
+                  trailing: const Text(
+                    'Responded',
+                    style: TextStyle(
+                      color: AppColors.textColor,
+                      fontWeight: FontWeight.w600,
                     ),
-                    foregroundColor:
-                        isContacted ? Colors.green : AppColors.primaryColor,
-                    minimumSize: const Size(0, 36),
                   ),
                 ),
-                const SizedBox(width: 8),
-                // ElevatedButton(
-                //   onPressed: onReadMore,
-                //   style: ElevatedButton.styleFrom(
-                //     minimumSize: const Size(0, 36),
-                //     padding: const EdgeInsets.symmetric(horizontal: 12),
-                //   ),
-                //   child: const Text('Read More'),
-                // ),
               ],
             ),
           ],
@@ -602,14 +655,34 @@ class _LeadCard extends StatelessWidget {
     );
   }
 
-  static Widget _kv(IconData icon, String k, String v) {
+  static Widget _kv(IconData icon, String label, String text) {
     return Row(
       children: [
         Icon(icon, color: AppColors.accentColor, size: 18),
         const SizedBox(width: 6),
         Expanded(
-          child: Text('$k: $v',
-              style: const TextStyle(color: AppColors.textColor)),
+          child: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: '$label: ',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700, // bold label
+                    color: AppColors.textColor,
+                  ),
+                ),
+                TextSpan(
+                  text: text,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w400, // normal value
+                    color: AppColors.textColor,
+                  ),
+                ),
+              ],
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );
@@ -743,4 +816,97 @@ class _GrabbedLeadCard extends StatelessWidget {
       ],
     );
   }
+}
+
+// --- Reusable row ------------------------------------------------------------
+class LeadMetaRow extends StatelessWidget {
+  const LeadMetaRow({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.iconColor = Colors.green,
+    this.trailing,
+    this.inlineLinkText,
+    this.onInlineLinkTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color iconColor;
+
+  /// Right-side widget (e.g., badge pill or status text)
+  final Widget? trailing;
+
+  /// Optional "(Read more)" link shown inline after `value`
+  final String? inlineLinkText;
+  final VoidCallback? onInlineLinkTap;
+
+  @override
+  Widget build(BuildContext context) {
+    const baseColor = AppColors.textColor;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(icon, size: 18, color: iconColor),
+        const SizedBox(width: 6),
+        // Left text block (label bold + value + optional link)
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              style: const TextStyle(color: baseColor, fontSize: 14),
+              children: [
+                TextSpan(
+                  text: '$label: ',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                TextSpan(
+                  text: value,
+                  style: const TextStyle(fontWeight: FontWeight.w400),
+                ),
+                if (inlineLinkText != null) ...[
+                  const TextSpan(text: ' '),
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.baseline,
+                    baseline: TextBaseline.alphabetic,
+                    child: InkWell(
+                      onTap: onInlineLinkTap,
+                      child: Text(
+                        inlineLinkText!,
+                        style: const TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 8),
+        if (trailing != null) trailing!,
+      ],
+    );
+  }
+}
+
+// --- Right-side pill badge ---------------------------------------------------
+Widget leadCountPill(String text) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    decoration: BoxDecoration(
+      color: const Color(0xFF38A3FF),
+      borderRadius: BorderRadius.circular(999),
+    ),
+    child: Text(
+      text,
+      style: const TextStyle(
+          color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
+    ),
+  );
 }

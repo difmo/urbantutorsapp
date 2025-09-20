@@ -40,7 +40,7 @@ class CustomTeacherNavBar extends StatelessWidget {
         showUnselectedLabels: true,
         onTap: onTap,
         items: [
-            _buildItem(FontAwesomeIcons.home, 'Home', 0, currentIndex),
+          _buildItem(FontAwesomeIcons.home, 'Home', 0, currentIndex),
           _buildItem(FontAwesomeIcons.noteSticky, 'Notes', 1, currentIndex),
           _buildItem(FontAwesomeIcons.book, 'PYQs', 2, currentIndex),
           _buildItem(
@@ -63,7 +63,6 @@ class CustomTeacherNavBar extends StatelessWidget {
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 250),
-            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: isActive
                   ? AppColors.primaryColor.withOpacity(0.12)

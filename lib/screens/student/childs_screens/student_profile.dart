@@ -85,9 +85,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
 
     // IDs
     final nextBoardId =
-        (p.boardId is int) ? p.boardId : int.tryParse('${p.boardId ?? ''}');
+        (p.boardId is int) ? p.boardId : int.tryParse(p.boardId ?? '');
     final nextClassId =
-        (p.courseId is int) ? p.courseId : int.tryParse('${p.courseId ?? ''}');
+        (p.courseId is int) ? p.courseId : int.tryParse(p.courseId ?? '');
 
     // Load classes for the board first, then set class id
     if (nextBoardId != null) {

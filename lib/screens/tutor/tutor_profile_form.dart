@@ -737,8 +737,9 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                                   : (selectedFeeMin! < 300
                                       ? 300
                                       : selectedFeeMin!);
-                              if (v < minAllowed)
+                              if (v < minAllowed) {
                                 return 'Must be ≥ ₹$minAllowed';
+                              }
                               return null;
                             },
                           ),
