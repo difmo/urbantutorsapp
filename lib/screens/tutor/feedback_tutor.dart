@@ -1,93 +1,414 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:urbantutorsapp/controllers/coins_controller.dart';
+import 'package:urbantutorsapp/controllers/lead_create_controller.dart';
+import 'package:urbantutorsapp/controllers/pay_course_controller.dart';
+import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
+import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
+import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
+import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
+import 'package:urbantutorsapp/screens/splash_screen.dart';
+import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
+import 'package:urbantutorsapp/widgets/TutorDrawer.dart';
 
 class FeedbackTutor extends StatefulWidget {
   const FeedbackTutor({super.key});
-
   @override
-  State<FeedbackTutor> createState() => _FeedbackTutorState();
+  State<FeedbackTutor> createState() => _FeedbackStudentState();
 }
 
-class _FeedbackTutorState extends State<FeedbackTutor> {
-  // This is the function that gets called when you press the button
+class _FeedbackStudentState extends State<FeedbackTutor> {
+  final _formKey = GlobalKey<FormState>();
+  final _titleCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
+  // Text controllers
+  // GetX controllers
+  late final CoinsController _c;
+  late final ProfileUpdateController _p;
+
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  // --- lead/user meta ---
+  String? leadStatus; // "1" → active/requested, anything else → no request yet
+  String? userName;
+  String? userPhone;
+  bool _loadingUserMeta = true;
+  bool get hasActiveLead => leadStatus == "1";
+
+  Future<void> _loadUserMeta() async {
+    try {
+      final s = await StorageService.getUserLeadStatus(); // returns "0"/"1"?
+      final n = await StorageService.getUserName();
+      final p = await StorageService.getUserPhoneNumber();
+      if (!mounted) return;
+      setState(() {
+        leadStatus = s ?? "0";
+        userName = n ?? "";
+        userPhone = p ?? "";
+        _loadingUserMeta = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        leadStatus = "0";
+        userName = "";
+        userPhone = "";
+        _loadingUserMeta = false;
+      });
+    }
+  }
+
+  // Safe number formatter
+  num _toNum(dynamic v) {
+    if (v == null) return 0;
+    if (v is num) return v;
+    return num.tryParse(v.toString()) ?? 0;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    _c = Get.isRegistered<CoinsController>()
+        ? Get.find<CoinsController>()
+        : Get.put(CoinsController());
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _c.refreshAll();
+    });
+
+    _p = Get.isRegistered<ProfileUpdateController>()
+        ? Get.find<ProfileUpdateController>()
+        : Get.put(ProfileUpdateController());
+    _p.fetchProfileForStudent();
+
+    _loadUserMeta(); // ✅ proper async load of lead status & user info
+  }
+
+  String _initial(String? name) {
+    final n = (name ?? '').trim();
+    if (n.isEmpty) return 'S';
+    return n.characters.first.toUpperCase();
+  }
+
+  String _firstName(String? name) {
+    final n = (name ?? '').trim();
+    if (n.isEmpty) return 'Student';
+    final parts = n.split(RegExp(r'\s+'));
+    return parts.first;
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _descCtrl.dispose();
+    super.dispose();
+  }
+
   void _submitFeedback() {
-    // For now, just show a Snackbar
+    if (!_formKey.currentState!.validate()) return;
+
+    // TODO: call your API here with _titleCtrl.text and _descCtrl.text
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Feedback submitted")),
     );
+    _titleCtrl.clear();
+    _descCtrl.clear();
+  }
 
-    // Later you can replace this with API call or logic to save feedback
+  InputDecoration _dec({
+    required String label,
+    String? hint,
+  }) {
+    return InputDecoration(
+      counterText: '',
+      labelText: label,
+      labelStyle: const TextStyle(fontSize: 14, color: Colors.black),
+      hintText: hint,
+      hintStyle: TextStyle(color: Colors.grey.shade500),
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppColors.primaryColor, width: 1.5),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final primary = AppColors.primaryColor;
+    final accent = AppColors.accentColor;
+
     return Scaffold(
+      backgroundColor: Colors.white,
+      key: _scaffoldKey,
+      extendBodyBehindAppBar: true,
+      endDrawer: Tutordrawer(onMenuTap: (label) async {
+        if (label == 'Logout') {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isLoggedIn', false);
+          await prefs.remove('user_name');
+          await prefs.remove('user_phone');
+          await prefs.remove('user_role');
+          await StorageService.clearTokenAndRole();
+          await StorageService.clear();
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Logged out successfully')),
+          );
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const SplashScreen()),
+            (route) => false,
+          );
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Navigating to $label')),
+          );
+        }
+      }),
       appBar: AppBar(
-        title: const Text("Feedback"),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        toolbarHeight: 76,
+        titleSpacing: 0,
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+        ),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [primary, accent],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        title: Obx(() {
+          final loadingCoins = _c.loadingCoins.value || _c.loadingMyCoins.value;
+          final wallet = _c.myCoins.value;
+          final balanceNum = _toNum(wallet?.available);
+          final balanceText = balanceNum.toStringAsFixed(0);
+
+          final prof = _p.studentprofileData.value;
+          final name = prof?.studentName?.trim() ?? '';
+          final displayName =
+              name.isEmpty ? 'Student' : name.split(RegExp(r'\s+')).first;
+
+          if (loadingCoins && wallet == null && prof == null) {
+            return const SizedBox(
+              height: 24,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+            );
+          }
+          return _Header(
+            primary: primary,
+            accent: accent,
+            initial: (displayName.isEmpty ? 'S' : displayName[0].toUpperCase()),
+            greeting: "Edit Profile",
+            name: displayName,
+            balance: balanceText,
+            onCoinTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TutorCoinsScreen()),
+              );
+            },
+          );
+        }),
+        actions: [
+          Builder(
+            builder: (ctx) => IconButton(
+              icon: const Icon(
+                Icons.menu,
+                color: Colors.white,
+                size: 45,
+              ),
+              onPressed: () => Scaffold.maybeOf(ctx)?.openEndDrawer(),
+            ),
+          ),
+        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextFormField(
-              style: const TextStyle(
-                color: Colors.black87, // input text color
-                fontSize: 16,
-              ),
-              decoration: InputDecoration(
-                labelText: 'Title',
-                labelStyle: const TextStyle(
-                  color: Colors.black, // light label color
-                  fontSize: 14,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                // Row(
+                //   children: [
+                //     Text("Title",textAlign: TextAlign.left,),
+                //   ],
+                // ),
+                //     const SizedBox(height: 8),
+                TextFormField(
+                  controller: _titleCtrl,
+                  style: const TextStyle(color: Colors.black87, fontSize: 16),
+                  decoration: _dec(label: 'Title : ', hint: 'Main heading'),
+                  maxLength: 100,
+                  validator: (v) {
+                    final t = (v ?? '').trim();
+                    if (t.isEmpty) return 'Title is required';
+                    if (t.length < 3) {
+                      return 'Title must be at least 3 characters';
+                    }
+                    return null;
+                  },
                 ),
-                hintText: 'Main Heading', // placeholder
-                hintStyle: TextStyle(
-                  color: Colors.grey.shade500,
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Text("Description :"),
+                  ],
                 ),
-                border: InputBorder.none,
-              ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _descCtrl,
+                  style: const TextStyle(color: Colors.black87, fontSize: 16),
+                  decoration: _dec(label: '', hint: 'Write your feedback'),
+                  maxLines: 8,
+
+                  maxLength: 999,
+                  scrollPadding: EdgeInsets.all(0),
+                  textAlignVertical:
+                      TextAlignVertical.top, // 👈 text starts at top
+                  validator: (v) {
+                    final t = (v ?? '').trim();
+                    if (t.isEmpty) return 'Description is required';
+                    if (t.length < 10) return 'Please add a bit more detail';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: AppColors.primaryColor,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: _submitFeedback,
+                    child: const Text(
+                      "Submit",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                )
+              ],
             ),
-            const SizedBox(height: 16),
-            TextFormField(
-              style: const TextStyle(
-                color: Colors.black87,
-                fontSize: 16,
-              ),
-              decoration: InputDecoration(
-                labelText: 'More Details',
-                labelStyle: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 14,
-                ),
-                hintText: 'Description',
-                hintStyle: TextStyle(
-                  color: Colors.grey.shade500,
-                ),
-                border: InputBorder.none,
-              ),
-              maxLines: 4,
-            ),
-            const SizedBox(height: 24),
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                backgroundColor:
-                    AppColors.primaryColor, // App theme color background
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-              onPressed: _submitFeedback,
-              child: const Text(
-                "Submit",
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.white, // White text
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            )
-          ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.primary,
+    required this.accent,
+    required this.onCoinTap,
+    required this.balance,
+    required this.initial,
+    required this.greeting,
+    required this.name,
+  });
+
+  final Color primary;
+  final Color accent;
+  final VoidCallback onCoinTap;
+  final String balance;
+
+  final String initial;
+  final String greeting;
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                greeting,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+        ),
+        InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: onCoinTap,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(22),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(.18),
+                    borderRadius: BorderRadius.circular(22),
+                    border:
+                        Border.all(width: 1, color: AppColors.primaryColor)),
+                child: Row(
+                  children: [
+                    const SizedBox(width: 6),
+                    Text(
+                      balance == "0" ? "Upgrade" : "$balance coins",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+      ],
     );
   }
 }

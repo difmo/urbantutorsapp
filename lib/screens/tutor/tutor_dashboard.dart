@@ -62,7 +62,7 @@ class _TutorDashboardState extends State<TutorDashboard> {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-          endDrawer: TutorDrawer(onMenuTap: (label) async {
+          endDrawer: Tutordrawer(onMenuTap: (label) async {
             if (label == 'Logout') {
               final prefs = await SharedPreferences.getInstance();
               await prefs.setBool('isLoggedIn', false);
@@ -71,7 +71,6 @@ class _TutorDashboardState extends State<TutorDashboard> {
               await prefs.remove('user_role');
               await StorageService.clearTokenAndRole();
               await StorageService.clear();
-
               if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Logged out successfully')),
@@ -80,6 +79,11 @@ class _TutorDashboardState extends State<TutorDashboard> {
                 context,
                 MaterialPageRoute(builder: (context) => const SplashScreen()),
                 (route) => false,
+              );
+            } else {
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Navigating to $label')),
               );
             }
           }),

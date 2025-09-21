@@ -1,56 +1,151 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
+import 'package:urbantutorsapp/controllers/coins_controller.dart';
+import 'package:urbantutorsapp/controllers/pay_course_controller.dart';
+import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/controllers/tutor_leads_controller.dart';
+import 'package:urbantutorsapp/models/tutor_lead.dart';
+import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
+import 'package:urbantutorsapp/theme/theme_constants.dart';
 
-class LeadDetailPage extends StatelessWidget {
-  final Map<String, String> enquiry;
+class LeadDetailPage extends StatefulWidget {
+  final TutorLead enquiry;
   const LeadDetailPage({super.key, required this.enquiry});
 
-  // Access controller (use existing instance if already put)
+  @override
+  State<LeadDetailPage> createState() => _LeadDetailPageState();
+}
+
+class _LeadDetailPageState extends State<LeadDetailPage> {
+  late final CoinsController _c;
+  late final ProfileUpdateController _p;
+
+  // Guarded init (avoids Get.find crash if not registered)
+  late final PayCourseController _payCourseController =
+      Get.isRegistered<PayCourseController>()
+          ? Get.find<PayCourseController>()
+          : Get.put(PayCourseController());
+
+  @override
+  void initState() {
+    super.initState();
+
+    _c = Get.isRegistered<CoinsController>()
+        ? Get.find<CoinsController>()
+        : Get.put(CoinsController());
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _c.refreshAll();
+    });
+
+    _p = Get.isRegistered<ProfileUpdateController>()
+        ? Get.find<ProfileUpdateController>()
+        : Get.put(ProfileUpdateController());
+    _p.fetchProfileForStudent();
+
+    // Debug (optional)
+    // for (var course in _payCourseController.courses) {
+    //   // ignore: avoid_print
+    //   print(course.toJson());
+    // }
+  }
+
   TutorLeadsController get _leads => Get.isRegistered<TutorLeadsController>()
       ? Get.find<TutorLeadsController>()
       : Get.put(TutorLeadsController());
 
-  // ----- helpers to read flexible keys -----
+  num _toNum(dynamic v) {
+    if (v == null) return 0;
+    if (v is num) return v;
+    return num.tryParse(v.toString()) ?? 0;
+  }
+
+  String _initial(String? name) {
+    final n = (name ?? '').trim();
+    if (n.isEmpty) return 'S';
+    return n.characters.first.toUpperCase();
+  }
+
+  String _firstName(String? name) {
+    final n = (name ?? '').trim();
+    if (n.isEmpty) return 'Student';
+    final parts = n.split(RegExp(r'\s+'));
+    return parts.first;
+  }
+
+  // ---------- Flexible map reader for mixed payloads ----------
   String _val(List<String> keys, [String fallback = '']) {
-    for (final k in keys) {
-      final v = enquiry[k];
-      if (v != null && v.trim().isNotEmpty) return v.trim();
+    try {
+      // Try map first (some APIs send different keys)
+      final raw = widget.enquiry.toMap();
+      // Normalize to string map
+      final m = raw.map((k, v) =>
+          MapEntry(k.toString(), v == null ? '' : v.toString().trim()));
+      for (final k in keys) {
+        final v = m[k] ?? m[k.toLowerCase()] ?? m[k.toUpperCase()];
+        if (v != null && v.isNotEmpty && v != 'null') return v;
+      }
+    } catch (_) {
+      // fall back to typed fields on TutorLead
+      for (final k in keys) {
+        switch (k) {
+          case 'id':
+          case 'lead':
+            return widget.enquiry.id.toString();
+          case 'student_name':
+          case 'name':
+            return widget.enquiry.studentName;
+          case 'class':
+          case 'course_name':
+            return widget.enquiry.courseName;
+          case 'subject':
+          case 'subject_name':
+            return widget.enquiry.subjectName;
+          case 'state':
+          case 'state_name':
+            return widget.enquiry.state;
+          case 'location':
+          case 'locality':
+            return widget.enquiry.location;
+          case 'price':
+          case 'fee':
+            return widget.enquiry.price.toString();
+          case 'mode':
+            return widget.enquiry.mode;
+        }
+      }
     }
     return fallback;
   }
 
-  // Try to read the "grab record id" (required by decline API)
   String? _grabId() {
-    // common possibilities coming from various payloads
-    final candidates = <String>[
-      'grab_lead_id', 'grab_id', 'grablead_id',
-      'id',
-    ];
-    final got = _val(candidates, '');
+    // if it doesn't exist, return null (decline hidden)
+    final got = _val(['grab_lead_id', 'grab_id', 'grablead_id'], '');
     return got.isEmpty ? null : got;
   }
 
   void _shareLead(BuildContext context) {
     final leadNo = _val(['lead', 'id'], '—');
     final dateTime = _val(['date', 'created_at'], '—');
-    final clazz = _val(['class', 'course_name'], '—');
-    final subject = _val(['subject', 'subject_name'], '—');
-    final state = _val(['state', 'state_name'], '—');
-    final locality = _val(['location', 'locality'], '—');
-    final fee = _val(['fee', 'price'], '—');
-    final mode = _val(['mode'], '—');
+    final clazz = _val(['class', 'course_name'], widget.enquiry.courseName);
+    final subject =
+        _val(['subject', 'subject_name'], widget.enquiry.subjectName);
+    final state = _val(['state', 'state_name'], widget.enquiry.state);
+    final locality = _val(['location', 'locality'], widget.enquiry.location);
+    final fee = _val(['fee', 'price'], widget.enquiry.price.toString());
+    final mode = _val(['mode'], widget.enquiry.mode);
     final gender = _val(['tutor_gender', 'type_of_teacher'], 'Any');
     final note = _val(['remarks', 'remark', 'note'], '—');
     final coins = _val(['coins', 'coins_needed'], '—');
     final responded = _val(['responded'], '—');
-    final name = _val(['student_name', 'name'], '—');
-    final phone = _val(['mobile', 'phone'], '—');
+    final name = _val(['student_name', 'name'], widget.enquiry.studentName);
+    final phone = _val(['mobile', 'phone'], '');
 
     final text = '''
 Tuition Lead #$leadNo
@@ -79,78 +174,97 @@ $phone
 
   @override
   Widget build(BuildContext context) {
-    final dateTime = _val(['date', 'created_at'], '—');
-    final leadNo = _val(['lead', 'id'], '—');
-    final grabId = _grabId(); // if null → decline is not available
-  print("Grab ID: $grabId");
-  print ("Enquiry Data: $enquiry");
-  print("Enquiry Keys: ${enquiry.keys.toList()}");
+    final leadNo = _val(['lead', 'id'], widget.enquiry.id.toString());
+    final grabId = _grabId();
+
+    final primary = AppColors.primaryColor;
+    final accent = AppColors.accentColor;
+
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          dateTime,
-          style: const TextStyle(color: Colors.black, fontSize: 16),
-        ),
-        backgroundColor: Colors.white,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share, color: Colors.black),
-            onPressed: () => _shareLead(context),
+        backgroundColor: Colors.transparent,
+        toolbarHeight: 76,
+        titleSpacing: 0,
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+        ),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [primary, accent],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
-        ],
+        ),
+        title: Obx(() {
+          // coins
+          final loadingCoins = _c.loadingCoins.value || _c.loadingMyCoins.value;
+          final wallet = _c.myCoins.value;
+          final balanceNum = _toNum(wallet?.available);
+          final balanceText = balanceNum.toStringAsFixed(0);
+
+          // profile
+          final prof = _p.studentprofileData.value;
+          final name = prof?.studentName?.trim();
+          final displayName = _firstName(name);
+
+          if (loadingCoins && wallet == null && prof == null) {
+            return const SizedBox(
+              height: 24,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+            );
+          }
+          return _Header(
+            primary: primary,
+            accent: accent,
+            initial: _initial(name),
+            greeting: "Nearby Enquiries",
+            name: displayName,
+            balance: balanceText,
+            onCoinTap: () => _shareLead(context), // fixed callback
+          );
+        }),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Lead Number
+            _LeadCard(
+              lead: widget.enquiry,
+              isContacted: false,
+              onContactToggle: () {}, // hook up if needed
+              onReadMore: () {},
+            ),
+
+            SizedBox(
+              height: 16,
+            ),
+
             Row(
               children: [
-                const Text("Lead No: ",
+                const Text("Note : ",
                     style: TextStyle(fontWeight: FontWeight.bold)),
                 Text(
-                  leadNo,
-                  style: const TextStyle(color: Colors.blueAccent),
+                  _val(['remarks', 'remark', 'note'],
+                      'Required Only Professional Tutor.'),
+                  style: const TextStyle(color: Colors.blue),
                 ),
               ],
-            ),
-            const SizedBox(height: 12),
-
-            // Details
-            _buildDetailRow(
-                Icons.book, "Class:", _val(['class', 'course_name'], '—')),
-            _buildDetailRow(Icons.school, "Subject:",
-                _val(['subject', 'subject_name'], '—')),
-            _buildDetailRow(Icons.location_on, "Location:",
-                _val(['state', 'state_name'], '—')),
-            _buildDetailRow(
-                Icons.map, "Locality:", _val(['location', 'locality'], '—')),
-            _buildDetailRow(
-                Icons.attach_money, "Fee:", _val(['fee', 'price'], '—')),
-            _buildDetailRow(Icons.computer, "Mode:", _val(['mode'], '—')),
-            _buildDetailRow(Icons.person, "Tutor Gender:",
-                _val(['tutor_gender', 'type_of_teacher'], 'Any')),
-            const SizedBox(height: 12),
-
-            // Note
-            const Text("Note:", style: TextStyle(fontWeight: FontWeight.bold)),
-            Text(
-              _val(['remarks', 'remark', 'note'],
-                  'Required Only Professional Tutor.'),
-              style: const TextStyle(color: Colors.blue),
             ),
             const SizedBox(height: 12),
 
             _buildDetailRow(Icons.credit_card, "Coins needed:",
                 _val(['coins', 'coins_needed'], '300')),
             _buildDetailRow(
-                Icons.group, "Responded:", _val(['responded'], '0 out of 3')),
+                Icons.group, "Responded:", _val(['responded'], '0/3')),
             const SizedBox(height: 24),
 
             if (grabId != null)
@@ -170,11 +284,10 @@ $phone
                   ),
                   onPressed: () => _promptDecline(context, grabId),
                 ),
-              )
-            else
-              const SizedBox.shrink(),
-            SizedBox(height: grabId != null ? 12 : 0),
-            // Action Buttons (Upgrade + Show contact)
+              ),
+            if (grabId != null) const SizedBox(height: 12),
+
+            // Actions
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -182,9 +295,9 @@ $phone
                   context,
                   "Upgrade Wallet",
                   () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const TutorCoinsScreen())),
+                    context,
+                    MaterialPageRoute(builder: (_) => const TutorCoinsScreen()),
+                  ),
                 ),
                 _buildBlueButton(
                   context,
@@ -194,29 +307,6 @@ $phone
               ],
             ),
             const SizedBox(height: 12),
-
-            // Decline Lead (visible only if we have a grab record id)
-
-            const SizedBox(height: 12),
-
-            // VIP Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                onPressed: () => _showVipSheet(context),
-                child: const Text(
-                  "Connect VIP Tutors Bureau",
-                  style: TextStyle(fontSize: 16, color: Colors.white),
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -230,7 +320,7 @@ $phone
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: Colors.grey),
+          Icon(icon, size: 20, color: AppColors.accentColor),
           const SizedBox(width: 8),
           Expanded(
             child: RichText(
@@ -238,10 +328,13 @@ $phone
                 style: const TextStyle(color: Colors.black, fontSize: 14),
                 children: [
                   TextSpan(
-                      text: "$label ",
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                    text: "$label ",
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   TextSpan(
-                      text: value, style: const TextStyle(color: Colors.blue)),
+                    text: value,
+                    style: const TextStyle(color: Colors.blue),
+                  ),
                 ],
               ),
             ),
@@ -251,7 +344,6 @@ $phone
     );
   }
 
-  /// Primary blue button
   static Widget _buildBlueButton(
       BuildContext context, String text, VoidCallback onTap) {
     return Expanded(
@@ -271,8 +363,6 @@ $phone
       ),
     );
   }
-
-  // -------------------- Decline flow --------------------
 
   void _promptDecline(BuildContext context, String grabLeadId) {
     final txt = TextEditingController();
@@ -300,16 +390,13 @@ $phone
               final remark =
                   txt.text.trim().isEmpty ? 'Lead declined' : txt.text.trim();
               try {
-                // API expects: user_id (from storage inside service), grab_lead_id, remark
-                final ss = await _leads.declineLead(
+                await _leads.declineLead(
                     grabLeadId: grabLeadId, remark: remark);
-                // Refresh both grabbed & declined lists
-                print(ss);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Lead declined successfully')),
                   );
-                  Navigator.pop(context); // go back to list
+                  Navigator.pop(context);
                 }
               } catch (e) {
                 if (context.mounted) {
@@ -325,8 +412,6 @@ $phone
       ),
     );
   }
-
-  // -------------------- Bottom Sheets --------------------
 
   void _showContactSheet(BuildContext context) {
     final name = _val(['student_name', 'name'], 'Student');
@@ -459,12 +544,12 @@ $phone
               text: TextSpan(
                 style: const TextStyle(color: Colors.black87, fontSize: 14),
                 children: [
-                  TextSpan(
-                    text: '$label: ',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  const TextSpan(
+                    text: 'Name: ',
+                    style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   TextSpan(
-                    text: value,
+                    text: label == 'Name' ? value : value,
                     style: const TextStyle(color: Colors.black87),
                   ),
                 ],
@@ -523,4 +608,299 @@ $phone
       }
     }
   }
+}
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.primary,
+    required this.accent,
+    required this.onCoinTap,
+    required this.balance,
+    required this.initial,
+    required this.greeting,
+    required this.name,
+  });
+
+  final Color primary;
+  final Color accent;
+  final VoidCallback onCoinTap;
+  final String balance;
+
+  final String initial;
+  final String greeting;
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                greeting,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Coins chip
+        InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: onCoinTap,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(22),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(.18),
+                    borderRadius: BorderRadius.circular(22),
+                    border:
+                        Border.all(width: 1, color: AppColors.primaryColor)),
+                child: Row(
+                  children: [
+                    const SizedBox(width: 6),
+                    Text(
+                      '${balance == "0" ? "Upgrade" : "$balance coins"} ',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.share, color: Colors.white),
+          onPressed: onCoinTap,
+          tooltip: 'Share lead',
+        ),
+        const SizedBox(width: 8),
+      ],
+    );
+  }
+}
+
+/// —— Lead card + meta rows —— ///
+class _LeadCard extends StatelessWidget {
+  const _LeadCard({
+    required this.lead,
+    required this.isContacted,
+    required this.onContactToggle,
+    required this.onReadMore,
+  });
+
+  final TutorLead lead;
+  final bool isContacted;
+  final VoidCallback? onContactToggle; // null => disabled
+  final VoidCallback onReadMore;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Text(
+                    'Lead No: ',
+                    style: TextStyle(
+                      color: AppColors.textColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    '${lead.id}',
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ],
+              ),
+              Text(
+                lead.createdAt != null ? _fmtDate(lead.createdAt!) : '',
+                style: const TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+
+          _kv(Icons.person, 'Name', lead.studentName),
+          const SizedBox(height: 6),
+          _kv(Icons.school, 'Class', lead.courseName),
+          const SizedBox(height: 4),
+          _kv(Icons.book, 'Subject', lead.subjectName),
+          const SizedBox(height: 4),
+          _kv(Icons.location_on, 'Location', "${lead.location}, ${lead.state}"),
+          const SizedBox(height: 10),
+
+          // Meta rows (like your screenshot)
+          LeadMetaRow(
+            icon: Icons.switch_video,
+            label: 'Mode',
+            value: lead.mode,
+            iconColor: AppColors.accentColor,
+            trailing: null,
+          ),
+          const SizedBox(height: 6),
+          LeadMetaRow(
+            icon: Icons.attach_money,
+            label: 'Fee',
+            value: "₹${lead.price}/Hr",
+            iconColor: AppColors.accentColor,
+            onInlineLinkTap: onContactToggle,
+            trailing: null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Widget _kv(IconData icon, String label, String text) {
+    return Row(
+      children: [
+        Icon(icon, color: AppColors.accentColor, size: 18),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: '$label: ',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700, // bold label
+                    color: AppColors.textColor,
+                  ),
+                ),
+                TextSpan(
+                  text: text,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.textColor,
+                  ),
+                ),
+              ],
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  static String _fmtDate(DateTime d) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    return '${d.day} ${months[d.month - 1]} ${d.year}';
+  }
+}
+
+/// Small row used for Mode/Fee with optional inline "(Read more)" and trailing chip/status
+class LeadMetaRow extends StatelessWidget {
+  const LeadMetaRow({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.iconColor,
+    this.inlineLinkText,
+    this.onInlineLinkTap,
+    this.trailing,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color iconColor;
+  final String? inlineLinkText;
+  final VoidCallback? onInlineLinkTap;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: iconColor, size: 20),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                '$label: ',
+                style: const TextStyle(
+                    fontWeight: FontWeight.w700, color: AppColors.textColor),
+              ),
+              Text(
+                value,
+                style: const TextStyle(color: AppColors.textColor),
+              ),
+              if (inlineLinkText != null) ...[
+                const SizedBox(width: 4),
+                GestureDetector(
+                  onTap: onInlineLinkTap,
+                  child: Text(
+                    inlineLinkText!,
+                    style: const TextStyle(
+                      color: Colors.blue,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (trailing != null) ...[
+          const SizedBox(width: 8),
+          trailing!,
+        ],
+      ],
+    );
+  }
+}
+
+Widget leadCountPill(String text) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: const Color(0xFF2EA1FF),
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: Text(
+      text,
+      style: const TextStyle(color: Colors.white, fontSize: 12),
+    ),
+  );
 }

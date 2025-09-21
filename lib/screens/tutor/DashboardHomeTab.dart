@@ -24,8 +24,13 @@ class DashboardHomeTab extends StatefulWidget {
   State<DashboardHomeTab> createState() => _DashboardHomeTabState();
 }
 
-class _DashboardHomeTabState extends State<DashboardHomeTab> {
-  RangeValues _currentRangeValues = const RangeValues(5, 10);
+class _DashboardHomeTabState extends State<DashboardHomeTab>
+    with SingleTickerProviderStateMixin {
+  // Separate ranges for each tab
+  RangeValues _nearbyRange = const RangeValues(1, 15);
+  RangeValues _allRange = const RangeValues(1, 50);
+
+  late final TabController _tab; // <— to know which tab is active
 
   final TutorLeadsController _leads = Get.put(TutorLeadsController());
   late final CoinsController _coins;
@@ -34,6 +39,9 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
   @override
   void initState() {
     super.initState();
+    _tab = TabController(length: 3, vsync: this)
+      ..addListener(() => setState(() {})); // rebuild when tab changes
+
     _coins = Get.isRegistered<CoinsController>()
         ? Get.find<CoinsController>()
         : Get.put(CoinsController());
@@ -126,7 +134,7 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        endDrawer: TutorDrawer(onMenuTap: _handleMenuTap),
+        endDrawer: Tutordrawer(onMenuTap: _handleMenuTap),
         appBar: AppBar(
           elevation: 3,
           backgroundColor: Colors.transparent,
@@ -281,35 +289,74 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
                   color: Colors.white.withOpacity(0.25),
                 ),
                 TabBar(
+                  controller: _tab, // <—
                   labelColor: Colors.white,
                   unselectedLabelColor: Colors.white70,
                   indicatorColor: Colors.white,
-                  labelPadding: EdgeInsets.zero, // no extra vertical padding
-                  indicatorPadding: EdgeInsets.zero, // keep indicator tight
+                  labelPadding: EdgeInsets.zero,
+                  indicatorPadding: EdgeInsets.zero,
                   tabs: const [
                     Tab(
-                      height: 48, // <— reduce tab height
-                      iconMargin: EdgeInsets.only(bottom: 2),
-                      icon: Icon(Icons.location_on, size: 18),
-                      text: "Nearby Enquiries",
-                    ),
+                        height: 48,
+                        iconMargin: EdgeInsets.only(bottom: 2),
+                        icon: Icon(Icons.location_on, size: 18),
+                        text: "Nearby Enquiries"),
                     Tab(
-                      height: 48,
-                      iconMargin: EdgeInsets.only(bottom: 2),
-                      icon: Icon(Icons.message, size: 18),
-                      text: "All Enquiries",
-                    ),
+                        height: 48,
+                        iconMargin: EdgeInsets.only(bottom: 2),
+                        icon: Icon(Icons.message, size: 18),
+                        text: "All Enquiries"),
                     Tab(
-                      height: 48,
-                      iconMargin: EdgeInsets.only(bottom: 2),
-                      icon: Icon(Icons.check_circle, size: 18),
-                      text: "Connected",
-                    ),
+                        height: 48,
+                        iconMargin: EdgeInsets.only(bottom: 2),
+                        icon: Icon(Icons.check_circle, size: 18),
+                        text: "Connected"),
                   ],
                 ),
               ],
             ),
           ),
+
+          //  PreferredSize(
+          //   preferredSize: const Size.fromHeight(40), // smaller than default
+          //   child: Column(
+          //     mainAxisSize: MainAxisSize.min,
+          //     children: [
+          //       Divider(
+          //         height: 1,
+          //         thickness: 1,
+          //         color: Colors.white.withOpacity(0.25),
+          //       ),
+          //       TabBar(
+          //         labelColor: Colors.white,
+          //         unselectedLabelColor: Colors.white70,
+          //         indicatorColor: Colors.white,
+          //         labelPadding: EdgeInsets.zero, // no extra vertical padding
+          //         indicatorPadding: EdgeInsets.zero, // keep indicator tight
+          //         tabs: const [
+          //           Tab(
+          //             height: 48, // <— reduce tab height
+          //             iconMargin: EdgeInsets.only(bottom: 2),
+          //             icon: Icon(Icons.location_on, size: 18),
+          //             text: "Nearby Enquiries",
+          //           ),
+          //           Tab(
+          //             height: 48,
+          //             iconMargin: EdgeInsets.only(bottom: 2),
+          //             icon: Icon(Icons.message, size: 18),
+          //             text: "All Enquiries",
+          //           ),
+          //           Tab(
+          //             height: 48,
+          //             iconMargin: EdgeInsets.only(bottom: 2),
+          //             icon: Icon(Icons.check_circle, size: 18),
+          //             text: "Connected",
+          //           ),
+          //         ],
+          //       ),
+          //     ],
+          //   ),
+          // ),
           actions: [
             Builder(
               builder: (ctx) => IconButton(
@@ -328,73 +375,138 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
         ),
         body: Column(
           children: [
-            // Range header (no extra padding)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Select Range:',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${_currentRangeValues.start.round()} Km',
-                    style: const TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(width: 6),
-
-                  // Slider (slim track + small thumbs + no overlay circle)
-                  Expanded(
-                    child: SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        trackHeight: 2,
-                        rangeThumbShape: const RoundRangeSliderThumbShape(
-                          enabledThumbRadius: 5,
-                          elevation: 0,
-                          pressedElevation: 0,
+            // ---- Select Range header (varies by tab) ----
+            if (_tab.index == 0) ...[
+              // Nearby: 1 – 15 km
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Select Range:',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${_nearbyRange.start.round()} Km',
+                      style: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          trackHeight: 2,
+                          rangeThumbShape: const RoundRangeSliderThumbShape(
+                            enabledThumbRadius: 5,
+                            elevation: 0,
+                            pressedElevation: 0,
+                          ),
+                          overlayShape:
+                              const RoundSliderOverlayShape(overlayRadius: 0),
+                          overlayColor: Colors.transparent,
+                          activeTrackColor: AppColors.accentColor,
+                          inactiveTrackColor: Colors.grey,
+                          thumbColor: AppColors.accentColor,
                         ),
-                        overlayShape:
-                            const RoundSliderOverlayShape(overlayRadius: 0),
-                        overlayColor: Colors.transparent,
-                        activeTrackColor: AppColors.accentColor,
-                        inactiveTrackColor: Colors.grey,
-                        thumbColor: AppColors.accentColor,
-                      ),
-                      child: RangeSlider(
-                        values: _currentRangeValues,
-                        min: 5,
-                        max: 50,
-                        divisions: 45,
-                        labels: RangeLabels(
-                          '${_currentRangeValues.start.round()} km',
-                          '${_currentRangeValues.end.round()} km',
+                        child: RangeSlider(
+                          values: _nearbyRange,
+                          min: 1,
+                          max: 15,
+                          divisions: 14,
+                          labels: RangeLabels(
+                            '${_nearbyRange.start.round()} km',
+                            '${_nearbyRange.end.round()} km',
+                          ),
+                          onChanged: (v) => setState(() {
+                            _nearbyRange = RangeValues(
+                              v.start.clamp(1.0, 15.0),
+                              v.end.clamp(1.0, 15.0),
+                            );
+                          }),
                         ),
-                        onChanged: (v) => setState(() {
-                          _currentRangeValues = RangeValues(
-                            v.start.clamp(5.0, 50.0),
-                            v.end.clamp(5.0, 50.0),
-                          );
-                        }),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  const Text(
-                    '50 km',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(width: 12),
-                ],
+                    const SizedBox(width: 6),
+                    const Text(
+                      '15 km',
+                      style:
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                ),
               ),
-            ),
-
-            const SizedBox(height: 4),
-
-            // Tabs content (MUST be Expanded)
+            ] else if (_tab.index == 1) ...[
+              // All Enquiries: 1 – 50 km
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Select Range:',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${_allRange.start.round()} Km',
+                      style: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          trackHeight: 2,
+                          rangeThumbShape: const RoundRangeSliderThumbShape(
+                            enabledThumbRadius: 5,
+                            elevation: 0,
+                            pressedElevation: 0,
+                          ),
+                          overlayShape:
+                              const RoundSliderOverlayShape(overlayRadius: 0),
+                          overlayColor: Colors.transparent,
+                          activeTrackColor: AppColors.accentColor,
+                          inactiveTrackColor: Colors.grey,
+                          thumbColor: AppColors.accentColor,
+                        ),
+                        child: RangeSlider(
+                          values: _allRange,
+                          min: 1,
+                          max: 50,
+                          divisions: 49,
+                          labels: RangeLabels(
+                            '${_allRange.start.round()} km',
+                            '${_allRange.end.round()} km',
+                          ),
+                          onChanged: (v) => setState(() {
+                            _allRange = RangeValues(
+                              v.start.clamp(1.0, 50.0),
+                              v.end.clamp(1.0, 50.0),
+                            );
+                          }),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      '50 km',
+                      style:
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                ),
+              ),
+            ] else ...[
+              const SizedBox.shrink(),
+            ],
             Expanded(
               child: Obx(() {
                 if (_leads.isLoading.value && _leads.leads.isEmpty) {
@@ -508,9 +620,7 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> {
       context,
       MaterialPageRoute(
         builder: (_) => LeadDetailPage(
-          enquiry: e.toMap().map(
-                (k, v) => MapEntry(k, v?.toString() ?? ''),
-              ),
+          enquiry: e,
         ),
       ),
     );

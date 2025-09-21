@@ -15,7 +15,6 @@ class CustomTeacherNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final primaryColor = AppColors.primaryColor;
-
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
