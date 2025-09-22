@@ -3,42 +3,84 @@ import 'package:urbantutorsapp/theme/theme_constants.dart';
 
 class TutorChatScreen extends StatelessWidget {
   const TutorChatScreen({super.key});
-
+  final ss = false;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          // _buildAppBar(context),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(12),
+      body: ss == false
+          ? Center(
+              child: Container(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "Get Pro Membership Now, to Enable Features Like Free Chat with Students / Parents, Top View , Visble Contact Number for One Year.",
+                    textAlign: TextAlign.center,
+                    style:
+                        TextStyle(color: AppColors.primaryColor, fontSize: 25),
+                  ),
+                  SizedBox(
+                    height: 16,
+                  ),
+                  Container(
+                    height: 48,
+                    width: 350,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            const Color(0xFF27AE60), // a distinct color
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      icon: const Icon(
+                        Icons.workspace_premium,
+                        size: 24,
+                      ),
+                      label: const Text(
+                        'Get Pro Membership Now ',
+                        style: TextStyle(fontSize: 24),
+                      ),
+                      onPressed: () => {},
+                    ),
+                  ),
+                ],
+              ),
+            ))
+          : Column(
               children: [
-                _chatBubble(
-                  message: "Hello Tutor, I need help with math.",
-                  isSender: false,
-                  time: "5 min ago",
+                // _buildAppBar(context),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.all(12),
+                    children: [
+                      _chatBubble(
+                        message: "Hello Tutor, I need help with math.",
+                        isSender: false,
+                        time: "5 min ago",
+                      ),
+                      _chatBubble(
+                        message: "Sure! Let me help you with that.",
+                        isSender: true,
+                        time: "4 min ago",
+                      ),
+                      _chatBubble(
+                        message: "Can we solve algebra equations?",
+                        isSender: false,
+                        time: "2 min ago",
+                      ),
+                    ],
+                  ),
                 ),
-                _chatBubble(
-                  message: "Sure! Let me help you with that.",
-                  isSender: true,
-                  time: "4 min ago",
-                ),
-                _chatBubble(
-                  message: "Can we solve algebra equations?",
-                  isSender: false,
-                  time: "2 min ago",
+                SafeArea(
+                  minimum: const EdgeInsets.only(bottom: 8),
+                  child: _messageInputField(),
                 ),
               ],
             ),
-          ),
-          SafeArea(
-            minimum: const EdgeInsets.only(bottom: 8),
-            child: _messageInputField(),
-          ),
-        ],
-      ),
     );
   }
 

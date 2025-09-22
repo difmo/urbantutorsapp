@@ -38,13 +38,13 @@ class _TutorDashboardState extends State<TutorDashboard> {
 
   // Bottom nav
   int _currentIndex = 0;
-  final List<Widget> _screens = const [
+  final List<Widget> _screens = [
     DashboardHomeTab(),
     NotesTutor(),
     TutorPyqScreen(),
     TutorCoursesScreen(),
     TutorChatScreen(),
-    TutorSupportScreen(),
+    SupportTutor(),
   ];
 
   @override
