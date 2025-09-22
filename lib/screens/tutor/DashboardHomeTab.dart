@@ -133,401 +133,211 @@ class _DashboardHomeTabState extends State<DashboardHomeTab>
 
     return DefaultTabController(
       length: 3,
-      child: Scaffold(
-        endDrawer: Tutordrawer(onMenuTap: _handleMenuTap),
-        appBar: AppBar(
-          elevation: 3,
-          backgroundColor: Colors.transparent,
-          toolbarHeight: 75,
-          titleSpacing: 0,
-          systemOverlayStyle: const SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: Brightness.light,
-            statusBarBrightness: Brightness.dark,
-          ),
-          flexibleSpace: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [primary, accent],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-          ),
-          title: Obx(() {
-            final loading =
-                _coins.loadingCoins.value || _coins.loadingMyCoins.value;
-            final wallet = _coins.myCoins.value;
-            final balance = _toNum(wallet?.available).toStringAsFixed(0);
-            // profile
-            final prof = _p.studentprofileData.value;
-            final name = prof?.studentName?.trim();
-            final initial = _initial(name);
-            final greet = _greet();
-            final displayName = _firstName(name);
-            if (loading && wallet == null) {
-              return const SizedBox(
-                height: 24,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: CircularProgressIndicator(color: Colors.white),
-                ),
-              );
-            }
-
-            return Row(
-              children: [
-                const SizedBox(width: 8),
-                Container(
+      child: SafeArea(
+        child: Scaffold(
+          body: Column(
+            children: [
+              Container(
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(width: 2, color: AppColors.primaryColor),
                     gradient: LinearGradient(
                       colors: [primary, accent],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                   ),
-                  padding: const EdgeInsets.all(2),
-                  child: const CircleAvatar(
-                    backgroundColor: Colors.transparent,
-                    radius: 20,
-                    child: Text(
-                      'S',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11),
+                  child: PreferredSize(
+                    preferredSize:
+                        const Size.fromHeight(40), // smaller than default
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Divider(
+                          height: 1,
+                          thickness: 1,
+                          color: Colors.white.withOpacity(0.25),
+                        ),
+                        TabBar(
+                          controller: _tab, // <—
+                          labelColor: Colors.white,
+                          unselectedLabelColor: Colors.white70,
+                          indicatorColor: Colors.white,
+                          labelPadding: EdgeInsets.zero,
+                          indicatorPadding: EdgeInsets.zero,
+                          tabs: const [
+                            Tab(
+                                height: 48,
+                                iconMargin: EdgeInsets.only(bottom: 2),
+                                icon: Icon(Icons.location_on, size: 18),
+                                text: "Nearby Enquiries"),
+                            Tab(
+                                height: 48,
+                                iconMargin: EdgeInsets.only(bottom: 2),
+                                icon: Icon(Icons.message, size: 18),
+                                text: "All Enquiries"),
+                            Tab(
+                                height: 48,
+                                iconMargin: EdgeInsets.only(bottom: 2),
+                                icon: Icon(Icons.check_circle, size: 18),
+                                text: "Connected"),
+                          ],
+                        ),
+                      ],
                     ),
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start, // <-- key for left align
+                  )),
+              // ---- Select Range header (varies by tab) ----
+              if (_tab.index == 0) ...[
+                // Nearby: 1 – 15 km
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
+                      const SizedBox(width: 12),
                       const Text(
-                        'Welcome,',
+                        'Select Range:',
                         style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontSize: 12,
-                        ),
+                            fontWeight: FontWeight.w600, fontSize: 16),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(width: 6),
                       Text(
-                        displayName, // from your state
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        '${_nearbyRange.start.round()} Km',
                         style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontSize: 16,
+                            fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            trackHeight: 2,
+                            rangeThumbShape: const RoundRangeSliderThumbShape(
+                              enabledThumbRadius: 5,
+                              elevation: 0,
+                              pressedElevation: 0,
+                            ),
+                            overlayShape:
+                                const RoundSliderOverlayShape(overlayRadius: 0),
+                            overlayColor: Colors.transparent,
+                            activeTrackColor: AppColors.accentColor,
+                            inactiveTrackColor: Colors.grey,
+                            thumbColor: AppColors.accentColor,
+                          ),
+                          child: RangeSlider(
+                            values: _nearbyRange,
+                            min: 1,
+                            max: 15,
+                            divisions: 14,
+                            labels: RangeLabels(
+                              '${_nearbyRange.start.round()} km',
+                              '${_nearbyRange.end.round()} km',
+                            ),
+                            onChanged: (v) => setState(() {
+                              _nearbyRange = RangeValues(
+                                v.start.clamp(1.0, 15.0),
+                                v.end.clamp(1.0, 15.0),
+                              );
+                            }),
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 6),
+                      const Text(
+                        '15 km',
+                        style: TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 12),
                     ],
                   ),
                 ),
-                // Coins chip
-                SizedBox(
-                  height: 8,
-                ),
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const TutorCoinsScreen()),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      margin: EdgeInsets.only(top: 8),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.18),
-                        borderRadius: BorderRadius.circular(20),
-                        border:
-                            Border.all(width: 2, color: AppColors.primaryColor),
+              ] else if (_tab.index == 1) ...[
+                // All Enquiries: 1 – 50 km
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Select Range:',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 16),
                       ),
-                      child: Row(
-                        children: [
-                          const SizedBox(width: 6),
-                          Text(
-                            '${balance == "0" ? "Upgrade" : "coins"} ',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 11,
+                      const SizedBox(width: 6),
+                      Text(
+                        '${_allRange.start.round()} Km',
+                        style: const TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            trackHeight: 2,
+                            rangeThumbShape: const RoundRangeSliderThumbShape(
+                              enabledThumbRadius: 5,
+                              elevation: 0,
+                              pressedElevation: 0,
                             ),
+                            overlayShape:
+                                const RoundSliderOverlayShape(overlayRadius: 0),
+                            overlayColor: Colors.transparent,
+                            activeTrackColor: AppColors.accentColor,
+                            inactiveTrackColor: Colors.grey,
+                            thumbColor: AppColors.accentColor,
                           ),
-                        ],
+                          child: RangeSlider(
+                            values: _allRange,
+                            min: 1,
+                            max: 50,
+                            divisions: 49,
+                            labels: RangeLabels(
+                              '${_allRange.start.round()} km',
+                              '${_allRange.end.round()} km',
+                            ),
+                            onChanged: (v) => setState(() {
+                              _allRange = RangeValues(
+                                v.start.clamp(1.0, 50.0),
+                                v.end.clamp(1.0, 50.0),
+                              );
+                            }),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 6),
+                      const Text(
+                        '50 km',
+                        style: TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
                   ),
                 ),
-                SizedBox(
-                  width: 8,
-                )
+              ] else ...[
+                const SizedBox.shrink(),
               ],
-            );
-          }),
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(40), // smaller than default
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: Colors.white.withOpacity(0.25),
-                ),
-                TabBar(
-                  controller: _tab, // <—
-                  labelColor: Colors.white,
-                  unselectedLabelColor: Colors.white70,
-                  indicatorColor: Colors.white,
-                  labelPadding: EdgeInsets.zero,
-                  indicatorPadding: EdgeInsets.zero,
-                  tabs: const [
-                    Tab(
-                        height: 48,
-                        iconMargin: EdgeInsets.only(bottom: 2),
-                        icon: Icon(Icons.location_on, size: 18),
-                        text: "Nearby Enquiries"),
-                    Tab(
-                        height: 48,
-                        iconMargin: EdgeInsets.only(bottom: 2),
-                        icon: Icon(Icons.message, size: 18),
-                        text: "All Enquiries"),
-                    Tab(
-                        height: 48,
-                        iconMargin: EdgeInsets.only(bottom: 2),
-                        icon: Icon(Icons.check_circle, size: 18),
-                        text: "Connected"),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          //  PreferredSize(
-          //   preferredSize: const Size.fromHeight(40), // smaller than default
-          //   child: Column(
-          //     mainAxisSize: MainAxisSize.min,
-          //     children: [
-          //       Divider(
-          //         height: 1,
-          //         thickness: 1,
-          //         color: Colors.white.withOpacity(0.25),
-          //       ),
-          //       TabBar(
-          //         labelColor: Colors.white,
-          //         unselectedLabelColor: Colors.white70,
-          //         indicatorColor: Colors.white,
-          //         labelPadding: EdgeInsets.zero, // no extra vertical padding
-          //         indicatorPadding: EdgeInsets.zero, // keep indicator tight
-          //         tabs: const [
-          //           Tab(
-          //             height: 48, // <— reduce tab height
-          //             iconMargin: EdgeInsets.only(bottom: 2),
-          //             icon: Icon(Icons.location_on, size: 18),
-          //             text: "Nearby Enquiries",
-          //           ),
-          //           Tab(
-          //             height: 48,
-          //             iconMargin: EdgeInsets.only(bottom: 2),
-          //             icon: Icon(Icons.message, size: 18),
-          //             text: "All Enquiries",
-          //           ),
-          //           Tab(
-          //             height: 48,
-          //             iconMargin: EdgeInsets.only(bottom: 2),
-          //             icon: Icon(Icons.check_circle, size: 18),
-          //             text: "Connected",
-          //           ),
-          //         ],
-          //       ),
-          //     ],
-          //   ),
-          // ),
-          actions: [
-            Builder(
-              builder: (ctx) => IconButton(
-                icon: const Icon(
-                  Icons.menu,
-                  color: Colors.white,
-                  size: 45,
-                ),
-                onPressed: () => Scaffold.maybeOf(ctx)?.openEndDrawer(),
-              ),
-            ),
-            SizedBox(
-              height: 8,
-            )
-          ],
-        ),
-        body: Column(
-          children: [
-            // ---- Select Range header (varies by tab) ----
-            if (_tab.index == 0) ...[
-              // Nearby: 1 – 15 km
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Select Range:',
-                      style:
-                          TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${_nearbyRange.start.round()} Km',
-                      style: const TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: SliderTheme(
-                        data: SliderTheme.of(context).copyWith(
-                          trackHeight: 2,
-                          rangeThumbShape: const RoundRangeSliderThumbShape(
-                            enabledThumbRadius: 5,
-                            elevation: 0,
-                            pressedElevation: 0,
-                          ),
-                          overlayShape:
-                              const RoundSliderOverlayShape(overlayRadius: 0),
-                          overlayColor: Colors.transparent,
-                          activeTrackColor: AppColors.accentColor,
-                          inactiveTrackColor: Colors.grey,
-                          thumbColor: AppColors.accentColor,
-                        ),
-                        child: RangeSlider(
-                          values: _nearbyRange,
-                          min: 1,
-                          max: 15,
-                          divisions: 14,
-                          labels: RangeLabels(
-                            '${_nearbyRange.start.round()} km',
-                            '${_nearbyRange.end.round()} km',
-                          ),
-                          onChanged: (v) => setState(() {
-                            _nearbyRange = RangeValues(
-                              v.start.clamp(1.0, 15.0),
-                              v.end.clamp(1.0, 15.0),
-                            );
-                          }),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Text(
-                      '15 km',
-                      style:
-                          TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(width: 12),
-                  ],
-                ),
-              ),
-            ] else if (_tab.index == 1) ...[
-              // All Enquiries: 1 – 50 km
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Select Range:',
-                      style:
-                          TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${_allRange.start.round()} Km',
-                      style: const TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: SliderTheme(
-                        data: SliderTheme.of(context).copyWith(
-                          trackHeight: 2,
-                          rangeThumbShape: const RoundRangeSliderThumbShape(
-                            enabledThumbRadius: 5,
-                            elevation: 0,
-                            pressedElevation: 0,
-                          ),
-                          overlayShape:
-                              const RoundSliderOverlayShape(overlayRadius: 0),
-                          overlayColor: Colors.transparent,
-                          activeTrackColor: AppColors.accentColor,
-                          inactiveTrackColor: Colors.grey,
-                          thumbColor: AppColors.accentColor,
-                        ),
-                        child: RangeSlider(
-                          values: _allRange,
-                          min: 1,
-                          max: 50,
-                          divisions: 49,
-                          labels: RangeLabels(
-                            '${_allRange.start.round()} km',
-                            '${_allRange.end.round()} km',
-                          ),
-                          onChanged: (v) => setState(() {
-                            _allRange = RangeValues(
-                              v.start.clamp(1.0, 50.0),
-                              v.end.clamp(1.0, 50.0),
-                            );
-                          }),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Text(
-                      '50 km',
-                      style:
-                          TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(width: 12),
-                  ],
-                ),
-              ),
-            ] else ...[
-              const SizedBox.shrink(),
-            ],
-            Expanded(
-              child: Obx(() {
-                if (_leads.isLoading.value && _leads.leads.isEmpty) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (_leads.error.isNotEmpty && _leads.leads.isEmpty) {
-                  return _ErrorRetry(
-                    message: _leads.error.value,
-                    onRetry: _leads.loadAvailable,
+              Expanded(
+                child: Obx(() {
+                  if (_leads.isLoading.value && _leads.leads.isEmpty) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (_leads.error.isNotEmpty && _leads.leads.isEmpty) {
+                    return _ErrorRetry(
+                      message: _leads.error.value,
+                      onRetry: _leads.loadAvailable,
+                    );
+                  }
+                  return TabBarView(
+                    children: [
+                      _nearbyTab(context),
+                      _enquiryTab(context),
+                      _contactedTab(context),
+                    ],
                   );
-                }
-                return TabBarView(
-                  children: [
-                    _nearbyTab(context),
-                    _enquiryTab(context),
-                    _contactedTab(context),
-                  ],
-                );
-              }),
-            ),
-          ],
+                }),
+              ),
+            ],
+          ),
         ),
       ),
     );

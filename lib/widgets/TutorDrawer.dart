@@ -5,13 +5,15 @@ import 'package:urbantutorsapp/screens/student/childs_screens/history_student.da
 import 'package:urbantutorsapp/screens/student/childs_screens/support_student.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/transactions_student.dart';
 import 'package:urbantutorsapp/screens/tutor/feedback_tutor.dart';
+import 'package:urbantutorsapp/screens/tutor/course_tutor.dart';
+import 'package:urbantutorsapp/screens/tutor/notification_tutor.dart';
+import 'package:urbantutorsapp/screens/tutor/support_tutor.dart';
+import 'package:urbantutorsapp/screens/tutor/transactions_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_profile.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
-import 'package:urbantutorsapp/screens/student/childs_screens/feedback_student.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/notification_student.dart';
-import 'package:urbantutorsapp/screens/student/childs_screens/student_profile.dart';
 import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import '../theme/theme_constants.dart';
@@ -323,37 +325,43 @@ class _StudentDrawerState extends State<Tutordrawer> {
               ),
 
               _drawerItem(
+                Icons.card_membership,
+                'Get Pro Membership',
+                onTap: () => Get.to(() => const CourseTutor()),
+              ),
+              _drawerItem(
+                Icons.transcribe_sharp,
+                'Transactions',
+                onTap: () => Get.to(() => const TransactionsTutor()),
+              ),
+
+              _drawerItem(
+                Icons.notifications,
+                'Notifications',
+                onTap: () => Get.to(() => const NotificationTutor()),
+              ),
+
+              _drawerItem(
                 Icons.feedback,
                 'Feedback',
                 onTap: () => Get.to(() => const FeedbackTutor()),
               ),
               _drawerItem(
-                Icons.notifications,
-                'Notifications',
-                onTap: () => Get.to(() => const NotificationStudent()),
-              ),
-              _drawerItem(
-                Icons.transcribe_sharp,
-                'Transactions',
-                onTap: () => Get.to(() => const TransactionsStudent()),
+                Icons.history,
+                'My Courses',
+                onTap: () => Get.to(() => const CourseTutor()),
               ),
 
-              _drawerItem(
-                Icons.history,
-                'History',
-                onTap: () => Get.to(() => const HistoryStudent()),
-              ),
+              // _drawerItem(
+              //   Icons.history,
+              //   'Sell Courses',
+              //   onTap: () => Get.to(() => const CourseTutor()),
+              // ),
 
               _drawerItem(
                 Icons.share,
                 'Share app',
                 onTap: _shareApp,
-              ),
-              // ===== Menu items =====
-              _drawerItem(
-                Icons.description,
-                'Term and Conditions',
-                onTap: () => {_openTerms()},
               ),
 
               _drawerItem(
@@ -371,8 +379,15 @@ class _StudentDrawerState extends State<Tutordrawer> {
               _drawerItem(
                 Icons.notifications,
                 'Get Support',
-                onTap: () => Get.to(() => const SupportStudent()),
+                onTap: () => Get.to(() => const SupportTutor()),
               ),
+              // ===== Menu items =====
+              _drawerItem(
+                Icons.description,
+                'Term and Conditions',
+                onTap: () => {_openTerms()},
+              ),
+
               _drawerItem(
                 Icons.delete_forever,
                 'Delete Account',

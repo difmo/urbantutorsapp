@@ -10,7 +10,7 @@ class TutorSupportScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          _buildAppBar(context),
+          // _buildAppBar(context),
           const SizedBox(height: 20),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20),
@@ -111,7 +111,6 @@ class TutorSupportScreen extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-               
               ],
             ),
           ),

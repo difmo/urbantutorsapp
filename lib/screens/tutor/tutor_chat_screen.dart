@@ -10,7 +10,7 @@ class TutorChatScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          _buildAppBar(context),
+          // _buildAppBar(context),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(12),

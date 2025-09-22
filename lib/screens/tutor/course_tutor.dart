@@ -1,23 +1,27 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
+import 'package:urbantutorsapp/controllers/pay_course_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
+import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/TutorDrawer.dart';
 
-class FeedbackTutor extends StatefulWidget {
-  const FeedbackTutor({super.key});
+class CourseTutor extends StatefulWidget {
+  const CourseTutor({super.key});
+
   @override
-  State<FeedbackTutor> createState() => _FeedbackStudentState();
+  State<CourseTutor> createState() => _NotificationStudentState();
 }
 
-class _FeedbackStudentState extends State<FeedbackTutor> {
+class _NotificationStudentState extends State<CourseTutor> {
   final _formKey = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
@@ -104,7 +108,6 @@ class _FeedbackStudentState extends State<FeedbackTutor> {
     super.dispose();
   }
 
-  
   @override
   Widget build(BuildContext context) {
     final primary = AppColors.primaryColor;
@@ -182,7 +185,7 @@ class _FeedbackStudentState extends State<FeedbackTutor> {
             primary: primary,
             accent: accent,
             initial: (displayName.isEmpty ? 'S' : displayName[0].toUpperCase()),
-            greeting: "FeedBack",
+            greeting: "My Courses",
             name: displayName,
             balance: balanceText,
             onCoinTap: () {
@@ -206,126 +209,9 @@ class _FeedbackStudentState extends State<FeedbackTutor> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                // Row(
-                //   children: [
-                //     Text("Title",textAlign: TextAlign.left,),
-                //   ],
-                // ),
-                //     const SizedBox(height: 8),
-                TextFormField(
-                  controller: _titleCtrl,
-                  style: const TextStyle(color: Colors.black87, fontSize: 16),
-                  decoration: _dec(label: 'Title : ', hint: 'Main heading'),
-                  maxLength: 100,
-                  validator: (v) {
-                    final t = (v ?? '').trim();
-                    if (t.isEmpty) return 'Title is required';
-                    if (t.length < 3) {
-                      return 'Title must be at least 3 characters';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Text("Description :"),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _descCtrl,
-                  style: const TextStyle(color: Colors.black87, fontSize: 16),
-                  decoration: _dec(label: '', hint: 'Write your feedback'),
-                  maxLines: 8,
-
-                  maxLength: 999,
-                  scrollPadding: EdgeInsets.all(0),
-                  textAlignVertical:
-                      TextAlignVertical.top, // 👈 text starts at top
-                  validator: (v) {
-                    final t = (v ?? '').trim();
-                    if (t.isEmpty) return 'Description is required';
-                    if (t.length < 10) return 'Please add a bit more detail';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: AppColors.primaryColor,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: _submitFeedback,
-                    child: const Text(
-                      "Submit",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                )
-              ],
-            ),
-          ),
-        ),
-      ),
+      body: Container(),
     );
   }
-  void _submitFeedback() {
-    if (!_formKey.currentState!.validate()) return;
-
-    // TODO: call your API here with _titleCtrl.text and _descCtrl.text
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Feedback submitted")),
-    );
-    _titleCtrl.clear();
-    _descCtrl.clear();
-  }
-
-  InputDecoration _dec({
-    required String label,
-    String? hint,
-  }) {
-    return InputDecoration(
-      counterText: '',
-      labelText: label,
-      labelStyle: const TextStyle(fontSize: 14, color: Colors.black),
-      hintText: hint,
-      hintStyle: TextStyle(color: Colors.grey.shade500),
-      filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: AppColors.primaryColor, width: 1.5),
-      ),
-    );
-  }
-
 }
 
 class _Header extends StatelessWidget {

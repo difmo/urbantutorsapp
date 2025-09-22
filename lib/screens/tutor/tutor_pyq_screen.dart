@@ -6,7 +6,7 @@ import 'package:urbantutorsapp/screens/student/ChapterDetailsScreen.dart';
 import 'package:urbantutorsapp/utils/app_log.dart';
 
 class TutorPyqScreen extends StatefulWidget {
-  final String ? flags;
+  final String? flags;
   const TutorPyqScreen({super.key, this.flags});
 
   @override
@@ -34,7 +34,6 @@ class _TutorPyqScreenState extends State<TutorPyqScreen> {
   // GetX controllers
   final MasterDataController _md = Get.find<MasterDataController>();
   final NotesController _notesController = Get.put(NotesController());
-
 
   @override
   void dispose() {
@@ -81,11 +80,6 @@ class _TutorPyqScreenState extends State<TutorPyqScreen> {
     const blue = Color(0xFF4A90E2);
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
-      appBar: AppBar(
-        title: Text(widget.flags == "Note" ? 'Notes' : 'PYQ’s'),
-        backgroundColor: blue,
-        elevation: 0,
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Container(
@@ -125,7 +119,8 @@ class _TutorPyqScreenState extends State<TutorPyqScreen> {
                           });
 
                           if (val != null) {
-                            _notesController.fetchClasses(boardId: val, type: widget.flags);
+                            _notesController.fetchClasses(
+                                boardId: val, type: widget.flags);
                           }
                         },
                         validator: (v) => v == null ? 'Required' : null,
@@ -223,7 +218,7 @@ class _TutorPyqScreenState extends State<TutorPyqScreen> {
                                 });
                                 if (val != null) {
                                   _notesController.fetchChapters(
-                                      subjectId: val,type: widget.flags);
+                                      subjectId: val, type: widget.flags);
                                 }
                               },
                         validator: (v) => v == null ? 'Required' : null,
@@ -266,23 +261,20 @@ class _TutorPyqScreenState extends State<TutorPyqScreen> {
                                 AppLog.i('[UI] Chapter changed → $val');
                                 setState(() => chapterId = val);
 
-                                   if (val != null) {
+                                if (val != null) {
                                   _notesController.fetchChapterDetails(
-                                      chapterId: val,
-                                      type: widget.flags);
+                                      chapterId: val, type: widget.flags);
                                 }
 
-                                   Navigator.push(
-                                context,
-                                MaterialPageRoute(
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
                                     builder: (_) => ChapterDetailsScreen(
-                                          chapterId: val!,
-                                        ),
-                                ),
-                              );
+                                      chapterId: val!,
+                                    ),
+                                  ),
+                                );
                               },
-
-                              
                         validator: (v) => v == null ? 'Required' : null,
                       ),
                     );

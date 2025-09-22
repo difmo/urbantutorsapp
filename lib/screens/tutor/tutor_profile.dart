@@ -605,7 +605,7 @@ class _TutorProfileState extends State<TutorProfile> {
                   title: 'Professional:',
                   children: [
                     // Boards (multi)
-                    Container(
+                    SizedBox(
                       width: 600,
                       child: _MultiSelectTile(
                         label: 'Boards you Teach : ',
@@ -656,7 +656,7 @@ class _TutorProfileState extends State<TutorProfile> {
                     const SizedBox(height: 10),
 
                     // Classes (multi)
-                    Container(
+                    SizedBox(
                       width: 600,
                       child: _MultiSelectTile(
                         label: 'Classes you Teach : ',
@@ -709,7 +709,7 @@ class _TutorProfileState extends State<TutorProfile> {
                     const SizedBox(height: 10),
 
                     // Subjects (multi)
-                    Container(
+                    SizedBox(
                       width: 600,
                       child: _MultiSelectTile(
                         label: 'Subjects you Teach : ',

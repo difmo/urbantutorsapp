@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import 'package:urbantutorsapp/controllers/pay_course_controller.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-
 class CoursesScreen extends StatefulWidget {
   const CoursesScreen({super.key});
 
@@ -35,11 +34,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
-      appBar: AppBar(
-        title: const Text('Courses'),
-        backgroundColor: blue,
-        elevation: 0,
-      ),
       body: Obx(() {
         if (_payCourseController.isLoading.value) {
           return const Center(child: CircularProgressIndicator());
@@ -75,81 +69,81 @@ class _CoursesScreenState extends State<CoursesScreen> {
             itemBuilder: (context, i) {
               final item = _payCourseController.courses[i];
               return Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                  item.courseName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF222B45),
-                  ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                  item.description,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    color: Color(0xFF6E7A8A),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                  children: [
-                    _CoinsChip(coins: item.coins),
-                    const Spacer(),
-                    Row(
-                    children: [
-                      const Icon(Icons.star, color: Colors.amber, size: 18),
-                      const SizedBox(width: 4),
-                      Text(
-                      item.rating.toStringAsFixed(1),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF222B45),
-                      ),
-                      ),
-                    ],
-                    ),
-                  ],
-                  ),
-                  const SizedBox(height: 12),
-                  if (item.pdf != null && item.pdf!.isNotEmpty)
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4A90E2),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    icon: const Icon(Icons.picture_as_pdf),
-                    label: const Text('Open PDF'),
-                    onPressed: () => _openPdf(item.pdf!),
-                    ),
-                  )
-                  else
-                  const Text(
-                    'PDF not available',
-                    style: TextStyle(color: Colors.redAccent),
-                  ),
-                ],
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
-              ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.courseName,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF222B45),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        item.description,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: Color(0xFF6E7A8A),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          _CoinsChip(coins: item.coins),
+                          const Spacer(),
+                          Row(
+                            children: [
+                              const Icon(Icons.star,
+                                  color: Colors.amber, size: 18),
+                              const SizedBox(width: 4),
+                              Text(
+                                item.rating.toStringAsFixed(1),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF222B45),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (item.pdf != null && item.pdf!.isNotEmpty)
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4A90E2),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            icon: const Icon(Icons.picture_as_pdf),
+                            label: const Text('Open PDF'),
+                            onPressed: () => _openPdf(item.pdf!),
+                          ),
+                        )
+                      else
+                        const Text(
+                          'PDF not available',
+                          style: TextStyle(color: Colors.redAccent),
+                        ),
+                    ],
+                  ),
+                ),
               );
             },
-            
           ),
         );
       }),
