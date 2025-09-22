@@ -42,7 +42,7 @@ class _TutorDashboardState extends State<TutorDashboard> {
     DashboardHomeTab(),
     NotesTutor(),
     TutorPyqScreen(),
-    CoursesScreen(),
+    TutorCoursesScreen(),
     TutorChatScreen(),
     TutorSupportScreen(),
   ];

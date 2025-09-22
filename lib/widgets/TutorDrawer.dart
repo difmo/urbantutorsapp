@@ -6,6 +6,7 @@ import 'package:urbantutorsapp/screens/student/childs_screens/support_student.da
 import 'package:urbantutorsapp/screens/student/childs_screens/transactions_student.dart';
 import 'package:urbantutorsapp/screens/tutor/feedback_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/course_tutor.dart';
+import 'package:urbantutorsapp/screens/tutor/get_pro_membership.dart';
 import 'package:urbantutorsapp/screens/tutor/notification_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/support_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/transactions_tutor.dart';
@@ -327,7 +328,7 @@ class _StudentDrawerState extends State<Tutordrawer> {
               _drawerItem(
                 Icons.card_membership,
                 'Get Pro Membership',
-                onTap: () => Get.to(() => const CourseTutor()),
+                onTap: () => Get.to(() => GetProMembership()),
               ),
               _drawerItem(
                 Icons.transcribe_sharp,
