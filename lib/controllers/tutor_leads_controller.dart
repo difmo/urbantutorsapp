@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:urbantutorsapp/models/grabbed_lead_model.dart';
+import 'package:urbantutorsapp/models/lead_create_model_response.dart';
 import 'package:urbantutorsapp/models/tutor_lead.dart';
 import 'package:urbantutorsapp/services/leads_view_service.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
@@ -13,6 +14,7 @@ class TutorLeadsController extends GetxController {
 
   // Data
   final leads = <TutorLead>[].obs; // available (leads_vew)
+    final studentLead = <StudentLead>[].obs; // available (leads_vew)
   final grabbedLeads = <GrabLead>[].obs; // grablead_veiw
   final declinedLeads = <TutorLead>[].obs; // grablead_decllin_veiw
 

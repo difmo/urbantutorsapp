@@ -13,6 +13,7 @@ class CustomFAB extends StatelessWidget {
 
     return Container(
       height: 64,
+      margin: EdgeInsets.only(top: 74),
       width: 64,
       decoration: BoxDecoration(
         shape: BoxShape.circle,

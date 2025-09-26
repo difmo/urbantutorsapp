@@ -112,8 +112,8 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                       ),
                     ),
+
                     const SizedBox(height: 32),
-                    // Title
                     TweenAnimationBuilder<Offset>(
                       tween:
                           Tween(begin: const Offset(0, 0.3), end: Offset.zero),
@@ -130,6 +130,7 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                       ),
                     ),
+
                     const SizedBox(height: 16),
                     const Text(
                       'Are you a',
@@ -147,7 +148,7 @@ class WelcomeScreen extends StatelessWidget {
                       children: [
                         _roleButton(
                           context,
-                          'Student / Parents',
+                          'Student / Parent',
                           3,
                           FontAwesomeIcons.userGraduate,
                           Colors.deepPurpleAccent,
@@ -166,7 +167,7 @@ class WelcomeScreen extends StatelessWidget {
                           'Tutors Bureau',
                           5,
                           FontAwesomeIcons.userShield,
-                          primary,
+                          const Color.fromARGB(255, 30, 13, 188),
                         ),
                       ],
                     ),
@@ -195,7 +196,7 @@ class WelcomeScreen extends StatelessWidget {
                             TextSpan(
                               text: 'Terms',
                               style: const TextStyle(
-                                color: Color(0xFF1E88E5),
+                                color: Color.fromARGB(255, 9, 23, 181),
                                 decoration: TextDecoration.underline,
                               ),
                               recognizer: TapGestureRecognizer()

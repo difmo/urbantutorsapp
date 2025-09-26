@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -12,10 +11,8 @@ import 'package:urbantutorsapp/models/tutor_lead.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/enquiry_details_page_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/grabbed_lead_details_page.dart';
-import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 
 import 'package:urbantutorsapp/utils/storage_helper.dart';
-import 'package:urbantutorsapp/widgets/TutorDrawer.dart';
 import '../../theme/theme_constants.dart';
 
 class DashboardHomeTab extends StatefulWidget {

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:urbantutorsapp/screens/admin/admin_profile_edit.dart';
 import 'package:urbantutorsapp/screens/controllers/profile_controller.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
@@ -82,7 +81,7 @@ class _AdmitProfileState extends State<AdmitProfile> {
             right: 20,
             child: GestureDetector(
               onTap: () {
-                Get.to(() => const AdminProfileEdit());
+                // Get.to(() => const AdminProfileEdit());
               },
               child: Container(
                 padding: const EdgeInsets.all(8),

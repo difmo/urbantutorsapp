@@ -1,37 +1,35 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:developer' as dev;
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
-import 'package:urbantutorsapp/models/profile_modals/tutor_profile_request_modal.dart';
-import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart'
-    show LeadMetaController;
 import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
 import 'package:urbantutorsapp/screens/tutor/teacher_pending_screen.dart';
+import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
 import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
+import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/app_log.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class AdminProfileForm extends StatefulWidget {
   const AdminProfileForm({super.key});
-
   @override
-  State<AdminProfileForm> createState() => _AdminProfileFormState();
+  State<AdminProfileForm> createState() => _TutorProfileFormScreenState();
 }
 
-class _AdminProfileFormState extends State<AdminProfileForm> {
+class _TutorProfileFormScreenState extends State<AdminProfileForm> {
   // Text controllers
   final TextEditingController nameController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController localityController = TextEditingController();
   final TextEditingController remarkController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
+  final TextEditingController experienceController = TextEditingController();
 
   // External controllers
   final LocationController _locationController = Get.find<LocationController>();
@@ -39,12 +37,6 @@ class _AdminProfileFormState extends State<AdminProfileForm> {
       Get.put(ProfileUpdateController());
   final MasterDataController _masterDataController =
       Get.put(MasterDataController());
-  final LeadMetaController _leadMetaController = Get.put(LeadMetaController());
-
-  // IDs kept as int? for API
-  int? selectedBoardId;
-  int? selectedClassId;
-  int? selectedSubjectId;
 
   String? selectedState;
   String? selectedIdType;
@@ -56,10 +48,10 @@ class _AdminProfileFormState extends State<AdminProfileForm> {
 
   bool _overlayLoading = false;
 
-  // ===== GetX workers we must dispose =====
-  late final Worker _wTutorData; // reacts to profile data changes
-  late final Worker _wRouteOnce; // navigate once when profile first arrives
-  late final Worker _wMasterData; // reflects master data changes
+  // ===== GetX workers we must dispose=====
+  late final Worker _wTutorData;
+  late final Worker _wRouteOnce;
+  late final Worker _wMasterData;
   late final Worker _wIsFetchingClasses;
   late final Worker _wIsFetchingSubjects;
 
@@ -73,7 +65,7 @@ class _AdminProfileFormState extends State<AdminProfileForm> {
       AppLog.i('[UI] studentprofileData changed');
       if (!mounted || student == null) return;
       nameController.text = student.studentName ?? '';
-      emailController.text = student.mobile?.toString() ?? '';
+      phoneController.text = student.mobile?.toString() ?? '';
       priceController.text = student.price?.toString() ?? '';
       localityController.text = student.location ?? '';
       selectedState = student.state;
@@ -95,12 +87,8 @@ class _AdminProfileFormState extends State<AdminProfileForm> {
       //     path: 'https://urbantutors.pro/${student.frontBack}',
       //   );
       // }
-      if (selectedBoardId != null) {
-        _leadMetaController.loadClasses(selectedBoardId!);
-      }
       setState(() {});
     });
-
     // 2) Route ONCE depending on profile_status (do not re-attach on refresh)
     _wRouteOnce = once(profileUpdateController.tutorprofileData, (student) {
       if (!mounted || student == null) return;
@@ -113,26 +101,6 @@ class _AdminProfileFormState extends State<AdminProfileForm> {
       } else if (status == null) {
         Get.offAll(() => const WelcomeScreen());
       }
-    });
-
-    // 3) Keep local UI in sync with master data
-    _wMasterData = ever(_masterDataController.masterData, (val) {
-      final boards = val?.data?.boardLead ?? [];
-      AppLog.i('[UI] masterData updated, boards=${boards.length}');
-      if (!mounted) return;
-      setState(() {});
-    });
-
-    // 4) Loading indicators for classes/subjects
-    _wIsFetchingClasses = ever(_leadMetaController.isFetchingClasses, (val) {
-      AppLog.i('[UI] isFetchingClasses=$val');
-      if (!mounted) return;
-      setState(() {});
-    });
-    _wIsFetchingSubjects = ever(_leadMetaController.isFetchingSubjects, (val) {
-      AppLog.i('[UI] isFetchingSubjects=$val');
-      if (!mounted) return;
-      setState(() {});
     });
   }
 
@@ -171,28 +139,7 @@ class _AdminProfileFormState extends State<AdminProfileForm> {
   }
 
   void _showPickerOptions(String type) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text("Camera"),
-              onTap: () => _pickImage(ImageSource.camera, type),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo),
-              title: const Text("Gallery"),
-              onTap: () => _pickImage(ImageSource.gallery, type),
-            ),
-          ],
-        ),
-      ),
-    );
+    _pickImage(ImageSource.camera, type);
   }
 
   Future<String?> _fileToBase64(XFile? file) async {
@@ -202,6 +149,11 @@ class _AdminProfileFormState extends State<AdminProfileForm> {
   }
 
   void _refreshTutorProfile() {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => TeacherPendingScreen()),
+      (route) => false,
+    );
     // Only triggers fetch; DOES NOT add any listeners.
     profileUpdateController.fetchProfileForTutor();
   }
@@ -213,45 +165,26 @@ class _AdminProfileFormState extends State<AdminProfileForm> {
       return;
     }
 
-    // Basic guards
-    if (selectedBoardId == null) {
-      Get.snackbar('Missing info', 'Please select a Board');
-      return;
-    }
-    if (selectedClassId == null) {
-      Get.snackbar('Missing info', 'Please select a Class');
-      return;
-    }
-    if (selectedSubjectId == null) {
-      Get.snackbar('Missing info', 'Please select a Subject');
-      return;
-    }
-
     if (mounted) setState(() => _overlayLoading = true);
     try {
       final profileBase64 = await _fileToBase64(_profileImage) ?? '';
       final frontBase64 = await _fileToBase64(_frontIdImage) ?? '';
       final backBase64 = await _fileToBase64(_backIdImage) ?? '';
-
-      final request = TutorProfileUpdateRequest(
-        userId: int.parse(userIdStr),
-        boardId: selectedBoardId!,
-        courseId: selectedClassId!,
-        subjectId: selectedSubjectId!,
-        price: double.tryParse(priceController.text.trim())
-                ?.clamp(0, double.infinity) ??
-            0.0,
-        location: localityController.text.trim(),
-        state: selectedState ?? "",
-        idType: selectedIdType ?? "",
-        remark: remarkController.text.trim(),
-        profilePicture: profileBase64,
-        frontId: frontBase64,
-        frontBack: backBase64,
-        mostExperienSubjectsId: 1,
-      );
-
-      await profileUpdateController.updateProfileForTutor(request);
+      final req = {
+        "user_id": userIdStr,
+        "tutorbureau": nameController.text.toString(),
+        "tutorbureau_number": phoneController.text.toString(),
+        "location": "Delhi",
+        "state": "Delhi",
+        "idtype": "Aadhar",
+        "profile_picture": profileBase64,
+        "frontid": frontBase64,
+        "frontback": backBase64,
+        "place_id": "125479359",
+        "latitude": "28.663",
+        "longitude": "97.2255",
+      };
+      await profileUpdateController.updateAdminProfile(req);
       Get.snackbar('Success', 'Profile updated successfully');
       _refreshTutorProfile();
     } catch (e) {
@@ -265,12 +198,42 @@ class _AdminProfileFormState extends State<AdminProfileForm> {
   Widget build(BuildContext context) {
     final boards =
         _masterDataController.masterData.value?.data?.boardLead ?? [];
-
+    final primary = AppColors.primaryColor;
+    final accent = AppColors.accentColor;
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Profile"),
-        backgroundColor: Theme.of(context).primaryColor,
-      ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          toolbarHeight: 76,
+          titleSpacing: 0,
+          systemOverlayStyle: const SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.light,
+            statusBarBrightness: Brightness.dark,
+          ),
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [primary, accent],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          title: _Header(
+            primary: primary,
+            accent: accent,
+            initial: "initial",
+            greeting: "Wallet",
+            name: " displayName",
+            balance: "balanceText",
+            onCoinTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TutorCoinsScreen()),
+              );
+            },
+          )),
       body: Stack(
         children: [
           SafeArea(
@@ -284,16 +247,23 @@ class _AdminProfileFormState extends State<AdminProfileForm> {
                     children: [
                       Stack(
                         children: [
-                          CircleAvatar(
-                            radius: 40,
-                            backgroundImage: _profileImage != null
-                                ? FileImage(File(_profileImage!.path))
-                                : null,
-                            backgroundColor: Colors.grey.shade300,
-                            child: _profileImage == null
-                                ? const Icon(Icons.person,
-                                    size: 50, color: Colors.white)
-                                : null,
+                          Container(
+                            decoration: BoxDecoration(
+                                border: Border.all(
+                                    color: AppColors.primaryColor, width: 2),
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(48))),
+                            child: CircleAvatar(
+                              radius: 40,
+                              backgroundImage: _profileImage != null
+                                  ? FileImage(File(_profileImage!.path))
+                                  : null,
+                              backgroundColor: Colors.grey.shade300,
+                              child: _profileImage == null
+                                  ? const Icon(Icons.person,
+                                      size: 50, color: Colors.white)
+                                  : null,
+                            ),
                           ),
                           Positioned(
                             bottom: 0,
@@ -315,20 +285,23 @@ class _AdminProfileFormState extends State<AdminProfileForm> {
                         child: TextField(
                           controller: nameController,
                           decoration:
-                              const InputDecoration(labelText: "Full Name"),
+                              const InputDecoration(labelText: "Bureau Name"),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-
                   TextField(
-                    controller: emailController,
+                    controller: phoneController,
                     decoration:
-                        const InputDecoration(labelText: "Email / Mobile"),
+                        const InputDecoration(labelText: "Phone Number"),
                   ),
                   const SizedBox(height: 16),
-
+                  TextField(
+                    controller: emailController,
+                    decoration: const InputDecoration(labelText: "Email ID"),
+                  ),
+                  const SizedBox(height: 16),
                   // Locality (Autocomplete fed by server suggestions)
                   Obx(() {
                     final loading = _locationController.isSearching.value;
@@ -417,143 +390,6 @@ class _AdminProfileFormState extends State<AdminProfileForm> {
                   }),
                   const SizedBox(height: 16),
 
-                  // Simple debug readouts
-                  Obx(() => Text(
-                      'Location results: ${_locationController.suggestions.length}',
-                      style:
-                          const TextStyle(fontSize: 12, color: Colors.grey))),
-                  Obx(() => _locationController.error.isNotEmpty
-                      ? Text(
-                          'Location error: ${_locationController.error.value}',
-                          style:
-                              const TextStyle(fontSize: 12, color: Colors.red))
-                      : const SizedBox.shrink()),
-
-                  // Board
-                  Obx(() {
-                    final boardsRx = _masterDataController
-                            .masterData.value?.data?.boardLead ??
-                        [];
-                    dev.log('[UI] Boards count: ${boardsRx.length}',
-                        name: 'StudentProfile');
-
-                    return DropdownButtonFormField<int>(
-                      decoration: InputDecoration(
-                        labelText: "Board",
-                        suffixIcon: Obx(
-                            () => _leadMetaController.isFetchingClasses.value
-                                ? const Padding(
-                                    padding: EdgeInsets.all(12.0),
-                                    child: SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2)),
-                                  )
-                                : const SizedBox.shrink()),
-                      ),
-                      value: selectedBoardId,
-                      items: boardsRx
-                          .map((b) => DropdownMenuItem<int>(
-                                value: b.boardId,
-                                child: Text(b.boardLabel?.toString() ?? ''),
-                              ))
-                          .toList(),
-                      onChanged: (val) {
-                        dev.log('[UI] Board changed → $val',
-                            name: 'StudentProfile');
-                        setState(() {
-                          selectedBoardId = val;
-                          selectedClassId = null;
-                          selectedSubjectId = null;
-                        });
-                        if (val != null) {
-                          _leadMetaController.loadClasses(val);
-                        }
-                      },
-                    );
-                  }),
-
-                  const SizedBox(height: 16),
-
-                  // Class
-                  Obx(() {
-                    final classItems = _leadMetaController.classes;
-                    dev.log('[UI] Classes count: ${classItems.length}',
-                        name: 'StudentProfile');
-
-                    return DropdownButtonFormField<int>(
-                      decoration: InputDecoration(
-                        labelText: "Class",
-                        suffixIcon: _leadMetaController.isFetchingClasses.value
-                            ? const Padding(
-                                padding: EdgeInsets.all(12.0),
-                                child: SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2)),
-                              )
-                            : null,
-                      ),
-                      value: selectedClassId,
-                      items: classItems
-                          .map((c) => DropdownMenuItem(
-                              value: c.classId, child: Text(c.className)))
-                          .toList(),
-                      onChanged: (selectedBoardId == null)
-                          ? null
-                          : (val) {
-                              dev.log('[UI] Class changed → $val',
-                                  name: 'StudentProfile');
-                              setState(() {
-                                selectedClassId = val;
-                                selectedSubjectId = null;
-                              });
-                              if (val != null && selectedBoardId != null) {
-                                _leadMetaController.loadSubjects(
-                                    classId: val, boardId: selectedBoardId!);
-                              }
-                            },
-                    );
-                  }),
-
-                  const SizedBox(height: 16),
-
-                  // Subject
-                  Obx(() {
-                    final subjectItems = _leadMetaController.subjects;
-                    dev.log('[UI] Subjects count: ${subjectItems.length}',
-                        name: 'StudentProfile');
-                    return DropdownButtonFormField<int>(
-                      decoration: InputDecoration(
-                        labelText: "Subject",
-                        suffixIcon: _leadMetaController.isFetchingSubjects.value
-                            ? const Padding(
-                                padding: EdgeInsets.all(12.0),
-                                child: SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2)),
-                              )
-                            : null,
-                      ),
-                      value: selectedSubjectId,
-                      items: subjectItems
-                          .map((s) => DropdownMenuItem(
-                              value: s.subjectId, child: Text(s.subjectName)))
-                          .toList(),
-                      onChanged: (selectedClassId == null ||
-                              selectedBoardId == null)
-                          ? null
-                          : (val) => setState(() => selectedSubjectId = val),
-                    );
-                  }),
-
-                  const SizedBox(height: 16),
-
-                  // State
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(labelText: "State"),
                     value: selectedState,
@@ -595,20 +431,14 @@ class _AdminProfileFormState extends State<AdminProfileForm> {
                   ),
 
                   const SizedBox(height: 16),
-
-                  TextField(
-                    controller: priceController,
-                    decoration:
-                        const InputDecoration(labelText: "Budget (Price)"),
-                    keyboardType: TextInputType.number,
-                  ),
-
-                  const SizedBox(height: 16),
-
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(labelText: "ID Type"),
                     value: selectedIdType,
-                    items: const ["Aadhar", "PAN", "Voter ID"]
+                    items: const [
+                      "Aadhar",
+                      "Voter ID",
+                      "Passport",
+                    ]
                         .map((id) =>
                             DropdownMenuItem(value: id, child: Text(id)))
                         .toList(),
@@ -618,10 +448,13 @@ class _AdminProfileFormState extends State<AdminProfileForm> {
                   const SizedBox(height: 16),
 
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _idUploadBox("Front ID", _frontIdImage, "front"),
-                      _idUploadBox("Back ID", _backIdImage, "back"),
+                      Expanded(
+                          child:
+                              _idUploadBox("Front ID", _frontIdImage, "front")),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: _idUploadBox("Back ID", _backIdImage, "back")),
                     ],
                   ),
 
@@ -650,26 +483,89 @@ class _AdminProfileFormState extends State<AdminProfileForm> {
 
   Widget _idUploadBox(String label, XFile? file, String type) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         GestureDetector(
           onTap: () => _showPickerOptions(type),
           child: Container(
-            width: 120,
-            height: 100,
+            width: double.infinity, // fill the Expanded width
+            height: 120,
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey),
+              border: Border.all(color: Colors.grey.shade400),
               borderRadius: BorderRadius.circular(8),
             ),
+            clipBehavior: Clip.antiAlias,
             child: file == null
-                ? const Icon(Icons.image, size: 40, color: Colors.black54)
-                : ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.file(File(file.path), fit: BoxFit.cover),
-                  ),
+                ? const Center(
+                    child: Icon(Icons.image, size: 40, color: Colors.black54),
+                  )
+                : Image.file(File(file.path), fit: BoxFit.cover),
           ),
         ),
+      ],
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.primary,
+    required this.accent,
+    required this.onCoinTap,
+    required this.balance,
+    required this.initial, // ⬅️ NEW
+    required this.greeting, // ⬅️ NEW
+    required this.name, // ⬅️ NEW
+  });
+
+  final Color primary;
+  final Color accent;
+  final VoidCallback onCoinTap;
+  final String balance;
+
+  final String initial;
+  final String greeting;
+  final String name;
+  String _capFirst(String s) {
+    final t = s.trim();
+    if (t.isEmpty) return '';
+    return t[0].toUpperCase() + t.substring(1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 8,
+        ),
+        // Avatar with gradient ring
+
+        const SizedBox(width: 12),
+
+        // Greeting + name (ellipsized)
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Profile",
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Coins chip
+        const SizedBox(width: 8),
       ],
     );
   }

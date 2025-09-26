@@ -24,7 +24,7 @@ class TutorChatScreen extends StatelessWidget {
                   SizedBox(
                     height: 16,
                   ),
-                  Container(
+                  SizedBox(
                     height: 48,
                     width: 350,
                     child: ElevatedButton.icon(

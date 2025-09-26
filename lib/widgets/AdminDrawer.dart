@@ -1,402 +1,393 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:urbantutorsapp/screens/admin/admin_tutor_page.dart';
-import 'package:urbantutorsapp/screens/admin/amount_option_admin.dart';
-import 'package:urbantutorsapp/screens/admin/notification_admin.dart';
-import 'package:urbantutorsapp/screens/admin/parents_student_admin.dart';
-import 'package:urbantutorsapp/screens/admin/transaction_admin.dart';
-import 'package:urbantutorsapp/screens/admin/wallet_hits_admin.dart';
-import 'package:urbantutorsapp/utils/storage_helper.dart';
+import 'package:urbantutorsapp/screens/admin/admin_profile_screen.dart';
+import 'package:urbantutorsapp/screens/student/childs_screens/history_student.dart';
+import 'package:urbantutorsapp/screens/student/childs_screens/support_student.dart';
+import 'package:urbantutorsapp/screens/student/childs_screens/transactions_student.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:urbantutorsapp/screens/admin/admit_profile.dart';
-import 'package:urbantutorsapp/screens/admin/class_list_admin.dart';
-import 'package:urbantutorsapp/screens/admin/feedback_admin.dart';
-import 'package:urbantutorsapp/screens/admin/support_agent.dart';
-import 'package:urbantutorsapp/screens/admin/term_conditions_admin.dart';
+import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
+import 'package:urbantutorsapp/screens/student/childs_screens/feedback_student.dart';
+import 'package:urbantutorsapp/screens/student/childs_screens/notification_student.dart';
+import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 import '../theme/theme_constants.dart';
 
-class AdminDrawer extends StatelessWidget {
+class Admindrawer extends StatefulWidget {
   final Function(String label) onMenuTap;
-
-  const AdminDrawer({super.key, required this.onMenuTap});
+  const Admindrawer({super.key, required this.onMenuTap});
 
   @override
-  Widget build(BuildContext context) {
-    return Drawer(
-      backgroundColor: Colors.white,
-      child: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              // Profile Header
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                child: Row(
-                  children: [
-                    Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        const CircleAvatar(
-                          radius: 32,
-                          backgroundImage:
-                              AssetImage('assets/icons/profile.jpg'),
-                          backgroundColor: Colors.transparent,
-                        ),
-                        Positioned(
-                          bottom: -2,
-                          right: -2,
-                          child: GestureDetector(
-                            onTap: () {
-                              Get.to(() => const AdmitProfile());
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(5),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 3,
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.edit,
-                                size: 16,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Nikhil Kumar',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primaryColor,
-                            ),
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            'nikhil@email.com',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.black54,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
+  State<Admindrawer> createState() => _StudentDrawerState();
+}
 
-              // Drawer Items
-              _drawerItem(
-                Icons.people_alt,
-                'Tutors',
-                onTap: () {
-                  Get.to(() => AdminTutorPage());
-                },
-              ),
-              _drawerItem(
-                Icons.person,
-                'Parents / Students',
-                onTap: () {
-                  Get.to(() => ParentsStudentAdmin());
-                },
-              ),
-              _drawerItem(
-                Icons.balance,
-                'Transaction',
-                onTap: () {
-                  Get.to(() => TransactionAdmin());
-                },
-              ),
-              _drawerItem(
-                Icons.account_balance_wallet,
-                'Wallet Hits',
-                onTap: () {
-                  Get.to(() => WalletHitsPage());
-                },
-              ),
-              _drawerItem(
-                Icons.attach_money,
-                'Amount Options',
-                onTap: () {
-                  Get.to(() => AmountOptionsScreen());
-                },
-              ),
+class _StudentDrawerState extends State<Admindrawer> {
+  String selectedLabel = 'Term and Conditions';
+  // Reuse if already registered
+  final ProfileUpdateController _profile =
+      Get.isRegistered<ProfileUpdateController>()
+          ? Get.find<ProfileUpdateController>()
+          : Get.put(ProfileUpdateController());
 
-              _drawerItem(
-                Icons.notifications_active,
-                'Send Notification',
-                onTap: () {
-                  showNotificationBottomSheet(context);
-                },
-              ),
-
-              _drawerItem(
-                Icons.notifications_none,
-                'Notification History',
-                onTap: () {
-                  Get.to(() => const NotificationPage());
-                },
-              ),
-
-              _drawerItem(
-                Icons.language,
-                'Connected Websites & Apps',
-                onTap: () async {
-                  await _launchURL('https://www.urbantutors.pro/');
-                },
-              ),
-
-              _drawerItem(
-                Icons.feedback,
-                'Feedbacks',
-                onTap: () {
-                  Get.to(() => const FeedbackScreen());
-                },
-              ),
-              _drawerItem(
-                Icons.contact_phone,
-                'Add Contact',
-                onTap: () {
-                  Get.to(() => const SupportAgentsScreen());
-                },
-              ),
-
-              ExpansionTile(
-                leading: const Icon(Icons.view_list),
-                title: const Text(
-                  'Dynamic Dropdown',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-                ),
-                children: [
-                  _drawerItem(Icons.group, 'Class List', isSubItem: true,
-                      onTap: () {
-                    Get.to(() => const ClassListAdmin());
-                  }),
-                  _drawerItem(Icons.home, 'Board List', isSubItem: true),
-                  _drawerItem(Icons.book, 'Subject List', isSubItem: true),
-                ],
-              ),
-
-              _drawerItem(Icons.description, 'Terms & Conditions', onTap: () {
-                Get.to(() => const TermsAndConditionsScreen());
-              }),
-
-              _drawerItem(Icons.share, 'Share', onTap: () {
-                Share.share(
-                  'Check out this amazing app: https://play.google.com/store/apps/details?id=com.urbantutors.app',
-                );
-              }),
-
-              GestureDetector(
-                onTap: () => StorageService.clear(),
-                child: _drawerItem(Icons.logout, 'Logout', color: Colors.red),
-              )
-            ],
-          ),
-        ),
-      ),
-    );
+  @override
+  void initState() {
+    super.initState();
+    // Ensure profile is present
+    if (_profile.studentprofileData.value == null) {
+      _profile.fetchProfileForStudent();
+    }
   }
 
-  static Future<void> _launchURL(String url) async {
-    final Uri uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      debugPrint('Could not launch $url');
-      throw 'Could not launch $url';
-    }
+  String _capFirst(String s) {
+    final t = s.trim();
+    if (t.isEmpty) return '';
+    return t[0].toUpperCase() + t.substring(1);
+  }
+
+  void handleTap(String label, {VoidCallback? onTap}) {
+    setState(() => selectedLabel = label);
+    Navigator.pop(context); // close drawer first
+    onTap?.call();
+  }
+
+  String _firstName(String? name) {
+    final n = (name ?? '').trim();
+    if (n.isEmpty) return 'Student';
+    final parts = n.split(RegExp(r'\s+'));
+    return parts.first;
   }
 
   Widget _drawerItem(
     IconData icon,
     String label, {
     Color? color,
-    bool isActive = false,
-    bool isSubItem = false,
     VoidCallback? onTap,
   }) {
-    final Color background =
-        isActive ? AppColors.primaryColor.withOpacity(0.08) : Colors.white;
-    final Color iconColor = color ?? Colors.grey.shade800;
-
+    final bool isSelected = selectedLabel == label;
     return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: isSubItem ? 32 : 12,
-        vertical: 4,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
       child: Container(
         decoration: BoxDecoration(
-          color: background,
+          color: isSelected
+              ? AppColors.primaryColor.withOpacity(0.08)
+              : Colors.white,
           borderRadius: BorderRadius.circular(12),
         ),
         child: ListTile(
-          leading: Icon(icon, color: iconColor, size: isSubItem ? 20 : null),
+          leading: Icon(icon, color: color ?? Colors.grey.shade800),
           title: Text(
             label,
             style: TextStyle(
               fontSize: 15,
-              color: iconColor,
+              color: color ?? Colors.black87,
               fontWeight: FontWeight.w500,
             ),
           ),
-          onTap: onTap ?? () => onMenuTap(label),
+          onTap: () => handleTap(label, onTap: onTap),
         ),
       ),
     );
   }
-}
 
-// 🔻 Notification Bottom Sheet Function
-void showNotificationBottomSheet(BuildContext context) {
-  final TextEditingController titleController = TextEditingController();
-  final TextEditingController messageController = TextEditingController();
+  void _shareApp() {
+    const playStoreLink =
+        'https://play.google.com/store/apps/details?id=pro.urbantutors.app&pcampaignid=web_share';
+    Share.share('Check out Urban Tutors App: $playStoreLink');
+  }
 
-  final RxString selectedRole = 'Teacher'.obs;
-  final RxString selectedState = 'All'.obs;
-
-  final List<String> roles = ['Teacher', 'Student'];
-  final List<String> states = [
-    'All',
-    'Delhi',
-    'Maharashtra',
-    'UP',
-    'Karnataka'
-  ];
-
-  showModalBottomSheet(
-    backgroundColor: Colors.white,
-    context: context,
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (_) {
-      return SafeArea(
-        child: Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 16,
-            right: 16,
-            top: 50,
+  void _showDeleteDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Account'),
+        content: const Text('Are you sure you want to delete your account?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.primaryColor,
+            ),
+            child: const Text('CANCEL'),
           ),
-          child: Wrap(
-            spacing: 23,
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // TODO: call delete endpoint if you have it
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.primaryColor,
+            ),
+            child: const Text('CONFIRM'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helpers
+  String _str(dynamic v, {String fallback = ''}) {
+    final s = (v?.toString() ?? '').trim();
+    return s.isEmpty ? fallback : s;
+  }
+
+  String _initialFrom(String? name) {
+    final s = (name ?? '').trim();
+    if (s.isEmpty) return 'U';
+    // simple & safe for Latin; adjust if you need complex scripts
+    return s[0].toUpperCase();
+  }
+
+  Future<void> _openTerms() async {
+    final Uri url = Uri.parse('https://urbantutors.pro/privacy-policy');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open Terms & Conditions')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final primaryColor = AppColors.primaryColor;
+    return Drawer(
+      backgroundColor: Colors.white,
+      child: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
             children: [
-              const Center(
-                child: Text(
-                  'Send Notification',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+              Obx(() {
+                final loading = _profile.isLoading.value &&
+                    _profile.studentprofileData.value == null;
+                final p = _profile.studentprofileData.value;
+
+                if (loading) {
+                  // Simple skeleton
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 20),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  width: 2, color: AppColors.accentColor)),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                height: 16,
+                                width: 140,
+                                color: Colors.grey.shade200,
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                height: 14,
+                                width: 100,
+                                color: Colors.grey.shade200,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final name = _str(p?.studentName, fallback: 'User');
+                final mobile = _str(p?.mobile, fallback: '');
+                final course = _str(p?.courseName, fallback: '');
+                final profileId =
+                    _str(p?.profileId, fallback: ''); // if present in model
+                final displayName = _firstName(name);
+
+                return Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.shade200,
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      )
+                    ],
                   ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              // Role Dropdown
-              Obx(() => DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(
-                      labelText: 'Select Role',
-                      border: OutlineInputBorder(),
-                    ),
-                    value: selectedRole.value,
-                    items: roles.map((role) {
-                      return DropdownMenuItem(value: role, child: Text(role));
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) selectedRole.value = value;
-                    },
-                  )),
+                  child: Row(
+                    children: [
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    width: 2, color: AppColors.primaryColor)),
+                            child: CircleAvatar(
+                              radius: 30,
+                              backgroundColor: primaryColor.withOpacity(0.12),
+                              child: Text(
+                                _initialFrom(name),
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  color: Colors.black87,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _capFirst(displayName),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                if (profileId.isNotEmpty) ...[
+                                  Flexible(
+                                    child: Text(
+                                      profileId,
+                                      style: const TextStyle(
+                                          fontSize: 13, color: Colors.black54),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ] else if (profileId.isNotEmpty) ...[
+                                  const Icon(Icons.badge,
+                                      size: 14, color: Colors.black54),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      profileId,
+                                      style: const TextStyle(
+                                          fontSize: 13, color: Colors.black54),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            if (mobile.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                mobile,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.black54,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
 
-              SizedBox(
-                height: 16,
-              ),
-              // State Dropdown
-              Obx(() => DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(
-                      labelText: 'Select State',
-                      border: OutlineInputBorder(),
-                    ),
-                    value: selectedState.value,
-                    items: states.map((state) {
-                      return DropdownMenuItem(value: state, child: Text(state));
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) selectedState.value = value;
-                    },
-                  )),
               const SizedBox(height: 12),
 
-              TextField(
-                controller: titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Title',
-                  border: OutlineInputBorder(),
-                ),
+              _drawerItem(
+                Icons.description,
+                'Profile',
+                onTap: () => Get.to(() => AdminProfileScreen()),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: messageController,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Message',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryColor,
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-                onPressed: () {
-                  final title = titleController.text.trim();
-                  final message = messageController.text.trim();
 
-                  if (title.isNotEmpty && message.isNotEmpty) {
-                    Navigator.pop(context);
-                    Get.snackbar(
-                      'Success',
-                      'Notification sent!',
-                      backgroundColor: Colors.green.shade100,
-                      snackPosition: SnackPosition.BOTTOM,
-                    );
-                    // TODO: Add your API call here
+              _drawerItem(
+                Icons.feedback,
+                'Feedback',
+                onTap: () => Get.to(() => const FeedbackStudent()),
+              ),
+              _drawerItem(
+                Icons.notifications,
+                'Notifications',
+                onTap: () => Get.to(() => const NotificationStudent()),
+              ),
+              _drawerItem(
+                Icons.transcribe_sharp,
+                'Transactions',
+                onTap: () => Get.to(() => const TransactionsStudent()),
+              ),
+
+              _drawerItem(
+                Icons.history,
+                'History',
+                onTap: () => Get.to(() => const HistoryStudent()),
+              ),
+
+              _drawerItem(
+                Icons.share,
+                'Share app',
+                onTap: _shareApp,
+              ),
+              // ===== Menu items =====
+              _drawerItem(
+                Icons.description,
+                'Term and Conditions',
+                onTap: () => {_openTerms()},
+              ),
+
+              _drawerItem(
+                Icons.language,
+                'Go to Website',
+                onTap: () async {
+                  final Uri url = Uri.parse('https://www.urbantutors.pro/');
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
                   } else {
-                    Get.snackbar(
-                      'Error',
-                      'Please enter both title and message',
-                      backgroundColor: Colors.red.shade100,
-                      snackPosition: SnackPosition.BOTTOM,
-                    );
+                    Get.snackbar('Error', 'Could not launch $url');
                   }
                 },
-                child: const Text('Send Notification'),
               ),
-              const SizedBox(height: 16),
+              _drawerItem(
+                Icons.notifications,
+                'Get Support',
+                onTap: () => Get.to(() => const SupportStudent()),
+              ),
+              _drawerItem(
+                Icons.delete_forever,
+                'Delete Account',
+                onTap: () => _showDeleteDialog(context),
+              ),
+              _drawerItem(
+                Icons.logout,
+                'Logout',
+                color: Colors.red,
+                onTap: () async {
+                  await StorageService.clearTokenAndRole();
+                  await StorageService.clear();
+                  Get.offAll(() => const WelcomeScreen());
+                },
+              ),
             ],
           ),
         ),
-      );
-    },
-  );
+      ),
+    );
+  }
 }

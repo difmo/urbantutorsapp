@@ -2,7 +2,6 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
@@ -10,7 +9,6 @@ import 'package:urbantutorsapp/controllers/pay_course_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/models/pay_course_models.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
-import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/StudentDrawer.dart';

@@ -1,25 +1,111 @@
 // lib/screens/tutor/create_lead_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:urbantutorsapp/controllers/coins_controller.dart';
 
 import 'package:urbantutorsapp/controllers/lead_create_controller.dart';
+import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/models/lead__model.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
+import 'package:urbantutorsapp/screens/splash_screen.dart';
+import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/models/lead_create_model_request.dart';
+import 'package:urbantutorsapp/widgets/AdminDrawer%20copy.dart';
 
 class CreateLeadScreen extends StatefulWidget {
-  final StudentLead? lead; // <-- if not null, we're editing
-  const CreateLeadScreen({super.key, this.lead});
+  final StudentLead? lead;
+  final bool? repost; // <-- if not null, we're editing
+  final bool? edit;
+  const CreateLeadScreen({super.key, this.lead, this.repost, this.edit});
 
   @override
   State<CreateLeadScreen> createState() => _CreateLeadScreenState();
 }
 
 class _CreateLeadScreenState extends State<CreateLeadScreen> {
+  late final CoinsController _c;
+  late final ProfileUpdateController _p;
+  bool get _isEditing => widget.lead != null && widget.edit!;
+  bool get _isRepost => widget.lead != null && widget.repost!;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  // --- lead/user meta ---
+  String? leadStatus; // "1" → active/requested, anything else → no request yet
+  String? userName;
+  String? userPhone;
+  bool get hasActiveLead => leadStatus == "1";
+  Future<void> _loadUserMeta() async {
+    try {
+      final s = await StorageService.getUserLeadStatus(); // returns "0"/"1"?
+      final n = await StorageService.getUserName();
+      final p = await StorageService.getUserPhoneNumber();
+      if (!mounted) return;
+      setState(() {
+        leadStatus = s ?? "0";
+        userName = n ?? "";
+        userPhone = p ?? "";
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        leadStatus = "0";
+        userName = "";
+        userPhone = "";
+      });
+    }
+  }
+
+  // Safe number formatter
+  num _toNum(dynamic v) {
+    if (v == null) return 0;
+    if (v is num) return v;
+    return num.tryParse(v.toString()) ?? 0;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _c = Get.isRegistered<CoinsController>()
+        ? Get.find<CoinsController>()
+        : Get.put(CoinsController());
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _c.refreshAll();
+    });
+
+    _p = Get.isRegistered<ProfileUpdateController>()
+        ? Get.find<ProfileUpdateController>()
+        : Get.put(ProfileUpdateController());
+    _p.fetchProfileForStudent();
+
+    _loadUserMeta();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (_md.masterData.value == null) {
+        await _md.fetchMasterData();
+      }
+      await _hydrateFromLeadIfEditing();
+    });
+  }
+
+  String _initial(String? name) {
+    final n = (name ?? '').trim();
+    if (n.isEmpty) return 'S';
+    return n.characters.first.toUpperCase();
+  }
+
+  String _firstName(String? name) {
+    final n = (name ?? '').trim();
+    if (n.isEmpty) return 'Student';
+    final parts = n.split(RegExp(r'\s+'));
+    return parts.first;
+  }
+
   final _formKey = GlobalKey<FormState>();
 
   // Controllers (use existing instances if registered)
@@ -27,18 +113,15 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
       Get.isRegistered<LeadCreateController>()
           ? Get.find<LeadCreateController>()
           : Get.put(LeadCreateController());
-  final MasterDataController _md =
-      Get.isRegistered<MasterDataController>()
-          ? Get.find<MasterDataController>()
-          : Get.put(MasterDataController());
-  final LeadMetaController _lead =
-      Get.isRegistered<LeadMetaController>()
-          ? Get.find<LeadMetaController>()
-          : Get.put(LeadMetaController());
-  final LocationController _loc =
-      Get.isRegistered<LocationController>()
-          ? Get.find<LocationController>()
-          : Get.put(LocationController());
+  final MasterDataController _md = Get.isRegistered<MasterDataController>()
+      ? Get.find<MasterDataController>()
+      : Get.put(MasterDataController());
+  final LeadMetaController _lead = Get.isRegistered<LeadMetaController>()
+      ? Get.find<LeadMetaController>()
+      : Get.put(LeadMetaController());
+  final LocationController _loc = Get.isRegistered<LocationController>()
+      ? Get.find<LocationController>()
+      : Get.put(LocationController());
 
   // Text fields
   final nameCtrl = TextEditingController();
@@ -48,13 +131,13 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
   final feeCtrl = TextEditingController();
   final coinsCtrl = TextEditingController();
   final remarksCtrl = TextEditingController();
-  final maxHitsCtrl = TextEditingController();
 
   // Dropdown values
   int? boardId;
   int? classId;
   int? subjectId;
   String? tutorGender;
+  String? maxHits;
   String? teachingMode;
   String? selectedState;
   String? selectedSupportAgent;
@@ -62,29 +145,43 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
   bool _submitting = false;
 
   static const _modes = <String>['Online', 'Offline', 'Hybrid'];
-  static const _genders = <String>['Male', 'Female', 'Any'];
+  static const _genders = <String>['Male', 'Female', 'Other'];
+  static const _maxHitsList = <String>['1', '2', '3'];
   static const _states = <String>[
-    "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana",
-    "Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur",
-    "Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu",
-    "Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Delhi"
+    "Andhra Pradesh",
+    "Arunachal Pradesh",
+    "Assam",
+    "Bihar",
+    "Chhattisgarh",
+    "Goa",
+    "Gujarat",
+    "Haryana",
+    "Himachal Pradesh",
+    "Jharkhand",
+    "Karnataka",
+    "Kerala",
+    "Madhya Pradesh",
+    "Maharashtra",
+    "Manipur",
+    "Meghalaya",
+    "Mizoram",
+    "Nagaland",
+    "Odisha",
+    "Punjab",
+    "Rajasthan",
+    "Sikkim",
+    "Tamil Nadu",
+    "Telangana",
+    "Tripura",
+    "Uttar Pradesh",
+    "Uttarakhand",
+    "West Bengal",
+    "Delhi"
   ];
   final List<Map<String, String>> _supportAgents = const [
     {'name': 'Raj', 'number': '+91 9123456780'},
     {'name': 'Neha', 'number': '+91 95826 99555'},
   ];
-
-  @override
-  void initState() {
-    super.initState();
-    // Ensure master data is present, then hydrate form from lead (if editing).
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (_md.masterData.value == null) {
-        await _md.fetchMasterData();
-      }
-      await _hydrateFromLeadIfEditing();
-    });
-  }
 
   @override
   void dispose() {
@@ -95,12 +192,10 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
     feeCtrl.dispose();
     coinsCtrl.dispose();
     remarksCtrl.dispose();
-    maxHitsCtrl.dispose();
     super.dispose();
   }
 
   // ---------- Helpers for prefill ----------
-
   String _norm(String? s) => (s ?? '').trim().toLowerCase();
 
   T? _firstWhereOrNull<T>(Iterable<T> it, bool Function(T) test) {
@@ -114,61 +209,74 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
     final l = widget.lead;
     if (l == null) return;
 
-    // 1) Simple text fields
-    nameCtrl.text     = l.studentName ?? '';
-    phoneCtrl.text    = (l.mobile ?? '').toString();
-    localityCtrl.text = l.location ?? '';
-    remarksCtrl.text  = l.remark ?? '';
-    coinsCtrl.text    = (l.price ?? '').toString();
-    // If you get timing / fee in your model, prefill here:
-    // timingCtrl.text = l.timing ?? '';
-    // feeCtrl.text    = l.fee ?? '';
-    selectedState  = l.state;
-    teachingMode   = l.mode; // "Online" / "Offline" / "Hybrid"
-    // Some payloads use "type_of_teacher" — your model likely mapped to camelCase:
-    // fallback to 'Any' if empty
-    final g = (l.typeOfTeacher?.trim().isNotEmpty ?? false) ? l.typeOfTeacher!.trim() : 'Any';
-    tutorGender = _genders.contains(g) ? g : 'Any';
+    // ---- Simple text fields ----
+    nameCtrl.text = (l.studentName ?? '').trim();
+    phoneCtrl.text = (l.mobile ?? '').toString().trim();
+    localityCtrl.text = (l.location ?? '').trim();
+    remarksCtrl.text = (l.remark ?? '').trim();
 
-    setState(() {});
+    // If your payload distinguishes between "fee" and "coins", map accordingly.
+    // Here: price = hourly fee, coins = coins needed (fallbacks covered).
+    final feeStr = (l.price == null)
+        ? ''
+        : (l.price is num
+            ? (l.price as num).toStringAsFixed(0)
+            : l.price.toString());
+    final coinsStr = (l.coins.toString().trim().isEmpty)
+        ? '300' // sensible default for old leads without coins
+        : l.coins.toString().trim();
 
-    // 2) Resolve Board → Class → Subject by **name**, then set their ids.
+    feeCtrl.text = feeStr;
+    coinsCtrl.text = coinsStr;
+
+    // ---- Selects (mode, state, max hits, gender if you use it) ----
+    teachingMode = (l.mode ?? '').trim().isEmpty ? null : l.mode.trim();
+    selectedState = (l.state ?? '').trim().isEmpty ? null : l.state.trim();
+
+    // Max hits (lead_count) → your Dropdown needs a string like "1","2","3"
+    final leadCountStr = (l.leadCount == null) ? '' : l.leadCount.toString();
+    maxHits =
+        _maxHitsList.contains(leadCountStr) ? leadCountStr : _maxHitsList.first;
+
+    // If you add a Tutor Gender dropdown later:
+    // final g = (l.typeOfTeacher ?? l.tutorGender ?? '').trim();
+    // tutorGender = g.isEmpty ? null : g;
+
+    setState(() {}); // reflect the simple fields immediately
+
+    // ---- Resolve Board → Class → Subject by NAME, then set their ids ----
     final boards = _md.masterData.value?.data?.boardLead ?? [];
+    String norm(String? s) => (s ?? '').trim().toLowerCase();
 
-    final boardMatch = _firstWhereOrNull(
-      boards,
-      (b) => _norm(b.boardLabel?.toString()) == _norm(l.boardName),
+    final boardMatch = boards.firstWhereOrNull(
+      (b) => norm(b.boardLabel?.toString()) == norm(l.boardName),
     );
 
     if (boardMatch != null) {
       boardId = boardMatch.boardId;
-      setState(() {});
-      await _lead.loadClasses(boardId!);
+      setState(() {}); // show the board instantly
+      await _lead.loadClasses(boardId!); // load classes for selected board
 
-      final classMatch = _firstWhereOrNull(
-        _lead.classes,
-        (c) => _norm(c.className) == _norm(l.courseName),
+      final classMatch = _lead.classes.firstWhereOrNull(
+        (c) => norm(c.className) == norm(l.courseName),
       );
-
       if (classMatch != null) {
         classId = classMatch.classId;
         setState(() {});
         await _lead.loadSubjects(classId: classId!, boardId: boardId!);
 
-        final subjectMatch = _firstWhereOrNull(
-          _lead.subjects,
-          (s) => _norm(s.subjectName) == _norm(l.subjectName),
+        final subjectMatch = _lead.subjects.firstWhereOrNull(
+          (s) => norm(s.subjectName) == norm(l.subjectName),
         );
-
         if (subjectMatch != null) {
           subjectId = subjectMatch.subjectId;
-          setState(() {});
         }
       }
     }
-  }
 
-  // ---------- UI helpers ----------
+    setState(() {}); // final refresh after async loads
+  }
+// ---------- UI helpers ----------
 
   InputDecoration _dec(String label) => InputDecoration(
         labelText: label,
@@ -221,27 +329,24 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
       fee: feeCtrl.text.trim(),
       userId: userId,
       tutorGender: tutorGender ?? 'Any',
-      maxHits: maxHitsCtrl.text.trim(),
+      maxHits: maxHits!,
       supportAgent: selectedSupportAgent ?? '',
-      // IMPORTANT: pass leadId when editing so backend updates the same lead
-      leadId: widget.lead?.id?.toString() ?? '',
+      leadId: _isEditing ? (widget.lead!.id.toString() ?? '') : '',
     );
-
 
     if (_submitting) return;
     setState(() => _submitting = true);
 
     try {
-      await _leadCreate.createOrUpdateLead(req);
+      final res = await _leadCreate.createOrUpdateLead(req);
+      print(res);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(widget.lead == null
-              ? 'Lead submitted successfully'
-              : 'Lead updated successfully'),
+          content: Text(res),
         ),
       );
-      Navigator.pop(context, true);
+      // Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -252,16 +357,106 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
     }
   }
 
-  // ---------- Build ----------
-
   @override
   Widget build(BuildContext context) {
     final primary = AppColors.primaryColor;
+    final accent = AppColors.accentColor;
 
     return Scaffold(
+      backgroundColor: Colors.white,
+      key: _scaffoldKey,
+      extendBodyBehindAppBar: true,
+      endDrawer: AdminDrawer(onMenuTap: (label) async {
+        if (label == 'Logout') {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isLoggedIn', false);
+          await prefs.remove('user_name');
+          await prefs.remove('user_phone');
+          await prefs.remove('user_role');
+          await StorageService.clearTokenAndRole();
+          await StorageService.clear();
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Logged out successfully')),
+          );
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const SplashScreen()),
+            (route) => false,
+          );
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Navigating to $label')),
+          );
+        }
+      }),
       appBar: AppBar(
-        backgroundColor: primary,
-        title: Text(widget.lead == null ? 'Create New Lead' : 'Edit Lead'),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        toolbarHeight: 76,
+        titleSpacing: 0,
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+        ),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [primary, accent],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        title: Obx(() {
+          final loadingCoins = _c.loadingCoins.value || _c.loadingMyCoins.value;
+          final wallet = _c.myCoins.value;
+          final balanceNum = _toNum(wallet?.available);
+          final balanceText = balanceNum.toStringAsFixed(0);
+
+          final prof = _p.studentprofileData.value;
+          final name = prof?.studentName?.trim() ?? '';
+          final displayName =
+              name.isEmpty ? 'Student' : name.split(RegExp(r'\s+')).first;
+
+          if (loadingCoins && wallet == null && prof == null) {
+            return const SizedBox(
+              height: 24,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+            );
+          }
+          return _Header(
+            primary: primary,
+            accent: accent,
+            initial: (displayName.isEmpty ? 'S' : displayName[0].toUpperCase()),
+            greeting: "Transactions",
+            name: displayName,
+            balance: balanceText,
+            onCoinTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TutorCoinsScreen()),
+              );
+            },
+          );
+        }),
+        actions: [
+          Builder(
+            builder: (ctx) => IconButton(
+              icon: const Icon(
+                Icons.menu,
+                color: Colors.white,
+                size: 45,
+              ),
+              onPressed: () => Scaffold.maybeOf(ctx)?.openEndDrawer(),
+            ),
+          ),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -270,7 +465,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
             key: _formKey,
             child: Column(
               children: [
-                _sectionTitle('Student Details'),
+                _sectionTitle('Student Details : '),
 
                 TextFormField(
                   controller: nameCtrl,
@@ -356,8 +551,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                           child: ConstrainedBox(
                             constraints: BoxConstraints(
                               maxHeight: 280,
-                              maxWidth:
-                                  MediaQuery.of(context).size.width - 32,
+                              maxWidth: MediaQuery.of(context).size.width - 32,
                             ),
                             child: ListView.separated(
                               padding: EdgeInsets.zero,
@@ -378,12 +572,11 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                 }),
                 const SizedBox(height: 24),
 
-                _sectionTitle('Lead Info'),
+                _sectionTitle('Lead Info : '),
 
                 // BOARD
                 Obx(() {
-                  final boards =
-                      _md.masterData.value?.data?.boardLead ?? [];
+                  final boards = _md.masterData.value?.data?.boardLead ?? [];
                   return DropdownButtonFormField<int>(
                     isExpanded: true,
                     value: boardId,
@@ -423,7 +616,8 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                               child: SizedBox(
                                 width: 18,
                                 height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               ),
                             )
                           : null,
@@ -465,7 +659,8 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                               child: SizedBox(
                                 width: 18,
                                 height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               ),
                             )
                           : null,
@@ -482,19 +677,8 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                     validator: (v) => v == null ? 'Required' : null,
                   );
                 }),
-                const SizedBox(height: 16),
 
-                DropdownButtonFormField<String>(
-                  isExpanded: true,
-                  value: tutorGender,
-                  decoration: _dec('Tutor Gender'),
-                  items: _genders
-                      .map((g) => DropdownMenuItem(value: g, child: Text(g)))
-                      .toList(),
-                  onChanged: (v) => setState(() => tutorGender = v),
-                ),
                 const SizedBox(height: 16),
-
                 DropdownButtonFormField<String>(
                   isExpanded: true,
                   value: teachingMode,
@@ -518,22 +702,28 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                   validator: (v) => v == null ? 'Required' : null,
                 ),
                 const SizedBox(height: 16),
-
-                TextFormField(
-                  controller: maxHitsCtrl,
+                DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  value: maxHits,
                   decoration: _dec('Max Hits'),
-                  keyboardType: TextInputType.number,
+                  items: _maxHitsList
+                      .map((max) => DropdownMenuItem(
+                          value: max,
+                          child: Row(
+                            children: [
+                              Text(
+                                max,
+                                textAlign: TextAlign.end,
+                                style: TextStyle(color: AppColors.primaryColor),
+                              ),
+                            ],
+                          )))
+                      .toList(),
+                  onChanged: (v) => setState(() => maxHits = v),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+                _sectionTitle('Session Info : '),
 
-                _sectionTitle('Class & Subject'),
-                const SizedBox(height: 24),
-
-                _sectionTitle('Session Info'),
-                TextFormField(
-                  controller: timingCtrl,
-                  decoration: _dec('Preferred Timing'),
-                ),
                 const SizedBox(height: 16),
 
                 TextFormField(
@@ -547,30 +737,38 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                   controller: coinsCtrl,
                   decoration: _dec('Required Coins'),
                   keyboardType: TextInputType.number,
+                  // Optional: hide the character counter if you set maxLength
+                  // buildCounter: (_, {required currentLength, required isFocused, required maxLength}) => null,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly, // only 0-9
+                    LengthLimitingTextInputFormatter(3), // up to 3 digits
+                    RangeIntFormatter(
+                        min: 1, max: 300), // clamp to 1–300 while typing
+                  ],
+                  validator: (v) {
+                    final n = int.tryParse((v ?? '').trim());
+                    if (n == null || n < 1 || n > 300) {
+                      return 'Enter a value from 1–300';
+                    }
+                    return null;
+                  },
                 ),
-                const SizedBox(height: 16),
 
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: remarksCtrl,
-                  decoration: _dec('Remarks / Notes'),
-                  maxLines: 3,
+                  textAlign: TextAlign.start, // left-align text
+                  textAlignVertical:
+                      TextAlignVertical.top, // <-- top align vertically
+                  minLines: 3,
+                  maxLines: 4, // or null to grow freely
+                  scrollPadding: EdgeInsets.zero,
+                  decoration: _dec('Any Remark').copyWith(
+                    alignLabelWithHint: true, // label sits at the top
+                  ),
                 ),
+
                 const SizedBox(height: 24),
-
-                _sectionTitle('Select Support Agent'),
-                Column(
-                  children: _supportAgents.map((agent) {
-                    final display = '${agent['name']} - ${agent['number']}';
-                    return RadioListTile<String>(
-                      title: Text(display),
-                      value: agent['number']!,
-                      groupValue: selectedSupportAgent,
-                      onChanged: (v) => setState(() => selectedSupportAgent = v),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 8),
-
                 SafeArea(
                   top: false,
                   child: SizedBox(
@@ -581,9 +779,13 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                         backgroundColor: AppColors.primaryColor,
                         minimumSize: const Size.fromHeight(48),
                       ),
-                      child: Text(_submitting
-                          ? (widget.lead == null ? 'Submitting…' : 'Updating…')
-                          : (widget.lead == null ? 'Submit Lead' : 'Update Lead')),
+                      child: Text(
+                        _submitting
+                            ? (_isEditing ? 'Updating…' : 'Submitting…')
+                            : (_isEditing
+                                ? 'Update Lead'
+                                : (_isRepost ? 'Post Lead' : 'Submit Lead')),
+                      ),
                     ),
                   ),
                 ),
@@ -610,4 +812,99 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
           ],
         ),
       );
+}
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.primary,
+    required this.accent,
+    required this.onCoinTap,
+    required this.balance,
+    required this.initial, // ⬅️ NEW
+    required this.greeting, // ⬅️ NEW
+    required this.name, // ⬅️ NEW
+  });
+
+  final Color primary;
+  final Color accent;
+  final VoidCallback onCoinTap;
+  final String balance;
+
+  final String initial;
+  final String greeting;
+  final String name;
+  String _capFirst(String s) {
+    final t = s.trim();
+    if (t.isEmpty) return '';
+    return t[0].toUpperCase() + t.substring(1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 8,
+        ),
+        // Avatar with gradient ring
+
+        const SizedBox(width: 12),
+
+        // Greeting + name (ellipsized)
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Create New Lead",
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Coins chip
+        const SizedBox(width: 8),
+      ],
+    );
+  }
+}
+
+class RangeIntFormatter extends TextInputFormatter {
+  final int min;
+  final int max;
+  const RangeIntFormatter({required this.min, required this.max});
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final txt = newValue.text;
+    if (txt.isEmpty) return newValue; // allow clearing
+
+    final v = int.tryParse(txt);
+    if (v == null) {
+      return oldValue; // reject non-numeric (shouldn't happen with digitsOnly)
+    }
+
+    int clamped = v;
+    if (clamped < min) clamped = min;
+    if (clamped > max) clamped = max;
+
+    if (clamped.toString() != txt) {
+      final t = clamped.toString();
+      return TextEditingValue(
+        text: t,
+        selection: TextSelection.collapsed(offset: t.length),
+      );
+    }
+    return newValue;
+  }
 }

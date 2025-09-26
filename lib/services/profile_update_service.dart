@@ -113,7 +113,25 @@ class ProfileUpdateService {
     }
   }
 
-    Future<TutorProfileResponse> updateTutorProfile(updateData) async {
+  Future<TutorProfileResponse> updateTutorProfile(updateData) async {
+    print("update profile called for tutor ");
+    try {
+      final response = await ApiService.post(
+        "/teacher_profile_update",
+        updateData,
+      );
+
+      print("✅ Response from updateProfile: ${response.data}");
+
+      return TutorProfileResponse.fromJson(response.data);
+    } catch (e) {
+      print("❌ Error in updateProfile (from ProfileUpdateService):");
+      print(e.toString());
+      rethrow;
+    }
+  }
+
+  Future<TutorProfileResponse> updateAdminProfile(updateData) async {
     print("update profile called for tutor ");
     try {
       final response = await ApiService.post(

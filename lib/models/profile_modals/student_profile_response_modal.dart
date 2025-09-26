@@ -30,10 +30,10 @@ class StudentProfileResponsdModal {
 
 class StudentProfileDataNew {
   final int id;
-  final int ? profile_status;
+  final int? profile_status;
   final String? profileId;
-  final String?profile_picture;
-  final int ?leadStatus;
+  final String? profile_picture;
+  final int? leadStatus;
   final String? studentName;
   final String? mobile;
   final String? totalCoins;
@@ -84,10 +84,10 @@ class StudentProfileDataNew {
       id: json['id'] ?? 0,
       profile_status: json['profile_status'] ?? 0,
       profileId: json['profile_id'],
-      profile_picture:json['profile_picture'],
+      profile_picture: json['profile_picture'],
       leadStatus: json['lead_status'],
-      studentName: json['student_name'],
-      mobile: json['mobile'],
+      studentName: json['student_name'] ?? json['tutorbureau'],
+      mobile: json['mobile'] ?? json['tutorbureau_number'],
       totalCoins: json['total_coins'],
       totalSpentCoins: json['total_spent_coins'],
       totalAvailableCoins: json['total_Available_coins'],
@@ -120,8 +120,8 @@ class StudentProfileDataNew {
       "id": id,
       "profile_status": profile_status,
       "profile_id": profileId,
-      "profile_picture":profile_picture,
-      "lead_status":leadStatus,
+      "profile_picture": profile_picture,
+      "lead_status": leadStatus,
       "student_name": studentName,
       "mobile": mobile,
       "total_coins": totalCoins,

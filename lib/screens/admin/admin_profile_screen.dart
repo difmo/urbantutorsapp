@@ -20,14 +20,14 @@ import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/StudentDrawer.dart';
 
-class TutorProfile extends StatefulWidget {
-  const TutorProfile({super.key});
+class AdminProfileScreen extends StatefulWidget {
+  const AdminProfileScreen({super.key});
 
   @override
-  State<TutorProfile> createState() => _TutorProfileState();
+  State<AdminProfileScreen> createState() => _AdminProfileSecreenState();
 }
 
-class _TutorProfileState extends State<TutorProfile> {
+class _AdminProfileSecreenState extends State<AdminProfileScreen> {
   // Controllers
   final ProfileUpdateController _p = Get.isRegistered<ProfileUpdateController>()
       ? Get.find<ProfileUpdateController>()
@@ -53,20 +53,22 @@ class _TutorProfileState extends State<TutorProfile> {
 
   // Text fields
   final _nameCtrl = TextEditingController();
+  final _agencyNameCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _localityCtrl = TextEditingController();
-  final _expCtrl = TextEditingController(); // NEW: experience years
+  final _expCtrl = TextEditingController(); // optional: experience years
 
   // Single (legacy; still hydrated for compatibility)
   int? _boardId;
   int? _classId;
 
-  // Multi-select state (NEW)
+  // Multi-select state (kept for future use)
   final List<int> _selBoardIds = [];
   final List<int> _selClassIds = [];
   final List<int> _selSubjectIds = [];
 
-  // Mode
+  // Mode / State (kept minimal)
   static const _modes = <String>['Online', 'Offline', 'Any'];
   String? modeVal;
   String? stateVal;
@@ -78,10 +80,15 @@ class _TutorProfileState extends State<TutorProfile> {
     'Karnataka',
     'Tamil Nadu'
   ];
-  // Image picker
+
+  // Image pickers
   final ImagePicker _picker = ImagePicker();
-  XFile? _profileImage;
-  String? _profileImageUrl; // from server
+
+  XFile? _profileImage; // local picked file (profile)
+  String? _profileImageUrl; // remote url (profile)
+
+  XFile? _agencyLogo; // local picked file (agency)
+  String? _agencyLogoUrl; // remote url (agency)
 
   // Misc
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -116,6 +123,8 @@ class _TutorProfileState extends State<TutorProfile> {
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _agencyNameCtrl.dispose();
+    _phoneCtrl.dispose();
     _emailCtrl.dispose();
     _localityCtrl.dispose();
     _expCtrl.dispose();
@@ -136,20 +145,23 @@ class _TutorProfileState extends State<TutorProfile> {
     if (p == null) return;
 
     // Text fields
-    _nameCtrl.text = (p.studentName ?? '').trim();
-    _emailCtrl.text = (p.mobile ?? '').trim();
-    _localityCtrl.text = p.location ?? '';
+    // _nameCtrl.text = (p.studentName ?? p.name ?? '').trim();
+    // _agencyNameCtrl.text = (p.agencyName ?? p.agency ?? '').toString().trim();
+    // _phoneCtrl.text = (p.mobile ?? p.phone ?? '').toString().trim();
+    // _emailCtrl.text = (p.email ?? '').toString().trim();
+    _localityCtrl.text = (p.location ?? '').toString().trim();
+    _expCtrl.text = (p.remark?.toString() ?? '').trim(); // if used as years
 
-    // Image from server
-    _profileImageUrl = _resolveImageUrl(p.profile_picture);
+    // Images from server (adapt keys as per your API model)
+    // _profileImageUrl = _resolveImageUrl(p.profile_picture ?? p.profilePicture);
+    // _agencyLogoUrl = _resolveImageUrl(p.agency_logo ?? p.agencyLogo);
 
-    // Legacy (single) IDs
+    // Legacy IDs
     final nextBoardId =
-        (p.boardId is int) ? p.boardId : int.tryParse(p.boardId ?? '');
+        (p.boardId is int) ? p.boardId : int.tryParse('${p.boardId ?? ''}');
     final nextClassId =
-        (p.courseId is int) ? p.courseId : int.tryParse(p.courseId ?? '');
+        (p.courseId is int) ? p.courseId : int.tryParse('${p.courseId ?? ''}');
 
-    // Load classes for the (first) board, then set class id
     if (nextBoardId != null) {
       await _leadMeta.loadClasses(nextBoardId);
     }
@@ -158,18 +170,13 @@ class _TutorProfileState extends State<TutorProfile> {
       _boardId = nextBoardId;
       _classId = nextClassId;
 
-      // Initialize multi-selects from single values (backward compat)
       _selBoardIds
         ..clear()
         ..addAll(nextBoardId != null ? [nextBoardId] : const []);
       _selClassIds
         ..clear()
         ..addAll(nextClassId != null ? [nextClassId] : const []);
-      _selSubjectIds.clear(); // subjects not present in legacy payload
-
-      // Optional: hydrate experience/mode if present on your profile model
-      // _expCtrl.text = '${p.experienceYears ?? ''}';
-      // modeVal = p.mode; // 'Online' / 'Offline' / 'Any'
+      _selSubjectIds.clear();
     });
   }
 
@@ -178,6 +185,7 @@ class _TutorProfileState extends State<TutorProfile> {
     final bytes = await File(file.path).readAsBytes();
     final ext = file.path.split('.').last.toLowerCase();
     return "data:image/$ext;base64,${base64Encode(bytes)}";
+    // If server expects raw bytes or multipart, adapt here.
   }
 
   num _toNum(dynamic v) {
@@ -186,17 +194,23 @@ class _TutorProfileState extends State<TutorProfile> {
     return num.tryParse(v.toString()) ?? 0;
   }
 
-  // -------------------- Image picker --------------------
+  // -------------------- Image pickers --------------------
 
-  Future<void> _pickImage(ImageSource source) async {
+  Future<void> _pickImage(ImageSource source, {required bool isAgency}) async {
     final picked = await _picker.pickImage(source: source, imageQuality: 80);
     if (picked != null) {
-      setState(() => _profileImage = picked);
+      setState(() {
+        if (isAgency) {
+          _agencyLogo = picked;
+        } else {
+          _profileImage = picked;
+        }
+      });
     }
     if (mounted) Navigator.pop(context);
   }
 
-  void _showPickerOptions() {
+  void _showPickerOptions({required bool isAgency}) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -207,19 +221,27 @@ class _TutorProfileState extends State<TutorProfile> {
             ListTile(
               leading: const Icon(Icons.camera_alt),
               title: const Text("Camera"),
-              onTap: () => _pickImage(ImageSource.camera),
+              onTap: () => _pickImage(ImageSource.camera, isAgency: isAgency),
             ),
             ListTile(
               leading: const Icon(Icons.photo),
               title: const Text("Gallery"),
-              onTap: () => _pickImage(ImageSource.gallery),
+              onTap: () => _pickImage(ImageSource.gallery, isAgency: isAgency),
             ),
-            if (_profileImage != null)
+            if ((isAgency ? _agencyLogo : _profileImage) != null)
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: Colors.red),
                 title: const Text("Remove"),
                 onTap: () {
-                  setState(() => _profileImage = null);
+                  setState(() {
+                    if (isAgency) {
+                      _agencyLogo = null;
+                      _agencyLogoUrl = null;
+                    } else {
+                      _profileImage = null;
+                      _profileImageUrl = null;
+                    }
+                  });
                   Navigator.pop(context);
                 },
               ),
@@ -229,7 +251,8 @@ class _TutorProfileState extends State<TutorProfile> {
     );
   }
 
-  ImageProvider? _avatarProvider() {
+  // Providers
+  ImageProvider? _profileImageProvider() {
     if (_profileImage != null) return FileImage(File(_profileImage!.path));
     if (_profileImageUrl != null && _profileImageUrl!.isNotEmpty) {
       return NetworkImage(_profileImageUrl!);
@@ -237,20 +260,25 @@ class _TutorProfileState extends State<TutorProfile> {
     return null;
   }
 
+  ImageProvider? _agencyLogoProvider() {
+    if (_agencyLogo != null) return FileImage(File(_agencyLogo!.path));
+    if (_agencyLogoUrl != null && _agencyLogoUrl!.isNotEmpty) {
+      return NetworkImage(_agencyLogoUrl!);
+    }
+    return null;
+  }
+
+  // Shortcuts for onEdit
+  void _showProfilePickerOptions() => _showPickerOptions(isAgency: false);
+  void _showAgencyPickerOptions() => _showPickerOptions(isAgency: true);
+
   // -------------------- Save --------------------
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_selBoardIds.isEmpty ||
-        _selClassIds.isEmpty ||
-        _selSubjectIds.isEmpty) {
-      Get.snackbar('Missing info', 'Please select Boards, Classes and Subjects',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.redAccent,
-          colorText: Colors.white);
-      return;
-    }
+    // If you require multi-selects:
+    // if (_selBoardIds.isEmpty || _selClassIds.isEmpty || _selSubjectIds.isEmpty) { ... }
 
     setState(() => _saving = true);
     try {
@@ -265,21 +293,27 @@ class _TutorProfileState extends State<TutorProfile> {
       }
 
       final profileBase64 = await _fileToBase64(_profileImage);
+      final agencyBase64 = await _fileToBase64(_agencyLogo);
       final experienceYears = int.tryParse(_expCtrl.text.trim()) ?? 0;
 
       final request = {
         "user_id": userId,
-        "email": _emailCtrl,
+        "name": _nameCtrl.text.trim(),
+        "agency_name": _agencyNameCtrl.text.trim(),
+        "phone": _phoneCtrl.text.trim(),
+        "email": _emailCtrl.text.trim(),
         "location": _localityCtrl.text.trim(),
-        "state": stateVal,
-        "remark": experienceYears,
-        "profile_picture": profileBase64 ?? '',
+        "state": stateVal ?? '',
+        "remark":
+            experienceYears, // or replace with proper key your API expects
+        "profile_picture": profileBase64 ?? '', // base64 (adapt to your API)
+        "agency_logo": agencyBase64 ?? '', // base64 (adapt to your API)
         "place_id": "ghjghjghjhgj",
         "latitude": "28.663",
         "longitude": "97.2255",
-        "board_id": _selBoardIds,
-        "class_id": _selClassIds,
-        "subject_id": _selSubjectIds
+        "board_id": _selBoardIds, // array
+        "class_id": _selClassIds, // array
+        "subject_id": _selSubjectIds, // array
       };
 
       final ok = await _p.updateTutorProfile(request);
@@ -291,10 +325,17 @@ class _TutorProfileState extends State<TutorProfile> {
 
         await _p.fetchProfileForStudent();
         await _hydrate();
-        setState(() => _profileImage = null);
+        setState(() {
+          _profileImage = null;
+          _agencyLogo = null;
+        });
       }
     } catch (e) {
       debugPrint('Failed $e');
+      Get.snackbar('Error', 'Failed to update profile',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.redAccent,
+          colorText: Colors.white);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -329,19 +370,17 @@ class _TutorProfileState extends State<TutorProfile> {
   }
 
   Widget _sectionCard({required String title, required List<Widget> children}) {
-    return Container(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 8),
-            ...children,
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          ...children,
+        ],
       ),
     );
   }
@@ -368,12 +407,10 @@ class _TutorProfileState extends State<TutorProfile> {
     );
   }
 
-
   List<String> _labelsFor(List<int> selectedIds, List<OptionInt> all) {
     final map = {for (final o in all) o.id: o.label};
     return selectedIds.map((id) => map[id]).whereType<String>().toList();
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -435,7 +472,8 @@ class _TutorProfileState extends State<TutorProfile> {
           final balanceText = balanceNum.toStringAsFixed(0);
 
           final prof = _p.studentprofileData.value;
-          final name = prof?.studentName?.trim() ?? '';
+          final name =
+              prof?.studentName?.trim() ?? prof?.studentName?.trim() ?? '';
           final displayName =
               name.isEmpty ? 'Student' : name.split(RegExp(r'\s+')).first;
 
@@ -518,265 +556,149 @@ class _TutorProfileState extends State<TutorProfile> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 100),
+                // ======= Avatar + Agency Logo =======
                 Center(
                   child: SizedBox(
-                    width: 120,
-                    height: 120,
                     child: Stack(
                       clipBehavior: Clip.none,
                       children: [
-                        Positioned.fill(
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                  color: AppColors.primaryColor, width: 1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: CircleAvatar(
-                              backgroundImage: _avatarProvider(),
-                              backgroundColor: Colors.grey.shade300,
-                              child: _avatarProvider() == null
-                                  ? Text(
-                                      ((prof?.studentName ?? 'U').trim().isEmpty
-                                          ? 'U'
-                                          : prof!.studentName!
-                                              .trim()
-                                              .characters
-                                              .first
-                                              .toUpperCase()),
-                                      style: const TextStyle(
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              // LEFT: Profile image
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _EditableCircle(
+                                      size: 120,
+                                      borderColor: AppColors.primaryColor,
+                                      image: _profileImageProvider(),
+                                      fallbackChild: Text(
+                                        (() {
+                                          final name =
+                                              (prof?.studentName ?? 'U').trim();
+                                          return name.isEmpty
+                                              ? 'U'
+                                              : name.characters.first
+                                                  .toUpperCase();
+                                        })(),
+                                        style: const TextStyle(
                                           fontSize: 28,
                                           fontWeight: FontWeight.w800,
-                                          color: Colors.white),
-                                    )
-                                  : null,
-                            ),
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      onEdit:
+                                          _showProfilePickerOptions, // <- do NOT call (no ())
+                                      showEditBadge: true,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    const Text(
+                                      'Profile ',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              const SizedBox(width: 24),
+
+                              // RIGHT: Agency logo
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _EditableCircle(
+                                      size: 120,
+                                      borderColor: AppColors.primaryColor,
+                                      image: _agencyLogoProvider(),
+                                      fallbackChild: const Icon(
+                                        Icons.apartment_rounded,
+                                        color: Colors.white,
+                                        size: 36,
+                                      ),
+                                      onEdit:
+                                          _showAgencyPickerOptions, // <- do NOT call (no ())
+                                      showEditBadge: true,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    const Text(
+                                      'Agency logo',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        Positioned(
-                          bottom: -6,
-                          right: -6,
-                          child: InkWell(
-                            onTap: _showPickerOptions,
-                            child: CircleAvatar(
-                              radius: 18,
-                              backgroundColor: AppColors.primaryColor,
-                              child: const Icon(Icons.camera_alt,
-                                  size: 16, color: Colors.white),
-                            ),
-                          ),
-                        ),
+                        )
                       ],
                     ),
                   ),
                 ),
 
-                // Basic
+                // ======= Basic =======
                 _sectionCard(
                   title: 'Basic:',
                   children: [
                     _textField('Full Name', _nameCtrl,
                         icon: Icons.person, hint: 'Your name'),
                     _textField(
+                      'Phone Number',
+                      _phoneCtrl,
+                      icon: Icons.call,
+                      hint: 'Phone',
+                      keyboardType: TextInputType.phone,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      validator: (v) =>
+                          (v == null || !RegExp(r'^\d{10}$').hasMatch(v.trim()))
+                              ? 'Enter 10-digit number'
+                              : null,
+                    ),
+                    _textField(
                       'Email',
                       _emailCtrl,
                       icon: Icons.email,
                       hint: 'Email',
                       keyboardType: TextInputType.emailAddress,
+                      validator: (v) {
+                        final s = (v ?? '').trim();
+                        if (s.isEmpty) return 'Required';
+                        final ok = RegExp(
+                                r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+                            .hasMatch(s);
+                        return ok ? null : 'Invalid email';
+                      },
                     ),
                   ],
                 ),
 
-                // Professional (multi-selects + experience)
+                // ======= Professional (example extra field) =======
                 _sectionCard(
                   title: 'Professional:',
                   children: [
-                    // Boards (multi)
-                    SizedBox(
-                      width: 600,
-                      child: _MultiSelectTile(
-                        label: 'Boards you Teach : ',
-                        selectedNames: _labelsFor(
-                          _selBoardIds,
-                          (_master.masterData.value?.data?.boardLead ?? [])
-                              .map((b) => OptionInt(
-                                    (b.boardId is int)
-                                        ? b.boardId!
-                                        : int.tryParse('${b.boardId}') ?? 0,
-                                    b.boardLabel ?? '',
-                                  ))
-                              .toList(),
-                        ),
-                        onTap: () async {
-                          final options =
-                              (_master.masterData.value?.data?.boardLead ?? [])
-                                  .map((b) => OptionInt(
-                                        (b.boardId is int)
-                                            ? b.boardId!
-                                            : int.tryParse('${b.boardId}') ?? 0,
-                                        b.boardLabel ?? '',
-                                      ))
-                                  .toList();
-
-                          final picked = await _showMultiSelect(
-                            context,
-                            title: 'Select Boards : ',
-                            options: options,
-                            initial: _selBoardIds,
-                          );
-                          if (picked != null) {
-                            setState(() {
-                              _selBoardIds
-                                ..clear()
-                                ..addAll(picked);
-                              _selClassIds.clear();
-                              _selSubjectIds.clear();
-                            });
-
-                            if (_selBoardIds.isNotEmpty) {
-                              await _leadMeta.loadClasses(_selBoardIds.first);
-                            }
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Classes (multi)
-                    SizedBox(
-                      width: 600,
-                      child: _MultiSelectTile(
-                        label: 'Classes you Teach : ',
-                        selectedNames: _labelsFor(
-                          _selClassIds,
-                          _leadMeta.classes
-                              .map((c) => OptionInt(c.classId, c.className))
-                              .toList(),
-                        ),
-                        onTap: () async {
-                          if (_selBoardIds.isEmpty) {
-                            Get.snackbar('Select Board',
-                                'Please select at least one Board first',
-                                snackPosition: SnackPosition.BOTTOM);
-                            return;
-                          }
-                          if (_leadMeta.classes.isEmpty) {
-                            await _leadMeta.loadClasses(_selBoardIds.first);
-                          }
-
-                          final options = _leadMeta.classes
-                              .map((c) => OptionInt(c.classId, c.className))
-                              .toList();
-
-                          final picked = await _showMultiSelect(
-                            context,
-                            title: 'Select Classes',
-                            options: options,
-                            initial: _selClassIds,
-                          );
-                          if (picked != null) {
-                            setState(() {
-                              _selClassIds
-                                ..clear()
-                                ..addAll(picked);
-                              _selSubjectIds.clear();
-                            });
-
-                            if (_selBoardIds.isNotEmpty &&
-                                _selClassIds.isNotEmpty) {
-                              await _leadMeta.loadSubjects(
-                                classId: _selClassIds.first,
-                                boardId: _selBoardIds.first,
-                              );
-                            }
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Subjects (multi)
-                    SizedBox(
-                      width: 600,
-                      child: _MultiSelectTile(
-                        label: 'Subjects you Teach : ',
-                        selectedNames: _labelsFor(
-                          _selSubjectIds,
-                          _leadMeta.subjects
-                              .map((s) => OptionInt(
-                                    s.subjectId ?? 0,
-                                    (s.subjectName ?? '').toString(),
-                                  ))
-                              .toList(),
-                        ),
-                        onTap: () async {
-                          if (_selBoardIds.isEmpty || _selClassIds.isEmpty) {
-                            Get.snackbar('Select Class',
-                                'Please select Boards and Classes first',
-                                snackPosition: SnackPosition.BOTTOM);
-                            return;
-                          }
-                          if (_leadMeta.subjects.isEmpty) {
-                            await _leadMeta.loadSubjects(
-                              classId: _selClassIds.first,
-                              boardId: _selBoardIds.first,
-                            );
-                          }
-
-                          final options = _leadMeta.subjects
-                              .map((s) => OptionInt(
-                                    s.subjectId ?? 0,
-                                    (s.subjectName ?? '').toString(),
-                                  ))
-                              .toList();
-
-                          final picked = await _showMultiSelect(
-                            context,
-                            title: 'Select Subjects',
-                            options: options,
-                            initial: _selSubjectIds,
-                          );
-                          if (picked != null) {
-                            setState(() {
-                              _selSubjectIds
-                                ..clear()
-                                ..addAll(picked);
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Experience (years)
                     _textField(
-                      'Experience (years)',
-                      _expCtrl,
-                      icon: Icons.work_outline,
-                      hint: 'e.g. 3',
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      'Agency Name',
+                      _agencyNameCtrl,
+                      icon: Icons.apartment_rounded,
+                      hint: 'Agency / Institute name',
                     ),
+                    _textField('Experience (years)', _expCtrl,
+                        icon: Icons.work_history_rounded,
+                        hint: 'e.g., 3',
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly
+                        ]),
                   ],
                 ),
 
-                // Mode
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
-                  child: DropdownButtonFormField<String>(
-                    isExpanded: true,
-                    value: modeVal,
-                    decoration: _dec('Select Mode', icon: Icons.swap_calls),
-                    items: _modes
-                        .map((m) => DropdownMenuItem(value: m, child: Text(m)))
-                        .toList(),
-                    onChanged: (v) => setState(() => modeVal = v),
-                    validator: (v) => v == null ? 'Required' : null,
-                  ),
-                ),
-
-                // Location
+                // ======= Location =======
                 _sectionCard(
                   title: 'Location:',
                   children: [
@@ -838,9 +760,9 @@ class _TutorProfileState extends State<TutorProfile> {
                   ],
                 ),
 
-                // State
+                // ======= State =======
                 Container(
-                  padding: EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(8),
                   child: _dropdownDec(
                     DropdownButtonFormField<String>(
                       isExpanded: true,
@@ -897,6 +819,76 @@ class _TutorProfileState extends State<TutorProfile> {
         ),
         child: child,
       );
+}
+
+class _EditableCircle extends StatelessWidget {
+  const _EditableCircle({
+    required this.size,
+    required this.borderColor,
+    required this.onEdit,
+    this.image,
+    this.fallbackChild,
+    this.showEditBadge = true,
+  });
+
+  final double size;
+  final Color borderColor;
+  final ImageProvider? image;
+  final Widget? fallbackChild;
+  final VoidCallback onEdit;
+  final bool showEditBadge;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        children: [
+          // Avatar circle with border
+          Positioned.fill(
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: borderColor, width: 1),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                shape: const CircleBorder(),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: onEdit,
+                  child: CircleAvatar(
+                    backgroundImage: image,
+                    backgroundColor: Colors.grey.shade300,
+                    child: image == null ? fallbackChild : null,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (showEditBadge)
+            Positioned(
+              bottom: 4,
+              right: 4,
+              child: InkWell(
+                onTap: onEdit,
+                child: CircleAvatar(
+                  radius: size < 80 ? 10 : 14,
+                  backgroundColor: AppColors.primaryColor,
+                  child: Icon(
+                    Icons.camera_alt,
+                    size: size < 80 ? 10 : 14,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 // -------------------- Header --------------------
@@ -962,7 +954,7 @@ class _Header extends StatelessWidget {
                   children: [
                     const SizedBox(width: 6),
                     Text(
-                      balance == "0" ? "Upgrade" : "$balance coins",
+                      "$balance coins",
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
@@ -981,7 +973,7 @@ class _Header extends StatelessWidget {
   }
 }
 
-// -------------------- Multi-select Helpers --------------------
+// -------------------- Multi-select Helpers (kept for future use) --------------------
 
 class OptionInt {
   final int id;
@@ -1028,7 +1020,7 @@ class _MultiSelectTile extends StatelessWidget {
                 runSpacing: -6,
                 children: selectedNames
                     .map((n) => Container(
-                          margin: EdgeInsets.all(4),
+                          margin: const EdgeInsets.all(4),
                           child: Chip(
                             label: Text(n),
                             materialTapTargetSize:

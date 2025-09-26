@@ -7,21 +7,20 @@ class LeadCreateController extends GetxController {
 
   var isSubmitting = false.obs;
 
-
-  Future<void> createOrUpdateLead(LeadCreateRequest request) async {
+  Future<String> createOrUpdateLead(LeadCreateRequest request) async {
     isSubmitting.value = true;
     print('📤 Submitting Lead with data:');
-      print('name: ${request.name}');
-      print('mobile: ${request.mobile}');
-      print('boardId: ${request.boardId}');
-      print('classId: ${request.classId}');
-      print('subjectId: ${request.subjectId}');
-      print('location: ${request.location}');
-      print('state: ${request.state}');
-      print('mode: ${request.mode}');
-      print('fee: ${request.fee}');
-      print('userId: ${request.userId}');
-      print('leadId: ${request.leadId}');
+    print('name: ${request.name}');
+    print('mobile: ${request.mobile}');
+    print('boardId: ${request.boardId}');
+    print('classId: ${request.classId}');
+    print('subjectId: ${request.subjectId}');
+    print('location: ${request.location}');
+    print('state: ${request.state}');
+    print('mode: ${request.mode}');
+    print('fee: ${request.fee}');
+    print('userId: ${request.userId}');
+    print('leadId: ${request.leadId}');
     try {
       print('request from controller try section');
       print('classId: ${request.classId}');
@@ -38,20 +37,25 @@ class LeadCreateController extends GetxController {
         subjectId: request.subjectId,
         userId: request.userId,
       );
-       print(response);
+      print(response);
       if (response.statusCode == 200 && response.data['success'] == true) {
-        Get.snackbar('Success', response.data['message'] ?? 'Lead created successfully');
+        Get.snackbar(
+            'Success', response.data['message'] ?? 'Lead created successfully');
         print("Lead created successfully:");
         print(response.data);
+        return response.data['message'] ?? 'Lead created successfully';
       } else {
-        Get.snackbar('Failed', response.data['message'] ?? 'Something went wrong');
+        Get.snackbar(
+            'Failed', response.data['message'] ?? 'Something went wrong');
         print("Lead creation failed:");
         print(response.data);
+        return response.data['message'] ?? 'Lead created successfully';
       }
     } catch (e) {
       print("ErrorFromLeadCreateController");
       print(e.toString());
       Get.snackbar('Error', e.toString());
+      return e.toString() ?? 'Error';
     } finally {
       isSubmitting.value = false;
     }

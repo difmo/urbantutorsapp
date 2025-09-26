@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:urbantutorsapp/screens/student/childs_screens/history_student.dart';
-import 'package:urbantutorsapp/screens/student/childs_screens/support_student.dart';
-import 'package:urbantutorsapp/screens/student/childs_screens/transactions_student.dart';
 import 'package:urbantutorsapp/screens/tutor/feedback_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/course_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/get_pro_membership.dart';
@@ -14,7 +11,6 @@ import 'package:urbantutorsapp/screens/tutor/tutor_profile.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
-import 'package:urbantutorsapp/screens/student/childs_screens/notification_student.dart';
 import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import '../theme/theme_constants.dart';

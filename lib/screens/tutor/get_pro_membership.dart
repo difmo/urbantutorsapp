@@ -13,7 +13,7 @@ import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/TutorDrawer.dart';
 
 class GetProMembership extends StatefulWidget {
-  GetProMembership({super.key});
+  const GetProMembership({super.key});
 
   @override
   State<GetProMembership> createState() => _NotificationStudentState();
