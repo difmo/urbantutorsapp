@@ -16,7 +16,7 @@ import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/models/lead_create_model_request.dart';
-import 'package:urbantutorsapp/widgets/AdminDrawer%20copy.dart';
+import 'package:urbantutorsapp/widgets/AdminDrawer.dart';
 
 class CreateLeadScreen extends StatefulWidget {
   final StudentLead? lead;
@@ -366,7 +366,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
       backgroundColor: Colors.white,
       key: _scaffoldKey,
       extendBodyBehindAppBar: true,
-      endDrawer: AdminDrawer(onMenuTap: (label) async {
+      endDrawer: Admindrawer(onMenuTap: (label) async {
         if (label == 'Logout') {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('isLoggedIn', false);

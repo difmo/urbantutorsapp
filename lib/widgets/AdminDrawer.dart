@@ -2,9 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:urbantutorsapp/screens/admin/admin_profile_screen.dart';
+import 'package:urbantutorsapp/screens/admin/admin_support_screen.dart';
+import 'package:urbantutorsapp/screens/admin/feedback_admin.dart';
+import 'package:urbantutorsapp/screens/admin/history_admin.dart';
+import 'package:urbantutorsapp/screens/admin/notification_admin.dart';
+import 'package:urbantutorsapp/screens/admin/transaction_admin.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/history_student.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/support_student.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/transactions_student.dart';
+import 'package:urbantutorsapp/screens/tutor/tutor_support_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
@@ -321,30 +327,29 @@ class _StudentDrawerState extends State<Admindrawer> {
               _drawerItem(
                 Icons.feedback,
                 'Feedback',
-                onTap: () => Get.to(() => const FeedbackStudent()),
+                onTap: () => Get.to(() => const FeedbackAdmin()),
               ),
               _drawerItem(
                 Icons.notifications,
                 'Notifications',
-                onTap: () => Get.to(() => const NotificationStudent()),
+                onTap: () => Get.to(() => const NotificationAdmin()),
               ),
               _drawerItem(
                 Icons.transcribe_sharp,
                 'Transactions',
-                onTap: () => Get.to(() => const TransactionsStudent()),
+                onTap: () => Get.to(() => const TransactionAdmin()),
               ),
-
               _drawerItem(
                 Icons.history,
-                'History',
-                onTap: () => Get.to(() => const HistoryStudent()),
+                'Report (History)',
+                onTap: () => Get.to(() => const HistoryAdmin()),
               ),
-
               _drawerItem(
                 Icons.share,
                 'Share app',
                 onTap: _shareApp,
               ),
+
               // ===== Menu items =====
               _drawerItem(
                 Icons.description,
@@ -367,7 +372,7 @@ class _StudentDrawerState extends State<Admindrawer> {
               _drawerItem(
                 Icons.notifications,
                 'Get Support',
-                onTap: () => Get.to(() => const SupportStudent()),
+                onTap: () => Get.to(() => const AdminSupportScreen()),
               ),
               _drawerItem(
                 Icons.delete_forever,

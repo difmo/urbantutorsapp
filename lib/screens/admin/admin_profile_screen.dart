@@ -52,14 +52,21 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
   bool _saving = false;
 
   // Text fields
-  final _nameCtrl = TextEditingController();
-  final _agencyNameCtrl = TextEditingController();
+  final _fullNameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
+  final _agencyNameCtrl = TextEditingController();
+  final _bussinessInYearCtrl = TextEditingController();
+  final _fbPageLinkCtrl = TextEditingController();
+  final _instaLinkCtrl = TextEditingController();
+  final _teleLinkCtrl = TextEditingController();
   final _localityCtrl = TextEditingController();
-  final _expCtrl = TextEditingController(); // optional: experience years
+  final _expCtrl = TextEditingController();
+  final _accountHolderNameCtrl = TextEditingController();
+  final _bankNameCtrl = TextEditingController();
+  final _accountNumbereCtrl = TextEditingController();
+  final _ifscCodeCtrl = TextEditingController();
 
-  // Single (legacy; still hydrated for compatibility)
   int? _boardId;
   int? _classId;
 
@@ -122,7 +129,7 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
 
   @override
   void dispose() {
-    _nameCtrl.dispose();
+    _fullNameCtrl.dispose();
     _agencyNameCtrl.dispose();
     _phoneCtrl.dispose();
     _emailCtrl.dispose();
@@ -294,29 +301,31 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
 
       final profileBase64 = await _fileToBase64(_profileImage);
       final agencyBase64 = await _fileToBase64(_agencyLogo);
-      final experienceYears = int.tryParse(_expCtrl.text.trim()) ?? 0;
 
-      final request = {
+      final bruaeProfileRequest = {
         "user_id": userId,
-        "name": _nameCtrl.text.trim(),
-        "agency_name": _agencyNameCtrl.text.trim(),
+        "profile_picture": profileBase64 ?? '',
+        "agency_logo": agencyBase64 ?? '',
+        "full_name": _fullNameCtrl.text.trim(),
         "phone": _phoneCtrl.text.trim(),
         "email": _emailCtrl.text.trim(),
+        "agency_name": _agencyNameCtrl.text.trim(),
+        "year_in_bussiness": _bussinessInYearCtrl.text.trim(),
+        "fb_link": _fbPageLinkCtrl.text.trim(),
+        "insta_link": _instaLinkCtrl.text.trim(),
+        "tel_link": _teleLinkCtrl.text.trim(),
         "location": _localityCtrl.text.trim(),
         "state": stateVal ?? '',
-        "remark":
-            experienceYears, // or replace with proper key your API expects
-        "profile_picture": profileBase64 ?? '', // base64 (adapt to your API)
-        "agency_logo": agencyBase64 ?? '', // base64 (adapt to your API)
-        "place_id": "ghjghjghjhgj",
+        'account_holder_name': _accountHolderNameCtrl.text.toString(),
+        'bank_name': _bankNameCtrl.text.toString(),
+        'account_number': _accountNumbereCtrl.text.toString(),
+        'ifsc_code': _ifscCodeCtrl.text.toString(),
+        "place_id": "my place id",
         "latitude": "28.663",
         "longitude": "97.2255",
-        "board_id": _selBoardIds, // array
-        "class_id": _selClassIds, // array
-        "subject_id": _selSubjectIds, // array
       };
 
-      final ok = await _p.updateTutorProfile(request);
+      final ok = await _p.updateTutorProfile(bruaeProfileRequest);
       if (ok) {
         Get.snackbar('Success', 'Profile Updated Successfully',
             snackPosition: SnackPosition.BOTTOM,
@@ -385,27 +394,34 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
     );
   }
 
-  Widget _textField(
-    String label,
-    TextEditingController c, {
-    required IconData icon,
-    String? hint,
-    TextInputType? keyboardType,
-    List<TextInputFormatter>? inputFormatters,
-    String? Function(String?)? validator,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: TextFormField(
-        controller: c,
-        keyboardType: keyboardType,
-        inputFormatters: inputFormatters,
-        decoration: _dec(label, icon: icon, hint: hint),
-        validator: validator ??
-            (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-      ),
-    );
-  }
+Widget _textField(
+  String label,
+  TextEditingController c, {
+  required IconData icon,
+  String? hint,
+  TextInputType? keyboardType,
+  List<TextInputFormatter>? inputFormatters,
+  String? Function(String?)? validator,
+}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: TextFormField(
+      controller: c,
+      keyboardType: keyboardType,
+      inputFormatters: [
+     
+        if (inputFormatters != null) ...inputFormatters,
+      ],
+      textCapitalization: TextCapitalization.characters, // ensures caps on typing
+      decoration: _dec(label, icon: icon, hint: hint),
+      validator: validator ??
+          (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+    ),
+  );
+}
+
+
+
 
   List<String> _labelsFor(List<int> selectedIds, List<OptionInt> all) {
     final map = {for (final o in all) o.id: o.label};
@@ -646,7 +662,7 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
                 _sectionCard(
                   title: 'Basic:',
                   children: [
-                    _textField('Full Name', _nameCtrl,
+                    _textField('Full Name', _fullNameCtrl,
                         icon: Icons.person, hint: 'Your name'),
                     _textField(
                       'Phone Number',
@@ -688,13 +704,31 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
                       icon: Icons.apartment_rounded,
                       hint: 'Agency / Institute name',
                     ),
-                    _textField('Experience (years)', _expCtrl,
+                    _textField('Years in Bussiness', _bussinessInYearCtrl,
                         icon: Icons.work_history_rounded,
                         hint: 'e.g., 3',
                         keyboardType: TextInputType.number,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly
                         ]),
+                    _textField(
+                      'Facebook Page Link',
+                      _fbPageLinkCtrl,
+                      icon: Icons.facebook,
+                      hint: 'Facebook Page Link',
+                    ),
+                    _textField(
+                      'Instagram Page Link',
+                      _instaLinkCtrl,
+                      icon: Icons.face,
+                      hint: 'Insta Link',
+                    ),
+                    _textField(
+                      'Telegram Link',
+                      _teleLinkCtrl,
+                      icon: Icons.telegram,
+                      hint: 'Telegram  Link',
+                    ),
                   ],
                 ),
 
@@ -780,6 +814,40 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
+
+                // ======= Professional (example extra field) =======
+                _sectionCard(
+                  title: 'Bank Account Details : ',
+                  children: [
+                    _textField(
+                      'Account Holder Name',
+                      _accountHolderNameCtrl,
+                      icon: Icons.apartment_rounded,
+                      hint: 'Account Holder Name',
+                    ),
+                    _textField(
+                      'Bank Name',
+                      _bankNameCtrl,
+                      icon: Icons.apartment_rounded,
+                      hint: 'Bank Name',
+                    ),
+                    _textField('Account Number', _accountNumbereCtrl,
+                        icon: Icons.work_history_rounded,
+                        hint: 'Account Number',
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly
+                        ]),
+                    _textField(
+                      'IFSC Code',
+                      _ifscCodeCtrl,
+                      icon: Icons.work_history_rounded,
+                      hint: 'IFSC Code',
+                      keyboardType: TextInputType.text,
+                      inputFormatters: [   UpperCaseTextFormatter(), ]
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -1121,4 +1189,18 @@ Future<List<int>?> _showMultiSelect(
       },
     ),
   );
+}
+
+/// Custom InputFormatter to force uppercase
+class UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return TextEditingValue(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
+    );
+  }
 }

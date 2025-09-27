@@ -6,104 +6,116 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
+import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
+import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
+import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
-import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
+import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
-import 'package:urbantutorsapp/widgets/TutorDrawer.dart';
+import 'package:urbantutorsapp/widgets/AdminDrawer.dart';
 
-class AdminHistoryScreen extends StatefulWidget {
-  const AdminHistoryScreen({super.key});
+class HistoryAdmin extends StatefulWidget {
+  const HistoryAdmin({super.key});
 
   @override
-  State<AdminHistoryScreen> createState() => _NotificationStudentState();
+  State<HistoryAdmin> createState() => _TransactionAdmin();
 }
 
-class _NotificationStudentState extends State<AdminHistoryScreen> {
+class _TransactionAdmin extends State<HistoryAdmin> {
   final _formKey = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
-  // Text controllers
-  // GetX controllers
-  late final CoinsController _c;
-  late final ProfileUpdateController _p;
-
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  // --- lead/user meta ---
-  String? leadStatus; // "1" → active/requested, anything else → no request yet
-  String? userName;
-  String? userPhone;
-  bool _loadingUserMeta = true;
-  bool get hasActiveLead => leadStatus == "1";
-
-  Future<void> _loadUserMeta() async {
-    try {
-      final s = await StorageService.getUserLeadStatus(); // returns "0"/"1"?
-      final n = await StorageService.getUserName();
-      final p = await StorageService.getUserPhoneNumber();
-      if (!mounted) return;
-      setState(() {
-        leadStatus = s ?? "0";
-        userName = n ?? "";
-        userPhone = p ?? "";
-        _loadingUserMeta = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        leadStatus = "0";
-        userName = "";
-        userPhone = "";
-        _loadingUserMeta = false;
-      });
-    }
-  }
-
-  // Safe number formatter
-  num _toNum(dynamic v) {
-    if (v == null) return 0;
-    if (v is num) return v;
-    return num.tryParse(v.toString()) ?? 0;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _c = Get.isRegistered<CoinsController>()
-        ? Get.find<CoinsController>()
-        : Get.put(CoinsController());
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _c.refreshAll();
-    });
-
-    _p = Get.isRegistered<ProfileUpdateController>()
-        ? Get.find<ProfileUpdateController>()
-        : Get.put(ProfileUpdateController());
-    _p.fetchProfileForStudent();
-
-    _loadUserMeta(); // ✅ proper async load of lead status & user info
-  }
-
-  String _initial(String? name) {
-    final n = (name ?? '').trim();
-    if (n.isEmpty) return 'S';
-    return n.characters.first.toUpperCase();
-  }
-
-  String _firstName(String? name) {
-    final n = (name ?? '').trim();
-    if (n.isEmpty) return 'Student';
-    final parts = n.split(RegExp(r'\s+'));
-    return parts.first;
-  }
 
   @override
   void dispose() {
     _titleCtrl.dispose();
     _descCtrl.dispose();
     super.dispose();
+  }
+
+  void _submitFeedback() {
+    if (!_formKey.currentState!.validate()) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Feedback submitted")),
+    );
+    _titleCtrl.clear();
+    _descCtrl.clear();
+  }
+
+  // Controllers
+  final ProfileUpdateController _p = Get.isRegistered<ProfileUpdateController>()
+      ? Get.find<ProfileUpdateController>()
+      : Get.put(ProfileUpdateController());
+
+  final MasterDataController _master = Get.isRegistered<MasterDataController>()
+      ? Get.find<MasterDataController>()
+      : Get.put(MasterDataController());
+
+  final LeadMetaController _leadMeta = Get.isRegistered<LeadMetaController>()
+      ? Get.find<LeadMetaController>()
+      : Get.put(LeadMetaController());
+
+  final LocationController _loc = Get.isRegistered<LocationController>()
+      ? Get.find<LocationController>()
+      : Get.put(LocationController());
+
+  late final CoinsController _c;
+
+  InputDecoration _dec({
+    required String label,
+    String? hint,
+  }) {
+    return InputDecoration(
+      counterText: '',
+      labelText: label,
+      labelStyle: const TextStyle(fontSize: 14, color: Colors.black),
+      hintText: hint,
+      hintStyle: TextStyle(color: Colors.grey.shade500),
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppColors.primaryColor, width: 1.5),
+      ),
+    );
+  }
+
+  // Misc
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  @override
+  void initState() {
+    super.initState();
+
+    _c = Get.isRegistered<CoinsController>()
+        ? Get.find<CoinsController>()
+        : Get.put(CoinsController());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _c.refreshAll());
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (_master.masterData.value == null) {
+        await _master.fetchMasterData();
+      }
+      if (_p.studentprofileData.value == null && !_p.isLoading.value) {
+        await _p.fetchProfileForStudent();
+      }
+    });
+  }
+
+  num _toNum(dynamic v) {
+    if (v == null) return 0;
+    if (v is num) return v;
+    return num.tryParse(v.toString()) ?? 0;
   }
 
   @override
@@ -115,7 +127,7 @@ class _NotificationStudentState extends State<AdminHistoryScreen> {
       backgroundColor: Colors.white,
       key: _scaffoldKey,
       extendBodyBehindAppBar: true,
-      endDrawer: Tutordrawer(onMenuTap: (label) async {
+      endDrawer: Admindrawer(onMenuTap: (label) async {
         if (label == 'Logout') {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('isLoggedIn', false);
@@ -166,7 +178,8 @@ class _NotificationStudentState extends State<AdminHistoryScreen> {
           final balanceText = balanceNum.toStringAsFixed(0);
 
           final prof = _p.studentprofileData.value;
-          final name = prof?.studentName?.trim() ?? '';
+          final name =
+              prof?.studentName?.trim() ?? prof?.studentName?.trim() ?? '';
           final displayName =
               name.isEmpty ? 'Student' : name.split(RegExp(r'\s+')).first;
 
@@ -183,13 +196,13 @@ class _NotificationStudentState extends State<AdminHistoryScreen> {
             primary: primary,
             accent: accent,
             initial: (displayName.isEmpty ? 'S' : displayName[0].toUpperCase()),
-            greeting: "History",
+            greeting: "Report",
             name: displayName,
             balance: balanceText,
             onCoinTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const TutorCoinsScreen()),
+                MaterialPageRoute(builder: (_) => const CoinsStudentScreen()),
               );
             },
           );
@@ -291,3 +304,5 @@ class _Header extends StatelessWidget {
     );
   }
 }
+
+// -------------------- Multi-select Helpers (kept for future use) --------------------

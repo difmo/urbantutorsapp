@@ -15,7 +15,7 @@ import 'package:urbantutorsapp/models/lead__model.dart';
 import 'package:urbantutorsapp/models/tutor_lead.dart';
 import 'package:urbantutorsapp/screens/admin/CreateLeadScreen.dart' as create;
 import 'package:urbantutorsapp/screens/admin/LeadDetailsScreen.dart' as details;
-import 'package:urbantutorsapp/screens/admin/history_screen.dart';
+import 'package:urbantutorsapp/screens/admin/history_admin.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/DashboardHomeTab.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
@@ -436,10 +436,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                         onTap: () {
                           HapticFeedback.selectionClick();
                           setState(() => _selectedIndex = 0);
+
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                                builder: (_) => AdminHistoryScreen()),
+                            MaterialPageRoute(builder: (_) => HistoryAdmin()),
                           );
                         },
                       ),
