@@ -15,7 +15,9 @@ import 'package:urbantutorsapp/models/lead__model.dart';
 import 'package:urbantutorsapp/models/tutor_lead.dart';
 import 'package:urbantutorsapp/screens/admin/CreateLeadScreen.dart' as create;
 import 'package:urbantutorsapp/screens/admin/LeadDetailsScreen.dart' as details;
+import 'package:urbantutorsapp/screens/admin/add_tutor_admin.dart';
 import 'package:urbantutorsapp/screens/admin/history_admin.dart';
+import 'package:urbantutorsapp/screens/admin/promot_admin.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/DashboardHomeTab.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
@@ -389,14 +391,15 @@ class _AdminDashboardState extends State<AdminDashboard>
           );
         }).toList(),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: CustomFAB(
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const create.CreateLeadScreen()),
-          );
-        },
-      ),
+
+      // floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      // floatingActionButton: CustomFAB(
+      //   onPressed: () {
+      //     Navigator.of(context).push(
+      //       MaterialPageRoute(builder: (_) => const create.CreateLeadScreen()),
+      //     );
+      //   },
+      // ),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
         child: ClipRRect(
@@ -416,6 +419,60 @@ class _AdminDashboardState extends State<AdminDashboard>
                       child: _NavItem(
                         icon: FontAwesomeIcons.house,
                         label: 'Home',
+                        selected: _selectedIndex == 0,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _selectedIndex = 0);
+                        },
+                      ),
+                    ),
+
+                    // Gap for center FAB
+                    const SizedBox(width: 16),
+
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _selectedIndex = 1);
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => AddTutorAdmin()),
+                          );
+                        },
+                        child: Container(
+                          child: Column(
+                            children: [
+                              Image(
+                                image: AssetImage(
+                                  'assets/icons/profile.jpg',
+                                ),
+                                height: 36,
+                                width: 36,
+                              ),
+                              Text(
+                                "Tutor",
+                                style: TextStyle(fontSize: 11),
+                              )
+                            ],
+                          ),
+                          // icon: FontAwesomeIcons.add,
+                          // label: 'Tutor',
+                          // selected: _selectedIndex == 2,
+                          // onTap: () {
+                          //   HapticFeedback.selectionClick();
+                          //   setState(() => _selectedIndex = 2);
+                          // },
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _NavItem(
+                        icon: FontAwesomeIcons.add,
+                        label: 'Add Lead',
                         selected: _selectedIndex == 2,
                         onTap: () {
                           HapticFeedback.selectionClick();
@@ -423,19 +480,33 @@ class _AdminDashboardState extends State<AdminDashboard>
                         },
                       ),
                     ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _NavItem(
+                        icon: FontAwesomeIcons.share,
+                        label: 'Promot',
+                        selected: _selectedIndex == 3,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _selectedIndex = 3);
 
-                    // Gap for center FAB
-                    const SizedBox(width: 56),
-
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => PromotAdmin()),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
                     // Right item
                     Expanded(
                       child: _NavItem(
                         icon: Icons.history,
                         label: 'Report',
-                        selected: _selectedIndex == 0,
+                        selected: _selectedIndex == 4,
                         onTap: () {
                           HapticFeedback.selectionClick();
-                          setState(() => _selectedIndex = 0);
+                          setState(() => _selectedIndex = 4);
 
                           Navigator.push(
                             context,
@@ -488,15 +559,14 @@ class _NavItem extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48), // preferred height
+        constraints: const BoxConstraints(minHeight: 36), // preferred height
         child: Center(
-          // If a parent ever squeezes it (like 20px), this scales down
           child: FittedBox(
             fit: BoxFit.scaleDown,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 22, color: selected ? active : inactive),
+                Icon(icon, size: 28, color: selected ? active : inactive),
                 const SizedBox(height: 4),
                 Text(
                   label,

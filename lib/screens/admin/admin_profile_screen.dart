@@ -394,34 +394,31 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
     );
   }
 
-Widget _textField(
-  String label,
-  TextEditingController c, {
-  required IconData icon,
-  String? hint,
-  TextInputType? keyboardType,
-  List<TextInputFormatter>? inputFormatters,
-  String? Function(String?)? validator,
-}) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
-    child: TextFormField(
-      controller: c,
-      keyboardType: keyboardType,
-      inputFormatters: [
-     
-        if (inputFormatters != null) ...inputFormatters,
-      ],
-      textCapitalization: TextCapitalization.characters, // ensures caps on typing
-      decoration: _dec(label, icon: icon, hint: hint),
-      validator: validator ??
-          (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-    ),
-  );
-}
-
-
-
+  Widget _textField(
+    String label,
+    TextEditingController c, {
+    required IconData icon,
+    String? hint,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    String? Function(String?)? validator,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: TextFormField(
+        controller: c,
+        keyboardType: keyboardType,
+        inputFormatters: [
+          if (inputFormatters != null) ...inputFormatters,
+        ],
+        textCapitalization:
+            TextCapitalization.characters, // ensures caps on typing
+        decoration: _dec(label, icon: icon, hint: hint),
+        validator: validator ??
+            (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+      ),
+    );
+  }
 
   List<String> _labelsFor(List<int> selectedIds, List<OptionInt> all) {
     final map = {for (final o in all) o.id: o.label};
@@ -724,10 +721,10 @@ Widget _textField(
                       hint: 'Insta Link',
                     ),
                     _textField(
-                      'Telegram Link',
+                      'Whatsapp Community / Group Link',
                       _teleLinkCtrl,
                       icon: Icons.telegram,
-                      hint: 'Telegram  Link',
+                      hint: 'Whatsapp  Link',
                     ),
                   ],
                 ),
@@ -838,14 +835,13 @@ Widget _textField(
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly
                         ]),
-                    _textField(
-                      'IFSC Code',
-                      _ifscCodeCtrl,
-                      icon: Icons.work_history_rounded,
-                      hint: 'IFSC Code',
-                      keyboardType: TextInputType.text,
-                      inputFormatters: [   UpperCaseTextFormatter(), ]
-                    ),
+                    _textField('IFSC Code', _ifscCodeCtrl,
+                        icon: Icons.work_history_rounded,
+                        hint: 'IFSC Code',
+                        keyboardType: TextInputType.text,
+                        inputFormatters: [
+                          UpperCaseTextFormatter(),
+                        ]),
                   ],
                 ),
               ],

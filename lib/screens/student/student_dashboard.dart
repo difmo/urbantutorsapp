@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -228,9 +229,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   physics: const NeverScrollableScrollPhysics(),
                   crossAxisSpacing: 14,
                   mainAxisSpacing: 14,
+                  childAspectRatio: 1, // <-- makes the cards shorter
                   children: [
                     _FeatureCard(
                       label: 'Notes',
+                      height: 90, // reduced height
                       icon: Icons.note_alt_outlined,
                       gradient: LinearGradient(
                         colors: [accent.withOpacity(.18), Colors.white],
@@ -247,6 +250,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     ),
                     _FeatureCard(
                       label: 'PYQ’s',
+                      height: 90, // reduced height
                       icon: Icons.assignment_turned_in_outlined,
                       gradient: LinearGradient(
                         colors: [accent.withOpacity(.18), Colors.white],
@@ -263,12 +267,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 22),
+                const SizedBox(height: 8),
                 _BigActionCard(
-                  label: 'Courses (PDF)',
+                  label: 'Courses (PDF).',
                   subtitle:
                       'Kindly Purchase the most Valuable and Popular PDF Courses.',
-                  icon: Icons.picture_as_pdf,
+                  icon: Icon(Icons.picture_as_pdf),
                   gradient: LinearGradient(
                     colors: [accent.withOpacity(.18), Colors.white],
                     begin: Alignment.topLeft,
@@ -282,12 +286,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     );
                   },
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 8),
                 _BigActionCard(
                   label: 'Search a Private Tutor Now.',
                   subtitle:
                       'Find  Expert Private Tutor (Online/Offline) for any Subject withhin few Minutes.',
-                  icon: Icons.search_rounded,
+                  icon: Icon(Icons.search_rounded),
                   gradient: LinearGradient(
                     colors: [accent.withOpacity(.18), Colors.white],
                     begin: Alignment.topLeft,
@@ -301,7 +305,58 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     );
                   },
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 8),
+//  Icons.search_rounded
+                _BigActionCard(
+                  label: 'Get Addmision Assistance.',
+                  subtitle:
+                      'Get Support & Guidance at Each and Every Steps of your Life and Career.',
+                  icon: Container(
+                    child: Image(
+                      image: AssetImage('assets/icons/logogog.jpeg'),
+                      height: 176,
+                      width: 176,
+                    ),
+                  ),
+                  gradient: LinearGradient(
+                    colors: [accent.withOpacity(.18), Colors.white],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  onTap: () {
+                    // Navigator.push(
+                    //   context,
+                    //   MaterialPageRoute(
+                    //       builder: (_) => const SearchTutorScreen()),
+                    // );
+                  },
+                ),
+                const SizedBox(height: 8),
+                _BigActionCard(
+                  label: 'Chess:The Brain Booster Wager.',
+                  subtitle: 'The Gymnasium of the Genius Brain.',
+                  icon: Container(
+                    child: Image(
+                      image: AssetImage('assets/icons/chess.png'),
+                      height: 176,
+                      width: 176,
+                    ),
+                  ),
+                  gradient: LinearGradient(
+                    colors: [accent.withOpacity(.18), Colors.white],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Coming Soon!"),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
               ],
             ),
           ),
@@ -439,18 +494,21 @@ class _FeatureCard extends StatelessWidget {
     required this.icon,
     required this.gradient,
     required this.onTap,
+    this.height = 120, // default height
   });
   final String label;
   final IconData icon;
   final Gradient gradient;
   final VoidCallback onTap;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
     return _InkCard(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+        height: height, // use height here
+        padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: gradient,
@@ -487,7 +545,7 @@ class _BigActionCard extends StatelessWidget {
 
   final String label;
   final String subtitle;
-  final IconData icon;
+  final Widget icon;
   final Gradient gradient;
   final VoidCallback onTap;
 
@@ -496,7 +554,7 @@ class _BigActionCard extends StatelessWidget {
     return _InkCard(
       onTap: onTap,
       child: Container(
-        height: 120,
+        height: 100,
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         decoration: BoxDecoration(
@@ -524,7 +582,7 @@ class _BigActionCard extends StatelessWidget {
                   end: Alignment.bottomRight,
                 ),
               ),
-              child: Icon(icon, size: 26, color: AppColors.primaryColor),
+              child: icon,
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -533,10 +591,12 @@ class _BigActionCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(label,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.primaryColor)),
+                          color: label == "Search a Private Tutor Now."
+                              ? Colors.red
+                              : AppColors.primaryColor)),
                   const SizedBox(height: 6),
                   Text(subtitle,
                       style:

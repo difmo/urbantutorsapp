@@ -43,6 +43,10 @@ flutter:
     - assets/icons/animation/Nodata.json
     - assets/icons/animation/empty.json
     - assets/icons/profile.jpg
+    - assets/icons/download.png
+    - assets/icons/logogog.jpeg
+    - assets/icons/chess.png
+    
 
 flutter_icons:
   android: true
