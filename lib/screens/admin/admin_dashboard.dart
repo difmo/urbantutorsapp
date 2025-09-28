@@ -4,26 +4,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:lottie/lottie.dart';
-import 'package:urbantutorsapp/controllers/coins_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/lead_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/controllers/tutor_leads_controller.dart';
+
 import 'package:urbantutorsapp/models/lead__model.dart';
 import 'package:urbantutorsapp/models/tutor_lead.dart';
+
 import 'package:urbantutorsapp/screens/admin/CreateLeadScreen.dart' as create;
 import 'package:urbantutorsapp/screens/admin/LeadDetailsScreen.dart' as details;
 import 'package:urbantutorsapp/screens/admin/add_tutor_admin.dart';
 import 'package:urbantutorsapp/screens/admin/history_admin.dart';
 import 'package:urbantutorsapp/screens/admin/promot_admin.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
-import 'package:urbantutorsapp/screens/tutor/DashboardHomeTab.dart';
+
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/AdminDrawer.dart';
-import 'package:urbantutorsapp/widgets/CustomFAB.dart';
 import '../../theme/theme_constants.dart';
 
 class AdminDashboard extends StatefulWidget {
@@ -36,38 +37,31 @@ class AdminDashboard extends StatefulWidget {
 class _AdminDashboardState extends State<AdminDashboard>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   late final TabController _tabController;
-  final List<String> _tabs = const ['All Leads'];
+
+  // Tab labels
+  final List<String> _tabs = const [
+    'All Posted Leads',
+    'Grabed Leads',
+    'Declined Leads',
+  ];
 
   final LeadController leadController = Get.put(LeadController());
-  int _selectedIndex = -1;
+  final TutorLeadsController _leads = Get.put(TutorLeadsController());
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      leadController.fetchLeads();
-    }
-  }
+  late final CoinsController _coins;
+  late final ProfileUpdateController _p;
 
-  Future<void> _refreshLeads() => leadController.fetchLeads();
+  int _selectedIndex = 0;
 
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this); // <-- add
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  late final CoinsController _c;
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this); // <-- add
+    WidgetsBinding.instance.addObserver(this);
+
     leadController.fetchLeads();
-    _tabController = TabController(length: _tabs.length, vsync: this);
-    _c = Get.isRegistered<CoinsController>()
-        ? Get.find<CoinsController>()
-        : Get.put(CoinsController());
-    _c.refreshAll();
+
+    _tabController = TabController(length: _tabs.length, vsync: this)
+      ..addListener(() => setState(() {}));
 
     _coins = Get.isRegistered<CoinsController>()
         ? Get.find<CoinsController>()
@@ -80,11 +74,21 @@ class _AdminDashboardState extends State<AdminDashboard>
     _p.fetchProfileForStudent();
   }
 
-  // Controllers
-  final TutorLeadsController _leads = Get.put(TutorLeadsController());
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _tabController.dispose();
+    super.dispose();
+  }
 
-  late final CoinsController _coins;
-  late final ProfileUpdateController _p;
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      leadController.fetchLeads();
+    }
+  }
+
+  Future<void> _refreshLeads() => leadController.fetchLeads();
 
   num _toNum(dynamic v) {
     if (v == null) return 0;
@@ -158,16 +162,44 @@ class _AdminDashboardState extends State<AdminDashboard>
     }
   }
 
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   @override
   Widget build(BuildContext context) {
     final primary = AppColors.primaryColor;
     final accent = AppColors.accentColor;
+
     return Scaffold(
-      endDrawer: Admindrawer(onMenuTap: _handleMenuTap), // <- ensure class name
+      key: _scaffoldKey,
+      extendBodyBehindAppBar: true,
+      endDrawer: Admindrawer(onMenuTap: (label) async {
+        if (label == 'Logout') {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isLoggedIn', false);
+          await prefs.remove('user_name');
+          await prefs.remove('user_phone');
+          await prefs.remove('user_role');
+          await StorageService.clearTokenAndRole();
+          await StorageService.clear();
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Logged out successfully')),
+          );
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const SplashScreen()),
+            (route) => false,
+          );
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Navigating to $label')),
+          );
+        }
+      }),
       appBar: AppBar(
-        elevation: 3,
+        elevation: 0, // cleaner edge; we'll draw our own line
         backgroundColor: Colors.transparent,
-        toolbarHeight: 75,
+        toolbarHeight: 88,
         titleSpacing: 0,
         systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
@@ -193,6 +225,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           final initial = _initial(name);
           final displayName = _firstName(name);
           final greet = _greet();
+
           if (loading && wallet == null) {
             return const SizedBox(
               height: 24,
@@ -219,7 +252,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 padding: const EdgeInsets.all(2),
                 child: CircleAvatar(
                   backgroundColor: Colors.transparent,
-                  radius: 20,
+                  radius: 18,
                   child: Text(
                     initial,
                     style: const TextStyle(
@@ -230,7 +263,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -258,48 +291,78 @@ class _AdminDashboardState extends State<AdminDashboard>
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const TutorCoinsScreen()),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    margin: const EdgeInsets.only(top: 8),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.18),
-                      borderRadius: BorderRadius.circular(20),
-                      border:
-                          Border.all(width: 2, color: AppColors.primaryColor),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const TutorCoinsScreen(),
                     ),
-                    child: Row(
-                      children: [
-                        const SizedBox(width: 6),
-                        Text(
-                          "Coins: $balanceStr",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
+                  );
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(width: 2, color: AppColors.primaryColor),
+                  ),
+                  child: Text(
+                    "Coins: $balanceStr",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
             ],
           );
         }),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(38),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Divider(
+                height: 2,
+                thickness: 1,
+                color: Colors.white.withOpacity(0.28),
+              ),
+              TabBar(
+                tabAlignment: TabAlignment.center,
+                controller: _tabController,
+                isScrollable: true,
+                labelPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: EdgeInsets.zero,
+                indicatorPadding: EdgeInsets.zero,
+                // visual tweaks
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white70,
+                indicatorColor: Colors.white,
+                indicatorWeight: 2,
+                overlayColor: MaterialStateProperty.all(Colors.transparent),
+                splashFactory: NoSplash.splashFactory,
+                // (Optional) slightly smaller text to visually reduce height
+                labelStyle: const TextStyle(fontSize: 13),
+                unselectedLabelStyle: const TextStyle(fontSize: 13),
+                tabs: _tabs
+                    .map(
+                      (t) => Center(
+                        child:
+                            Text(t, maxLines: 1, overflow: TextOverflow.fade),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+          ),
+        ),
         actions: [
           Builder(
             builder: (ctx) => IconButton(
@@ -310,33 +373,37 @@ class _AdminDashboardState extends State<AdminDashboard>
           const SizedBox(height: 8),
         ],
       ),
+
       body: TabBarView(
         controller: _tabController,
         physics: const BouncingScrollPhysics(),
-        children: _tabs.map((label) {
+        children: _tabs.asMap().entries.map((entry) {
+          final tabIndex = entry.key;
+          final tabLabel = entry.value;
+
           return RefreshIndicator(
-            onRefresh: () => leadController.fetchLeads(),
+            onRefresh: _refreshLeads,
             child: Obx(() {
               if (leadController.isLoading.value) {
                 return const Center(child: CircularProgressIndicator());
               }
               final all = leadController.studentLeads;
-              // -------- filter per tab (works with numeric or text status) -----
-              List filtered;
-              if (label == 'Grabbed') {
+
+              // Filter
+              late final List<StudentLead> filtered;
+              if (tabIndex == 1) {
                 filtered = all.where((l) {
                   final s = (l.status ?? '').toString().toLowerCase();
-                  return s == 'grabbed' || s == '2';
+                  return s.contains('grab') || s == '2' || s == 'grabbed';
                 }).toList();
-              } else if (label == 'Declined') {
+              } else if (tabIndex == 2) {
                 filtered = all.where((l) {
                   final s = (l.status ?? '').toString().toLowerCase();
-                  return s == 'declined' || s == '3';
+                  return s.contains('declin') || s == '3';
                 }).toList();
               } else {
-                filtered = all; // All Leads
+                filtered = all;
               }
-              // ------------------------------------------------------------------
 
               if (filtered.isEmpty) {
                 return Center(
@@ -345,179 +412,156 @@ class _AdminDashboardState extends State<AdminDashboard>
                     children: [
                       Lottie.asset(
                         'assets/icons/animation/empty.json',
-                        width: 220,
+                        width: 200,
                         repeat: true,
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       Text(
-                        label == 'All Leads'
+                        tabIndex == 0
                             ? 'No Leads Created'
-                            : 'No $label yet',
+                            : 'No Leads ${tabLabel.replaceAll("Leads", "").trim()} yet',
                         style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.black54,
-                            fontWeight: FontWeight.bold),
+                          fontSize: 15,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      Text(
-                        "( Kindly, Add Your Leads )",
-                        style: const TextStyle(
-                            fontSize: 18,
-                            color: AppColors.primaryColor,
-                            fontWeight: FontWeight.bold),
+                      const SizedBox(height: 2),
+                      const Text(
+                        "[ Caution : Only Put Genuine  Leads ]",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: AppColors.primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
                 );
               }
 
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: filtered.length,
-                itemBuilder: (context, index) {
-                  final lead = filtered[index];
-                  print(lead);
-                  return GestureDetector(
-                    onTap: () => _openDetails(lead),
-                    child: _LeadCard(
-                      lead: lead,
-                      isContacted: true,
-                      onContactToggle: () => {},
-                      onReadMore: () => _openDetails(lead),
-                    ),
-                  );
-                },
+              return Container(
+                margin: EdgeInsets.only(top: 150),
+                child: ListView.builder(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final lead = filtered[index];
+                    return GestureDetector(
+                      onTap: () => _openDetails(lead),
+                      child: _LeadCard(
+                        lead: lead,
+                        isContacted: true,
+                        onContactToggle: () {},
+                        onReadMore: () => _openDetails(lead),
+                      ),
+                    );
+                  },
+                ),
               );
             }),
           );
         }).toList(),
       ),
 
-      // floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      // floatingActionButton: CustomFAB(
-      //   onPressed: () {
-      //     Navigator.of(context).push(
-      //       MaterialPageRoute(builder: (_) => const create.CreateLeadScreen()),
-      //     );
-      //   },
-      // ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: BottomAppBar(
-              shape: const CircularNotchedRectangle(),
-              notchMargin: 8,
-              elevation: 10,
-              color: Colors.white.withOpacity(.92),
-              child: SizedBox(
-                height: 68,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _NavItem(
-                        icon: FontAwesomeIcons.house,
-                        label: 'Home',
-                        selected: _selectedIndex == 0,
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          setState(() => _selectedIndex = 0);
-                        },
-                      ),
-                    ),
-
-                    // Gap for center FAB
-                    const SizedBox(width: 16),
-
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          setState(() => _selectedIndex = 1);
-
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => AddTutorAdmin()),
-                          );
-                        },
-                        child: Container(
-                          child: Column(
-                            children: [
-                              Image(
-                                image: AssetImage(
-                                  'assets/icons/profile.jpg',
-                                ),
-                                height: 36,
-                                width: 36,
-                              ),
-                              Text(
-                                "Tutor",
-                                style: TextStyle(fontSize: 11),
-                              )
-                            ],
-                          ),
-                          // icon: FontAwesomeIcons.add,
-                          // label: 'Tutor',
-                          // selected: _selectedIndex == 2,
-                          // onTap: () {
-                          //   HapticFeedback.selectionClick();
-                          //   setState(() => _selectedIndex = 2);
-                          // },
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _NavItem(
-                        icon: FontAwesomeIcons.add,
-                        label: 'Add Lead',
-                        selected: _selectedIndex == 2,
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          setState(() => _selectedIndex = 2);
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _NavItem(
-                        icon: FontAwesomeIcons.share,
-                        label: 'Promot',
-                        selected: _selectedIndex == 3,
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          setState(() => _selectedIndex = 3);
-
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => PromotAdmin()),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    // Right item
-                    Expanded(
-                      child: _NavItem(
-                        icon: Icons.history,
-                        label: 'Report',
-                        selected: _selectedIndex == 4,
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          setState(() => _selectedIndex = 4);
-
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => HistoryAdmin()),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+      // bottom nav (trimmed paddings)
+      bottomNavigationBar: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BottomAppBar(
+          shape: const CircularNotchedRectangle(),
+          color: Colors.white.withOpacity(.94),
+          child: SizedBox(
+            height: 64,
+            child: Row(
+              children: [
+                Expanded(
+                  child: _NavItem(
+                    icon: FontAwesomeIcons.house,
+                    label: 'Home',
+                    selected: _selectedIndex == 0,
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _selectedIndex = 0);
+                    },
+                  ),
                 ),
-              ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _selectedIndex = 1);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => AddTutorAdmin()),
+                      );
+                    },
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Image(
+                          image: AssetImage('assets/icons/profile.jpg'),
+                          height: 32,
+                          width: 32,
+                        ),
+                        SizedBox(height: 2),
+                        Text("Tutor", style: TextStyle(fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: _NavItem(
+                    icon: FontAwesomeIcons.add,
+                    label: 'Add Lead',
+                    selected: _selectedIndex == 2,
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _selectedIndex = 2);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const create.CreateLeadScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Expanded(
+                  child: _NavItem(
+                    icon: FontAwesomeIcons.share,
+                    label: 'Promot',
+                    selected: _selectedIndex == 3,
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _selectedIndex = 3);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PromotAdmin(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Expanded(
+                  child: _NavItem(
+                    icon: Icons.history,
+                    label: 'Report',
+                    selected: _selectedIndex == 4,
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _selectedIndex = 4);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => HistoryAdmin(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -533,7 +577,50 @@ class _AdminDashboardState extends State<AdminDashboard>
       ),
     );
     if (!mounted) return;
-    await _refreshLeads(); // <- refresh after return
+    await _refreshLeads();
+  }
+}
+
+class _HamburgerButton extends StatelessWidget {
+  const _HamburgerButton({
+    super.key,
+    required this.onTap,
+    this.color = Colors.white,
+  });
+
+  final VoidCallback onTap;
+  final Color color;
+
+  Widget _bar() => Container(
+        width: 26,
+        height: 2.2,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      customBorder: const CircleBorder(),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: SizedBox(
+          width: 28,
+          height: 22,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _bar(),
+              _bar(),
+              _bar(),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -557,28 +644,28 @@ class _NavItem extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(12),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 36), // preferred height
+        constraints: const BoxConstraints(minHeight: 36),
         child: Center(
           child: FittedBox(
             fit: BoxFit.scaleDown,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 28, color: selected ? active : inactive),
-                const SizedBox(height: 4),
+                Icon(icon, size: 24, color: selected ? active : inactive),
+                const SizedBox(height: 2),
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 12,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                     color: selected ? Colors.black87 : inactive,
                   ),
                 ),
-                const SizedBox(height: 4),
                 if (selected)
                   Container(
+                    margin: const EdgeInsets.only(top: 2),
                     width: 6,
                     height: 6,
                     decoration:
@@ -609,31 +696,31 @@ class _LeadCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
       decoration: BoxDecoration(
-          border: Border.all(width: 1, color: AppColors.primaryColor),
-          borderRadius: BorderRadius.all(Radius.circular(8))),
+        border: Border.all(width: 1, color: AppColors.primaryColor),
+        borderRadius: const BorderRadius.all(Radius.circular(8)),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
-                    Text(
+                    const Text(
                       'Lead No: ',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textColor,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(
-                      "${lead.id}",
-                      style: TextStyle(color: Colors.red),
-                    ),
+                    Text("${lead.id}",
+                        style: const TextStyle(color: Colors.red)),
                   ],
                 ),
                 Text(
@@ -643,7 +730,7 @@ class _LeadCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 6),
-            _kv(Icons.school, 'Name', lead.studentName),
+            _kv(Icons.person, 'Name', lead.studentName),
             const SizedBox(height: 6),
             _kv(Icons.school, 'Class', lead.courseName),
             const SizedBox(height: 4),
@@ -655,17 +742,14 @@ class _LeadCard extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Row 1: Mode + 0/3 pill
                 LeadMetaRow(
-                  icon: Icons.switch_video, // pick any icon you prefer
+                  icon: Icons.switch_video,
                   label: 'Mode',
                   value: lead.mode,
                   iconColor: AppColors.accentColor,
                   trailing: leadCountPill('0/3'),
                 ),
                 const SizedBox(height: 6),
-
-                // Row 2: Fee + "(Read more)" + right-aligned status
                 LeadMetaRow(
                   icon: Icons.attach_money,
                   label: 'Fee',
@@ -701,14 +785,14 @@ class _LeadCard extends StatelessWidget {
                 TextSpan(
                   text: '$label: ',
                   style: const TextStyle(
-                    fontWeight: FontWeight.w700, // bold label
+                    fontWeight: FontWeight.w700,
                     color: AppColors.textColor,
                   ),
                 ),
                 TextSpan(
                   text: text,
                   style: const TextStyle(
-                    fontWeight: FontWeight.w400, // normal value
+                    fontWeight: FontWeight.w400,
                     color: AppColors.textColor,
                   ),
                 ),
@@ -739,4 +823,81 @@ class _LeadCard extends StatelessWidget {
     ];
     return '${d.day} ${months[d.month - 1]} ${d.year}';
   }
+}
+
+class LeadMetaRow extends StatelessWidget {
+  const LeadMetaRow({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.iconColor,
+    this.inlineLinkText,
+    this.onInlineLinkTap,
+    this.trailing,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color iconColor;
+  final String? inlineLinkText;
+  final VoidCallback? onInlineLinkTap;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: iconColor, size: 20),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                '$label: ',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textColor,
+                ),
+              ),
+              Text(value, style: const TextStyle(color: AppColors.textColor)),
+              if (inlineLinkText != null) ...[
+                const SizedBox(width: 4),
+                GestureDetector(
+                  onTap: onInlineLinkTap,
+                  child: Text(
+                    inlineLinkText!,
+                    style: const TextStyle(
+                      color: Colors.blue,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (trailing != null) ...[
+          const SizedBox(width: 8),
+          trailing!,
+        ],
+      ],
+    );
+  }
+}
+
+Widget leadCountPill(String text) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: const Color(0xFF2EA1FF),
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: Text(
+      text,
+      style: const TextStyle(color: Colors.white, fontSize: 12),
+    ),
+  );
 }

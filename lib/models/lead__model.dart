@@ -40,6 +40,7 @@ class StudentLead {
   final String place_id;
   final String mode; // Online/Offline
   final String remark;
+  final int share_status;
   final int status;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -57,6 +58,7 @@ class StudentLead {
     required this.lead_status,
     required this.lead_message,
     required this.remark,
+    required this.share_status,
     required this.latitude,
     required this.longitude,
     required this.place_id,
@@ -83,6 +85,7 @@ class StudentLead {
         lead_status: (j['lead_status'] ?? '').toString(),
         lead_message: (j['lead_message'] ?? '').toString(),
         remark: (j['remark'] ?? '').toString(),
+        share_status:(j['share_status']??0),
         latitude: (j['latitude'] ?? '').toString(),
         longitude: (j['longitude'] ?? '').toString(),
         place_id: (j['place_id'] ?? '').toString(),
@@ -102,7 +105,6 @@ class StudentLead {
         'student_name': studentName,
         'student_id': studentId,
         'board_name': boardName,
-        
         'course_name': courseName,
         'subject_name': subjectName,
         'mobile': mobile,
@@ -111,6 +113,7 @@ class StudentLead {
         'location': location,
         'mode': mode,
         'status': status,
+        'share_status':share_status,
         'created_at': createdAt?.toIso8601String(),
         'updated_at': updatedAt?.toIso8601String(),
       };

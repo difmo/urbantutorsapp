@@ -318,7 +318,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
     if (userId == null) return _toast('User not found. Please login again.');
 
     final req = LeadCreateRequest(
-      name: nameCtrl.text.trim(),
+      name: nameCtrl.text.trim()??"Test",
       mobile: phoneCtrl.text.trim(),
       boardId: boardId!.toString(),
       classId: classId!.toString(),
@@ -361,7 +361,6 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
   Widget build(BuildContext context) {
     final primary = AppColors.primaryColor;
     final accent = AppColors.accentColor;
-
     return Scaffold(
       backgroundColor: Colors.white,
       key: _scaffoldKey,

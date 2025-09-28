@@ -261,7 +261,7 @@ class _PromotAdminState extends State<PromotAdmin> {
               ),
             );
           }
-        
+
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: leads.length,
@@ -282,6 +282,17 @@ class _PromotAdminState extends State<PromotAdmin> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
+                          Container(
+                            height: 20,
+                            width: 20,
+                            decoration: BoxDecoration(
+                                color: lead.share_status == 0
+                                    ? Colors.red
+                                    : Colors.green,
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(15))),
+                            child: SizedBox(),
+                          ),
                           Text("Lead No: ${lead.id}",
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold, fontSize: 16)),
