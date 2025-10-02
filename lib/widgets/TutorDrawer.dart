@@ -5,6 +5,7 @@ import 'package:urbantutorsapp/screens/tutor/feedback_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/course_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/get_pro_membership.dart';
 import 'package:urbantutorsapp/screens/tutor/notification_tutor.dart';
+import 'package:urbantutorsapp/screens/tutor/review_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/support_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/transactions_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_profile.dart';
@@ -359,6 +360,12 @@ class _StudentDrawerState extends State<Tutordrawer> {
                 Icons.share,
                 'Share app',
                 onTap: _shareApp,
+              ),
+
+              _drawerItem(
+                Icons.feedback,
+                'Take Review',
+                onTap: () => Get.to(() => const ReviewTutor()),
               ),
 
               _drawerItem(

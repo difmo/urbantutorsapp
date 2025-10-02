@@ -1,14 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
-import 'package:urbantutorsapp/models/profile_modals/tutor_profile_request_modal.dart';
-import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart'
-    show LeadMetaController;
+import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
 import 'package:urbantutorsapp/screens/tutor/teacher_pending_screen.dart';
@@ -34,33 +32,41 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
   final TextEditingController priceController = TextEditingController();
   final TextEditingController experienceController = TextEditingController();
 
-  // External controllers
-  final LocationController _locationController = Get.find<LocationController>();
-  final ProfileUpdateController profileUpdateController =
-      Get.put(ProfileUpdateController());
-  final MasterDataController _masterDataController =
-      Get.put(MasterDataController());
-  final LeadMetaController _leadMetaController = Get.put(LeadMetaController());
+  // Controllers (single, consistent set)
+  final ProfileUpdateController _p = Get.isRegistered<ProfileUpdateController>()
+      ? Get.find<ProfileUpdateController>()
+      : Get.put(ProfileUpdateController());
 
-  // IDs kept as int? for API
-  int? selectedBoardId;
-  int? selectedClassId;
-  int? selectedSubjectId;
+  final MasterDataController _master = Get.isRegistered<MasterDataController>()
+      ? Get.find<MasterDataController>()
+      : Get.put(MasterDataController());
 
+  final LeadMetaController _leadMeta = Get.isRegistered<LeadMetaController>()
+      ? Get.find<LeadMetaController>()
+      : Get.put(LeadMetaController());
+
+  final LocationController _loc = Get.isRegistered<LocationController>()
+      ? Get.find<LocationController>()
+      : Get.put(LocationController());
+
+  // Multi-select state
+  final List<int> _selBoardIds = [];
+  final List<int> _selClassIds = [];
+  final List<int> _selSubjectIds = [];
+  int? _boardId;
+  int? _classId;
+
+  // Other form bits
   String? selectedState;
   String? selectedIdType;
   String? selectedIdMode;
   String? selectedIdExperienceInYears;
 
-// --- in your State ---
-  int? selectedFeeMin; // 100..700
-  int? selectedFeeMax; // 700..3000
+  int? selectedFeeMin; // 100..1000
+  int? selectedFeeMax; // 300..3000
 
   final List<int> minOptions = [for (int v = 100; v <= 1000; v += 100) v];
   final List<int> maxOptionsBase = [for (int v = 300; v <= 3000; v += 100) v];
-
-// (optional) if you're inside a Form and want validation:
-// GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   final ImagePicker _picker = ImagePicker();
   XFile? _profileImage;
@@ -69,101 +75,120 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
   bool _overlayLoading = false;
 
-  // ===== GetX workers we must dispose =====
-  late final Worker _wTutorData; // reacts to profile data changes
-  late final Worker _wRouteOnce; // navigate once when profile first arrives
-  late final Worker _wMasterData; // reflects master data changes
+  // GetX workers (dispose later)
+  late final Worker _wTutorData;
+  late final Worker _wStudentData;
+  late final Worker _wRouteOnce;
+  late final Worker _wMasterData;
   late final Worker _wIsFetchingClasses;
   late final Worker _wIsFetchingSubjects;
 
   @override
   void initState() {
     super.initState();
-    profileUpdateController.fetchProfileForTutor();
-    _masterDataController.fetchMasterData();
-    profileUpdateController.fetchProfileForStudent();
-    _wTutorData = ever(profileUpdateController.tutorprofileData, (student) {
-      AppLog.i('[UI] studentprofileData changed');
+
+    // initial fetches
+    _p.fetchProfileForTutor();
+    _p.fetchProfileForStudent();
+    _master.fetchMasterData();
+
+    // react to tutor profile changes
+    _wTutorData = ever(_p.tutorprofileData, (student) async {
+      AppLog.i('[UI] tutorprofileData changed');
       if (!mounted || student == null) return;
       nameController.text = student.studentName ?? '';
-      // emailController.text = student.mobile?.toString() ?? '';
       priceController.text = student.price?.toString() ?? '';
       localityController.text = student.location ?? '';
       selectedState = student.state;
       selectedIdType = student.idType;
       remarkController.text = student.remark ?? '';
-      // if (student.frontId != null && student.frontId!.isNotEmpty) {
-      //   _frontIdImage = XFile.fromData(
-      //     base64Decode(student.frontId!.split(',').last),
-      //     name: 'front_id_${student.studentName ?? ""}.jpg',
-      //     mimeType: 'image/jpeg',
-      //     path: 'https://urbantutors.pro/${student.frontId}',
-      //   );
-      // }
-      // if (student.frontBack != null && student.frontBack!.isNotEmpty) {
-      //   _backIdImage = XFile.fromData(
-      //     base64Decode(student.frontBack!.split(',').last),
-      //     name: 'back_id_${student.studentName ?? ""}.jpg',
-      //     mimeType: 'image/jpeg',
-      //     path: 'https://urbantutors.pro/${student.frontBack}',
-      //   );
-      // }
-      if (selectedBoardId != null) {
-        _leadMetaController.loadClasses(selectedBoardId!);
-      }
       setState(() {});
     });
 
-    // 2) Route ONCE depending on profile_status (do not re-attach on refresh)
-    _wRouteOnce = once(profileUpdateController.tutorprofileData, (student) {
+    // hydrate from student profile (legacy fields, etc.)
+    _wStudentData = ever(_p.studentprofileData, (_) async => await _hydrate());
+
+    // single routing decision when tutorprofileData first arrives
+    _wRouteOnce = once(_p.tutorprofileData, (student) {
       if (!mounted || student == null) return;
       final status = student.profile_status;
-      // Stay on this screen for status == 0 (form incomplete)
-      if (status == 1) {
+      if (status == 0) {
+        // stay here (incomplete)
+      } else if (status == 1) {
         Get.offAll(() => const TeacherPendingScreen());
       } else if (status == 2) {
         Get.offAll(() => const TutorDashboard());
-      } else if (status == null) {
+      } else {
         Get.offAll(() => const WelcomeScreen());
       }
     });
 
-    // 3) Keep local UI in sync with master data
-    _wMasterData = ever(_masterDataController.masterData, (val) {
+    // reflect master data changes
+    _wMasterData = ever(_master.masterData, (val) {
       final boards = val?.data?.boardLead ?? [];
       AppLog.i('[UI] masterData updated, boards=${boards.length}');
       if (!mounted) return;
       setState(() {});
     });
 
-    // 4) Loading indicators for classes/subjects
-    _wIsFetchingClasses = ever(_leadMetaController.isFetchingClasses, (val) {
-      AppLog.i('[UI] isFetchingClasses=$val');
-      if (!mounted) return;
-      setState(() {});
+    _wIsFetchingClasses = ever(_leadMeta.isFetchingClasses, (_) {
+      if (mounted) setState(() {});
     });
-    _wIsFetchingSubjects = ever(_leadMetaController.isFetchingSubjects, (val) {
-      AppLog.i('[UI] isFetchingSubjects=$val');
-      if (!mounted) return;
-      setState(() {});
+    _wIsFetchingSubjects = ever(_leadMeta.isFetchingSubjects, (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  Future<void> _hydrate() async {
+    final p = _p.studentprofileData.value;
+    if (p == null) return;
+
+    // Basic text fields
+    nameController.text = (p.studentName ?? '').trim();
+    emailController.text = (p.mobile ?? '').trim();
+    localityController.text = p.location ?? '';
+
+    // Legacy IDs (single -> seed multi)
+    final nextBoardId =
+        (p.boardId is int) ? p.boardId : int.tryParse(p.boardId ?? '');
+    final nextClassId =
+        (p.courseId is int) ? p.courseId : int.tryParse(p.courseId ?? '');
+
+    if (nextBoardId != null) {
+      await _leadMeta.loadClasses(nextBoardId);
+    }
+
+    setState(() {
+      _boardId = nextBoardId;
+      _classId = nextClassId;
+
+      _selBoardIds
+        ..clear()
+        ..addAll(nextBoardId != null ? [nextBoardId] : const []);
+      _selClassIds
+        ..clear()
+        ..addAll(nextClassId != null ? [nextClassId] : const []);
+      _selSubjectIds.clear();
     });
   }
 
   @override
   void dispose() {
-    // Dispose workers to avoid setState after dispose
+    // Dispose workers
     _wTutorData.dispose();
+    _wStudentData.dispose();
     _wRouteOnce.dispose();
     _wMasterData.dispose();
     _wIsFetchingClasses.dispose();
     _wIsFetchingSubjects.dispose();
 
-    // Dispose text controllers
+    // Dispose controllers
     nameController.dispose();
     emailController.dispose();
     localityController.dispose();
     remarkController.dispose();
     priceController.dispose();
+    experienceController.dispose();
     super.dispose();
   }
 
@@ -211,17 +236,25 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
   Future<String?> _fileToBase64(XFile? file) async {
     if (file == null) return null;
     final bytes = await File(file.path).readAsBytes();
-    return "data:image/${file.path.split('.').last};base64,${base64Encode(bytes)}";
+    final ext = file.path.split('.').last.toLowerCase();
+    return "data:image/$ext;base64,${base64Encode(bytes)}";
+    // If your backend needs raw base64 only, return base64Encode(bytes)
   }
 
   void _refreshTutorProfile() {
-     Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => TeacherPendingScreen()),
-        (route) => false,
-      );
-    // Only triggers fetch; DOES NOT add any listeners.
-    profileUpdateController.fetchProfileForTutor();
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const TeacherPendingScreen()),
+      (route) => false,
+    );
+    _p.fetchProfileForTutor();
+  }
+
+  int? _expToInt(String? v) {
+    if (v == null) return null;
+    if (v.toLowerCase() == 'fresher') return 0;
+    if (v == '10+') return 10;
+    return int.tryParse(v);
   }
 
   Future<void> onSavePressed() async {
@@ -231,43 +264,42 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
       return;
     }
 
-    // Basic guards
-    if (selectedBoardId == null) {
-      Get.snackbar('Missing info', 'Please select a Board');
-      return;
-    }
-    if (selectedClassId == null) {
-      Get.snackbar('Missing info', 'Please select a Class');
-      return;
-    }
-    if (selectedSubjectId == null) {
-      Get.snackbar('Missing info', 'Please select a Subject');
-      return;
-    }
-
-    if (mounted) setState(() => _overlayLoading = true);
+    setState(() => _overlayLoading = true);
     try {
       final profileBase64 = await _fileToBase64(_profileImage) ?? '';
       final frontBase64 = await _fileToBase64(_frontIdImage) ?? '';
       final backBase64 = await _fileToBase64(_backIdImage) ?? '';
 
-      final request = TutorProfileUpdateRequest(
-        userId: int.parse(userIdStr),
-        boardId: selectedBoardId!,
-        courseId: selectedClassId!,
-        subjectId: selectedSubjectId!,
-        price: double.tryParse(selectedFeeMax.toString()) ?? 0.0,
-        location: localityController.text.trim(),
-        state: selectedState ?? "",
-        idType: selectedIdType ?? "",
-        remark: remarkController.text.trim(),
-        profilePicture: profileBase64,
-        frontId: frontBase64,
-        frontBack: backBase64,
-        mostExperienSubjectsId: 1,
-      );
+      final boardIds = List<int>.from(_selBoardIds.where((e) => e > 0).toSet());
+      final classIds = List<int>.from(_selClassIds.where((e) => e > 0).toSet());
+      final subjectIds =
+          List<int>.from(_selSubjectIds.where((e) => e > 0).toSet());
 
-      await profileUpdateController.updateProfileForTutor(request);
+      final request = {
+        "user_id": int.parse(userIdStr),
+        "email": emailController.text.trim(),
+        "location": localityController.text.trim(),
+        "state": selectedState,
+        "idType": selectedIdType ?? "",
+        "remark": remarkController.text.trim(),
+        "profile_picture":profileBase64,
+        "fee_min": selectedFeeMin ?? 0,
+        "fee_max": selectedFeeMax ?? 0,
+        "price": (selectedFeeMax ?? 0).toDouble(),
+        "mode": selectedIdMode,
+        "experience_years": _expToInt(selectedIdExperienceInYears),
+        "place_id": "ghjghjghjhgj",
+        "latitude": "28.663",
+        "longitude": "97.2255",
+        "board_id": boardIds,
+        "class_id": classIds,
+        "subject_id": subjectIds,
+        "frontid": frontBase64,
+        "backid": backBase64,
+      };
+
+      await _p.updateTutorProfile(request);
+
       Get.snackbar('Success', 'Profile updated successfully');
       _refreshTutorProfile();
     } catch (e) {
@@ -279,44 +311,44 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final boards =
-        _masterDataController.masterData.value?.data?.boardLead ?? [];
     final primary = AppColors.primaryColor;
     final accent = AppColors.accentColor;
+
     return Scaffold(
       appBar: AppBar(
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          toolbarHeight: 76,
-          titleSpacing: 0,
-          systemOverlayStyle: const SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: Brightness.light,
-            statusBarBrightness: Brightness.dark,
-          ),
-          flexibleSpace: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [primary, accent],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        toolbarHeight: 76,
+        titleSpacing: 0,
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+        ),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [primary, accent],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
           ),
-          title: _Header(
-            primary: primary,
-            accent: accent,
-            initial: "initial",
-            greeting: "Wallet",
-            name: " displayName",
-            balance: "balanceText",
-            onCoinTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const TutorCoinsScreen()),
-              );
-            },
-          )),
+        ),
+        title: _Header(
+          primary: primary,
+          accent: accent,
+          initial: "T",
+          greeting: "Wallet",
+          name: "Tutor",
+          balance: "0",
+          onCoinTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const TutorCoinsScreen()),
+            );
+          },
+        ),
+      ),
       body: Stack(
         children: [
           SafeArea(
@@ -370,26 +402,26 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
                   TextField(
                     controller: emailController,
+                    keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(labelText: "Email ID"),
                   ),
                   const SizedBox(height: 16),
 
                   // Locality (Autocomplete fed by server suggestions)
                   Obx(() {
-                    final loading = _locationController.isSearching.value;
-                    final opts =
-                        _locationController.suggestions; // RxList<String>
+                    final loading = _loc.isSearching.value;
+                    final opts = _loc.suggestions;
 
                     return Autocomplete<String>(
                       optionsBuilder: (TextEditingValue tev) {
                         final q = tev.text.trim();
                         if (q.isEmpty) return const Iterable<String>.empty();
-                        return opts; // controller already filtered
+                        return opts;
                       },
                       onSelected: (val) {
                         AppLog.i('[UI] Locality selected → $val');
                         localityController.text = val;
-                        _locationController.onQueryChanged('');
+                        _loc.onQueryChanged('');
                       },
                       fieldViewBuilder:
                           (context, textCtrl, focusNode, onFieldSubmitted) {
@@ -404,7 +436,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                           if (localityController.text != q) {
                             localityController.text = q;
                           }
-                          _locationController.onQueryChanged(q);
+                          _loc.onQueryChanged(q);
                         });
 
                         return TextField(
@@ -412,15 +444,16 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                           focusNode: focusNode,
                           decoration: InputDecoration(
                             labelText: 'Locality',
-                            hintText: 'Type city/area (e.g., lko)…',
+                            hintText: 'Type city/area…',
                             suffixIcon: loading
                                 ? const Padding(
                                     padding: EdgeInsets.all(10),
                                     child: SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2)),
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
+                                    ),
                                   )
                                 : const Icon(Icons.location_on_outlined),
                           ),
@@ -462,17 +495,6 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                   }),
                   const SizedBox(height: 16),
 
-                  // Simple debug readouts
-                  // Obx(() => Text(
-                  //     'Location results: ${_locationController.suggestions.length}',
-                  //     style:
-                  //         const TextStyle(fontSize: 12, color: Colors.grey))),
-                  // Obx(() => _locationController.error.isNotEmpty
-                  //     ? Text(
-                  //         'Location error: ${_locationController.error.value}',
-                  //         style:
-                  //             const TextStyle(fontSize: 12, color: Colors.red))
-                  //     : const SizedBox.shrink()),
                   // State
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(labelText: "State"),
@@ -516,127 +538,168 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
                   const SizedBox(height: 16),
 
-                  // Board
-                  Obx(() {
-                    final boardsRx = _masterDataController
-                            .masterData.value?.data?.boardLead ??
-                        [];
-                    dev.log('[UI] Boards count: ${boardsRx.length}',
-                        name: 'StudentProfile');
-
-                    return DropdownButtonFormField<int>(
-                      decoration: InputDecoration(
-                        labelText: "Selects Boards",
-                        suffixIcon: _leadMetaController.isFetchingSubjects.value
-                            ? const Padding(
-                                padding: EdgeInsets.all(12.0),
-                                child: SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2)),
-                              )
-                            : null,
+                  // Boards (multi)
+                  SizedBox(
+                    width: 600,
+                    child: _MultiSelectTile(
+                      label: 'Boards you Teach:',
+                      selectedNames: _labelsFor(
+                        _selBoardIds,
+                        (_master.masterData.value?.data?.boardLead ?? [])
+                            .map((b) => OptionInt(
+                                  (b.boardId is int)
+                                      ? b.boardId!
+                                      : int.tryParse('${b.boardId}') ?? 0,
+                                  b.boardLabel ?? '',
+                                ))
+                            .toList(),
                       ),
-                      value: selectedBoardId,
-                      items: boardsRx
-                          .map((b) => DropdownMenuItem<int>(
-                                value: b.boardId,
-                                child: Text(b.boardLabel?.toString() ?? ''),
-                              ))
-                          .toList(),
-                      onChanged: (val) {
-                        dev.log('[UI] Board changed → $val',
-                            name: 'StudentProfile');
-                        setState(() {
-                          selectedBoardId = val;
-                          selectedClassId = null;
-                          selectedSubjectId = null;
-                        });
-                        if (val != null) {
-                          _leadMetaController.loadClasses(val);
+                      onTap: () async {
+                        final options =
+                            (_master.masterData.value?.data?.boardLead ?? [])
+                                .map((b) => OptionInt(
+                                      (b.boardId is int)
+                                          ? b.boardId!
+                                          : int.tryParse('${b.boardId}') ?? 0,
+                                      b.boardLabel ?? '',
+                                    ))
+                                .toList();
+
+                        final picked = await _showMultiSelect(
+                          context,
+                          title: 'Select Boards',
+                          options: options,
+                          initial: _selBoardIds,
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            _selBoardIds
+                              ..clear()
+                              ..addAll(picked);
+                            _selClassIds.clear();
+                            _selSubjectIds.clear();
+                          });
+
+                          if (_selBoardIds.isNotEmpty) {
+                            await _leadMeta.loadClasses(_selBoardIds.first);
+                          }
                         }
                       },
-                    );
-                  }),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
 
-                  const SizedBox(height: 16),
-                  // Class
-                  Obx(() {
-                    final classItems = _leadMetaController.classes;
-                    dev.log('[UI] Classes count: ${classItems.length}',
-                        name: 'StudentProfile');
-
-                    return DropdownButtonFormField<int>(
-                      decoration: InputDecoration(
-                        labelText: "Select Classes",
-                        suffixIcon: _leadMetaController.isFetchingClasses.value
-                            ? const Padding(
-                                padding: EdgeInsets.all(12.0),
-                                child: SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2)),
-                              )
-                            : null,
+                  // Classes (multi)
+                  SizedBox(
+                    width: 600,
+                    child: _MultiSelectTile(
+                      label: 'Classes you Teach:',
+                      selectedNames: _labelsFor(
+                        _selClassIds,
+                        _leadMeta.classes
+                            .map((c) => OptionInt(c.classId, c.className))
+                            .toList(),
                       ),
-                      value: selectedClassId,
-                      items: classItems
-                          .map((c) => DropdownMenuItem(
-                              value: c.classId, child: Text(c.className)))
-                          .toList(),
-                      onChanged: (selectedBoardId == null)
-                          ? null
-                          : (val) {
-                              dev.log('[UI] Class changed → $val',
-                                  name: 'StudentProfile');
-                              setState(() {
-                                selectedClassId = val;
-                                selectedSubjectId = null;
-                              });
-                              if (val != null && selectedBoardId != null) {
-                                _leadMetaController.loadSubjects(
-                                    classId: val, boardId: selectedBoardId!);
-                              }
-                            },
-                    );
-                  }),
+                      onTap: () async {
+                        if (_selBoardIds.isEmpty) {
+                          Get.snackbar(
+                            'Select Board',
+                            'Please select at least one Board first',
+                            snackPosition: SnackPosition.BOTTOM,
+                          );
+                          return;
+                        }
+                        if (_leadMeta.classes.isEmpty) {
+                          await _leadMeta.loadClasses(_selBoardIds.first);
+                        }
 
-                  const SizedBox(height: 16),
+                        final options = _leadMeta.classes
+                            .map((c) => OptionInt(c.classId, c.className))
+                            .toList();
 
-                  // Subject
-                  Obx(() {
-                    final subjectItems = _leadMetaController.subjects;
-                    dev.log('[UI] Subjects count: ${subjectItems.length}',
-                        name: 'StudentProfile');
-                    return DropdownButtonFormField<int>(
-                      decoration: InputDecoration(
-                        labelText: "Select Subjects",
-                        suffixIcon: _leadMetaController.isFetchingSubjects.value
-                            ? const Padding(
-                                padding: EdgeInsets.all(12.0),
-                                child: SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2)),
-                              )
-                            : null,
+                        final picked = await _showMultiSelect(
+                          context,
+                          title: 'Select Classes',
+                          options: options,
+                          initial: _selClassIds,
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            _selClassIds
+                              ..clear()
+                              ..addAll(picked);
+                            _selSubjectIds.clear();
+                          });
+
+                          if (_selBoardIds.isNotEmpty &&
+                              _selClassIds.isNotEmpty) {
+                            await _leadMeta.loadSubjects(
+                              classId: _selClassIds.first,
+                              boardId: _selBoardIds.first,
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Subjects (multi)
+                  SizedBox(
+                    width: 600,
+                    child: _MultiSelectTile(
+                      label: 'Subjects you Teach:',
+                      selectedNames: _labelsFor(
+                        _selSubjectIds,
+                        _leadMeta.subjects
+                            .map((s) => OptionInt(
+                                  s.subjectId ?? 0,
+                                  (s.subjectName ?? '').toString(),
+                                ))
+                            .toList(),
                       ),
-                      value: selectedSubjectId,
-                      items: subjectItems
-                          .map((s) => DropdownMenuItem(
-                              value: s.subjectId, child: Text(s.subjectName)))
-                          .toList(),
-                      onChanged: (selectedClassId == null ||
-                              selectedBoardId == null)
-                          ? null
-                          : (val) => setState(() => selectedSubjectId = val),
-                    );
-                  }),
+                      onTap: () async {
+                        if (_selBoardIds.isEmpty || _selClassIds.isEmpty) {
+                          Get.snackbar(
+                            'Select Class',
+                            'Please select Boards and Classes first',
+                            snackPosition: SnackPosition.BOTTOM,
+                          );
+                          return;
+                        }
+                        if (_leadMeta.subjects.isEmpty) {
+                          await _leadMeta.loadSubjects(
+                            classId: _selClassIds.first,
+                            boardId: _selBoardIds.first,
+                          );
+                        }
 
-                  const SizedBox(height: 16),
+                        final options = _leadMeta.subjects
+                            .map((s) => OptionInt(
+                                  s.subjectId ?? 0,
+                                  (s.subjectName ?? '').toString(),
+                                ))
+                            .toList();
+
+                        final picked = await _showMultiSelect(
+                          context,
+                          title: 'Select Subjects',
+                          options: options,
+                          initial: _selSubjectIds,
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            _selSubjectIds
+                              ..clear()
+                              ..addAll(picked);
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Experience
                   DropdownButtonFormField<String>(
                     decoration:
                         const InputDecoration(labelText: "Experience in Years"),
@@ -663,6 +726,8 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                   ),
 
                   const SizedBox(height: 16),
+
+                  // Modes
                   DropdownButtonFormField<String>(
                     decoration:
                         const InputDecoration(labelText: "Select Modes"),
@@ -673,89 +738,83 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                         .toList(),
                     onChanged: (val) => setState(() => selectedIdMode = val),
                   ),
+
                   const SizedBox(height: 16),
-                  Container(
-                    child: Row(
-                      children: [
-                        // MIN: 100..700
-                        Expanded(
-                          child: DropdownButtonFormField<int>(
-                            decoration: const InputDecoration(
-                                labelText: "Select Fee Range (min)"),
-                            value: selectedFeeMin,
-                            isExpanded: true,
-                            items: minOptions
-                                .map((v) => DropdownMenuItem(
-                                    value: v, child: Text('₹$v/Hr')))
-                                .toList(),
-                            onChanged: (val) {
-                              setState(() {
-                                selectedFeeMin = val;
 
-                                // Ensure max respects both constraints:
-                                // - must be >= 700 (range rule)
-                                // - must be >= selected min
-                                final clampMinForMax = (val == null)
-                                    ? 700
-                                    : (val < 700 ? 700 : val);
-                                if (selectedFeeMax != null &&
-                                    selectedFeeMax! < clampMinForMax) {
-                                  selectedFeeMax = clampMinForMax;
-                                }
-                              });
-                            },
-                            validator: (v) => v == null ? 'Required' : null,
-                          ),
-                        ),
-                        const SizedBox(width: 20),
-
-                        // MAX: 700..3000, but filtered to >= max(700, selectedMin)
-                        Expanded(
-                          child: DropdownButtonFormField<int>(
-                            decoration: const InputDecoration(
-                                labelText: "Select Fee Range (max)"),
-                            value: selectedFeeMax,
-                            isExpanded: true,
-                            items: maxOptionsBase
-                                .where((v) =>
-                                    v >=
-                                    ((selectedFeeMin == null)
-                                        ? 300
-                                        : (selectedFeeMin! < 300
-                                            ? 300
-                                            : selectedFeeMin!)))
-                                .map((v) => DropdownMenuItem(
-                                    value: v, child: Text('₹$v/Hr')))
-                                .toList(),
-                            onChanged: (val) =>
-                                setState(() => selectedFeeMax = val),
-                            validator: (v) {
-                              if (v == null) return 'Required';
-                              final minAllowed = (selectedFeeMin == null)
-                                  ? 300
-                                  : (selectedFeeMin! < 300
-                                      ? 300
-                                      : selectedFeeMin!);
-                              if (v < minAllowed) {
-                                return 'Must be ≥ ₹$minAllowed';
+                  // Fee range
+                  Row(
+                    children: [
+                      // MIN
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          decoration: const InputDecoration(
+                              labelText: "Select Fee Range (min)"),
+                          value: selectedFeeMin,
+                          isExpanded: true,
+                          items: minOptions
+                              .map((v) => DropdownMenuItem(
+                                  value: v, child: Text('₹$v/Hr')))
+                              .toList(),
+                          onChanged: (val) {
+                            setState(() {
+                              selectedFeeMin = val;
+                              // clamp max >= min & >= 300
+                              final clampMinForMax =
+                                  (val == null) ? 300 : (val < 300 ? 300 : val);
+                              if (selectedFeeMax != null &&
+                                  selectedFeeMax! < clampMinForMax) {
+                                selectedFeeMax = clampMinForMax;
                               }
-                              return null;
-                            },
-                          ),
+                            });
+                          },
+                          validator: (v) => v == null ? 'Required' : null,
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 20),
+                      // MAX
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          decoration: const InputDecoration(
+                              labelText: "Select Fee Range (max)"),
+                          value: selectedFeeMax,
+                          isExpanded: true,
+                          items: maxOptionsBase
+                              .where((v) =>
+                                  v >=
+                                  ((selectedFeeMin == null)
+                                      ? 300
+                                      : (selectedFeeMin! < 300
+                                          ? 300
+                                          : selectedFeeMin!)))
+                              .map((v) => DropdownMenuItem(
+                                  value: v, child: Text('₹$v/Hr')))
+                              .toList(),
+                          onChanged: (val) =>
+                              setState(() => selectedFeeMax = val),
+                          validator: (v) {
+                            if (v == null) return 'Required';
+                            final minAllowed = (selectedFeeMin == null)
+                                ? 300
+                                : (selectedFeeMin! < 300
+                                    ? 300
+                                    : selectedFeeMin!);
+                            if (v < minAllowed) {
+                              return 'Must be ≥ ₹$minAllowed';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
                   ),
 
                   const SizedBox(height: 16),
+
+                  // ID Type
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(labelText: "ID Type"),
                     value: selectedIdType,
-                    items: const [
-                      "Aadhar",
-                      "Voter ID",
-                      "Passport",
-                    ]
+                    items: const ["Aadhar", "Voter ID", "Passport"]
                         .map((id) =>
                             DropdownMenuItem(value: id, child: Text(id)))
                         .toList(),
@@ -764,14 +823,16 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
                   const SizedBox(height: 16),
 
+                  // ID images
                   Row(
                     children: [
                       Expanded(
-                          child:
-                              _idUploadBox("Front ID", _frontIdImage, "front")),
+                        child: _idUploadBox("Front ID", _frontIdImage, "front"),
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
-                          child: _idUploadBox("Back ID", _backIdImage, "back")),
+                        child: _idUploadBox("Back ID", _backIdImage, "back"),
+                      ),
                     ],
                   ),
 
@@ -798,6 +859,11 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
     );
   }
 
+  List<String> _labelsFor(List<int> selectedIds, List<OptionInt> all) {
+    final map = {for (final o in all) o.id: o.label};
+    return selectedIds.map((id) => map[id]).whereType<String>().toList();
+  }
+
   Widget _idUploadBox(String label, XFile? file, String type) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -807,7 +873,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
         GestureDetector(
           onTap: () => _showPickerOptions(type),
           child: Container(
-            width: double.infinity, // fill the Expanded width
+            width: double.infinity,
             height: 120,
             decoration: BoxDecoration(
               border: Border.all(color: Colors.grey.shade400),
@@ -832,9 +898,9 @@ class _Header extends StatelessWidget {
     required this.accent,
     required this.onCoinTap,
     required this.balance,
-    required this.initial, // ⬅️ NEW
-    required this.greeting, // ⬅️ NEW
-    required this.name, // ⬅️ NEW
+    required this.initial,
+    required this.greeting,
+    required this.name,
   });
 
   final Color primary;
@@ -845,6 +911,7 @@ class _Header extends StatelessWidget {
   final String initial;
   final String greeting;
   final String name;
+
   String _capFirst(String s) {
     final t = s.trim();
     if (t.isEmpty) return '';
@@ -855,23 +922,16 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        SizedBox(
-          width: 8,
-        ),
-        // Avatar with gradient ring
-
-        const SizedBox(width: 12),
-
-        // Greeting + name (ellipsized)
+        const SizedBox(width: 8),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+            children: const [
               Text(
                 "Profile",
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w800,
                   fontSize: 18,
@@ -880,10 +940,158 @@ class _Header extends StatelessWidget {
             ],
           ),
         ),
-
-        // Coins chip
         const SizedBox(width: 8),
       ],
     );
   }
+}
+
+class _MultiSelectTile extends StatelessWidget {
+  const _MultiSelectTile({
+    required this.label,
+    required this.selectedNames,
+    required this.onTap,
+  });
+
+  final String label;
+  final List<String> selectedNames;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label,
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            if (selectedNames.isEmpty)
+              Text('Tap to select',
+                  style: TextStyle(color: Colors.grey.shade600))
+            else
+              Wrap(
+                spacing: 6,
+                runSpacing: -6,
+                children: selectedNames
+                    .map((n) => Container(
+                          margin: const EdgeInsets.all(4),
+                          child: Chip(
+                            label: Text(n),
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: const VisualDensity(
+                                vertical: -4, horizontal: -4),
+                          ),
+                        ))
+                    .toList(),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class OptionInt {
+  final int id;
+  final String label;
+  const OptionInt(this.id, this.label);
+}
+
+Future<List<int>?> _showMultiSelect(
+  BuildContext context, {
+  required String title,
+  required List<OptionInt> options,
+  required List<int> initial,
+}) async {
+  final Set<int> chosen = {...initial};
+  return showModalBottomSheet<List<int>>(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (ctx) => DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.6,
+      minChildSize: 0.4,
+      maxChildSize: 0.9,
+      builder: (_, controller) {
+        return Column(
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.black12,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Text(title,
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w700)),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, initial),
+                    child: const Text('CANCEL'),
+                  ),
+                  const SizedBox(width: 4),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(ctx, chosen.toList()),
+                    child: const Text('APPLY'),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: StatefulBuilder(
+                builder: (context, setSheetState) {
+                  return ListView.builder(
+                    controller: controller,
+                    itemCount: options.length,
+                    itemBuilder: (_, i) {
+                      final o = options[i];
+                      final checked = chosen.contains(o.id);
+                      return CheckboxListTile(
+                        dense: true,
+                        title: Text(o.label, overflow: TextOverflow.ellipsis),
+                        value: checked,
+                        onChanged: (v) {
+                          setSheetState(() {
+                            if (v == true) {
+                              chosen.add(o.id);
+                            } else {
+                              chosen.remove(o.id);
+                            }
+                          });
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    ),
+  );
 }

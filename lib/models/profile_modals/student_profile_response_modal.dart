@@ -36,6 +36,7 @@ class StudentProfileDataNew {
   final int? leadStatus;
   final String? studentName;
   final String? mobile;
+  final String? email;
   final String? totalCoins;
   final String? totalSpentCoins;
   final String? totalAvailableCoins;
@@ -60,6 +61,7 @@ class StudentProfileDataNew {
     this.profileId,
     this.leadStatus,
     this.studentName,
+    this.email,
     this.mobile,
     this.totalCoins,
     this.totalSpentCoins,
@@ -86,17 +88,18 @@ class StudentProfileDataNew {
       profileId: json['profile_id'],
       profile_picture: json['profile_picture'],
       leadStatus: json['lead_status'],
-      studentName: json['student_name'] ?? json['tutorbureau'],
-      mobile: json['mobile'] ?? json['tutorbureau_number'],
-      totalCoins: json['total_coins'],
-      totalSpentCoins: json['total_spent_coins'],
-      totalAvailableCoins: json['total_Available_coins'],
-      boardName: json['board_name'],
-      courseName: json['course_name'],
-      subjectName: json['subject_name'],
-      price: json['price'],
-      location: json['location'],
-      state: json['state'],
+      studentName: json['student_name'] ?? json['tutorbureau']??"test",
+      mobile: json['mobile'] ?? json['tutorbureau_number']??"0000000000",
+      totalCoins: json['total_coins']??"0",
+      totalSpentCoins: json['total_spent_coins']??"1",
+      totalAvailableCoins: json['total_Available_coins']??"10",
+      boardName: json['board_name']??"",
+      courseName: json['course_name']??"",
+      subjectName: json['subject_name']??"",
+      price: json['price']??"100",
+      location: json['location']??"Test",
+      state: json['state']??"test",
+      email: json['email'] ?? "test@gmail.com",
       idType: json['idtype'],
       frontId: json['frontid'],
       frontBack: json['frontback'],

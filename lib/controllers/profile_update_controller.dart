@@ -128,36 +128,35 @@ class ProfileUpdateController extends GetxController {
     }
   }
 
-  Future<bool> updateTutorProfile(updateData) async {
-    isLoading.value = true;
-    try {
-      final response =
-          await _profileUpdateService.updateTutorProfile(updateData);
-      tutorprofileData.value = response.data;
-      debugPrint("✅ Profile updated successfully");
-      Get.snackbar(
-        'Success',
-        response.message,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
-      return true;
-    } catch (e) {
-      debugPrint("❌ Error in updateProfile: $e");
-      Get.snackbar(
-        'Error',
-        e.toString(),
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
-      return false;
-    } finally {
-      isLoading.value = false;
-      return false;
-    }
+Future<bool> updateTutorProfile(updateData) async {
+  isLoading.value = true;
+  try {
+    final response = await _profileUpdateService.updateTutorProfile(updateData);
+    tutorprofileData.value = response.data;
+    debugPrint("✅ Profile updated successfully");
+    Get.snackbar(
+      'Success',
+      response.message,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.green,
+      colorText: Colors.white,
+    );
+    return true;
+  } catch (e) {
+    debugPrint("❌ Error in updateProfile: $e");
+    Get.snackbar(
+      'Error',
+      e.toString(),
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.redAccent,
+      colorText: Colors.white,
+    );
+    return false;
+  } finally {
+    isLoading.value = false;  // 👈 no return here
   }
+}
+
 
   Future<bool> updateProfileForStudent(
       StudentProfileUpdateRequest updateData) async {

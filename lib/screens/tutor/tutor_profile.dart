@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
@@ -19,6 +20,7 @@ import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/StudentDrawer.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class TutorProfile extends StatefulWidget {
   const TutorProfile({super.key});
@@ -56,6 +58,10 @@ class _TutorProfileState extends State<TutorProfile> {
   final _emailCtrl = TextEditingController();
   final _localityCtrl = TextEditingController();
   final _expCtrl = TextEditingController(); // NEW: experience years
+  final _qualificationCtrl = TextEditingController();
+  final _fbPageLinkCtrl = TextEditingController();
+  final _instaLinkCtrl = TextEditingController();
+  final _teleLinkCtrl = TextEditingController();
 
   // Single (legacy; still hydrated for compatibility)
   int? _boardId;
@@ -99,18 +105,26 @@ class _TutorProfileState extends State<TutorProfile> {
         : Get.put(CoinsController());
     WidgetsBinding.instance.addPostFrameCallback((_) => _c.refreshAll());
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (_master.masterData.value == null) {
-        await _master.fetchMasterData();
-      }
-      if (_p.studentprofileData.value == null && !_p.isLoading.value) {
-        await _p.fetchProfileForStudent();
-      }
-      await _hydrate();
-    });
+    // Kick off both (whichever returns first will be used)
+    _master.fetchMasterData();
+    _p.fetchProfileForStudent();
+    _p.fetchProfileForTutor(); // ✅ also pull tutor profile
 
-    // Re-hydrate whenever profile changes
-    ever(_p.studentprofileData, (_) async => await _hydrate());
+    // Hydrate whenever any of these change AND master data exists
+    everAll([_p.studentprofileData, _p.tutorprofileData, _master.masterData],
+        (_) async {
+      if (_master.masterData.value != null) {
+        await _hydrate(); // will pick the best available profile
+      }
+    });
+  }
+
+  String? _resolveImageUrl(String? path) {
+    if (path == null || path.isEmpty) return null;
+    if (path.startsWith('http')) return path;
+    // ✅ fix the missing slash and point to your real host if different
+    const base = 'https://urbantutors.com/';
+    return '$base$path';
   }
 
   @override
@@ -122,14 +136,39 @@ class _TutorProfileState extends State<TutorProfile> {
     super.dispose();
   }
 
+  T? _firstOrNull<T>(Iterable<T> it) => it.isEmpty ? null : it.first;
+
+  int? _toInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    return int.tryParse(v.toString());
+  }
+
+  List<int> _toIntList(dynamic v) {
+    if (v == null) return <int>[];
+    if (v is List) {
+      return v.map(_toInt).whereType<int>().toSet().toList();
+    }
+    if (v is String) {
+      return v
+          .split(RegExp(r'[,\s]+'))
+          .map(_toInt)
+          .whereType<int>()
+          .toSet()
+          .toList();
+    }
+    if (v is int) return <int>[v];
+    return <int>[];
+  }
+
   // -------------------- Data helpers --------------------
 
-  String? _resolveImageUrl(String? path) {
-    if (path == null || path.isEmpty) return null;
-    if (path.startsWith('http')) return path;
-    const base = 'https://your.api.host/'; // TODO: replace with your API host
-    return '$base$path';
-  }
+  // String? _resolveImageUrl(String? path) {
+  //   if (path == null || path.isEmpty) return null;
+  //   if (path.startsWith('http')) return path;
+  //   const base = 'https:/urbantutors.com/'; // TODO: replace with your API host
+  //   return '$base$path';
+  // }
 
   Future<void> _hydrate() async {
     final p = _p.studentprofileData.value;
@@ -137,7 +176,7 @@ class _TutorProfileState extends State<TutorProfile> {
 
     // Text fields
     _nameCtrl.text = (p.studentName ?? '').trim();
-    _emailCtrl.text = (p.mobile ?? '').trim();
+    _emailCtrl.text = (p.email ?? '').trim();
     _localityCtrl.text = p.location ?? '';
 
     // Image from server
@@ -279,7 +318,11 @@ class _TutorProfileState extends State<TutorProfile> {
         "longitude": "97.2255",
         "board_id": _selBoardIds,
         "class_id": _selClassIds,
-        "subject_id": _selSubjectIds
+        "subject_id": _selSubjectIds,
+        "qualification": _qualificationCtrl.text.toString(),
+        "fb_link": _fbPageLinkCtrl.text.trim(),
+        "insta_link": _instaLinkCtrl.text.trim(),
+        "tel_link": _teleLinkCtrl.text.trim(),
       };
 
       final ok = await _p.updateTutorProfile(request);
@@ -331,7 +374,7 @@ class _TutorProfileState extends State<TutorProfile> {
   Widget _sectionCard({required String title, required List<Widget> children}) {
     return Container(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -368,12 +411,10 @@ class _TutorProfileState extends State<TutorProfile> {
     );
   }
 
-
   List<String> _labelsFor(List<int> selectedIds, List<OptionInt> all) {
     final map = {for (final o in all) o.id: o.label};
     return selectedIds.map((id) => map[id]).whereType<String>().toList();
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -476,30 +517,65 @@ class _TutorProfileState extends State<TutorProfile> {
           ),
         ],
       ),
+// --- replace your current bottomNavigationBar with this ---
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-        child: SizedBox(
-          height: 48,
-          child: FilledButton.icon(
-            onPressed: _saving ? null : _save,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primaryColor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Save Changes
+            SizedBox(
+              height: 48,
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _saving ? null : _save,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: _saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.check),
+                label: const Text('Save Changes'),
+              ),
             ),
-            icon: _saving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
-                  )
-                : const Icon(Icons.check),
-            label: const Text('Save Changes'),
-          ),
+            const SizedBox(height: 10),
+
+            // Share Profile
+            SizedBox(
+              height: 48,
+              width: double.infinity,
+              child: Container(
+                decoration: BoxDecoration(
+                    borderRadius: BorderRadius.all(Radius.circular(16))),
+                child: OutlinedButton.icon(
+                  onPressed: _shareProfile,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primaryColor,
+                    side: BorderSide(color: AppColors.primaryColor, width: 1.6),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: const Icon(Icons.ios_share_rounded),
+                  label: const Text('Share Your Profile'),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
+
       body: Obx(() {
         final loading =
             _p.isLoading.value && _p.studentprofileData.value == null;
@@ -578,6 +654,9 @@ class _TutorProfileState extends State<TutorProfile> {
                   children: [
                     _textField('Full Name', _nameCtrl,
                         icon: Icons.person, hint: 'Your name'),
+                    SizedBox(
+                      width: 16,
+                    ),
                     _textField(
                       'Email',
                       _emailCtrl,
@@ -641,117 +720,133 @@ class _TutorProfileState extends State<TutorProfile> {
                         },
                       ),
                     ),
-                    const SizedBox(height: 10),
 
                     // Classes (multi)
-                    SizedBox(
-                      width: 600,
-                      child: _MultiSelectTile(
-                        label: 'Classes you Teach : ',
-                        selectedNames: _labelsFor(
-                          _selClassIds,
-                          _leadMeta.classes
-                              .map((c) => OptionInt(c.classId, c.className))
-                              .toList(),
+                    Container(
+                      margin: EdgeInsets.only(top: 16),
+                      child: SizedBox(
+                        width: 600,
+                        child: _MultiSelectTile(
+                          label: 'Classes you Teach : ',
+                          selectedNames: _labelsFor(
+                            _selClassIds,
+                            _leadMeta.classes
+                                .map((c) => OptionInt(c.classId, c.className))
+                                .toList(),
+                          ),
+                          onTap: () async {
+                            if (_selBoardIds.isEmpty) {
+                              Get.snackbar('Select Board',
+                                  'Please select at least one Board first',
+                                  snackPosition: SnackPosition.BOTTOM);
+                              return;
+                            }
+                            if (_leadMeta.classes.isEmpty) {
+                              await _leadMeta.loadClasses(_selBoardIds.first);
+                            }
+
+                            final options = _leadMeta.classes
+                                .map((c) => OptionInt(c.classId, c.className))
+                                .toList();
+
+                            final picked = await _showMultiSelect(
+                              context,
+                              title: 'Select Classes',
+                              options: options,
+                              initial: _selClassIds,
+                            );
+                            if (picked != null) {
+                              setState(() {
+                                _selClassIds
+                                  ..clear()
+                                  ..addAll(picked);
+                                _selSubjectIds.clear();
+                              });
+
+                              if (_selBoardIds.isNotEmpty &&
+                                  _selClassIds.isNotEmpty) {
+                                await _leadMeta.loadSubjects(
+                                  classId: _selClassIds.first,
+                                  boardId: _selBoardIds.first,
+                                );
+                              }
+                            }
+                          },
                         ),
-                        onTap: () async {
-                          if (_selBoardIds.isEmpty) {
-                            Get.snackbar('Select Board',
-                                'Please select at least one Board first',
-                                snackPosition: SnackPosition.BOTTOM);
-                            return;
-                          }
-                          if (_leadMeta.classes.isEmpty) {
-                            await _leadMeta.loadClasses(_selBoardIds.first);
-                          }
+                      ),
+                    ),
 
-                          final options = _leadMeta.classes
-                              .map((c) => OptionInt(c.classId, c.className))
-                              .toList();
-
-                          final picked = await _showMultiSelect(
-                            context,
-                            title: 'Select Classes',
-                            options: options,
-                            initial: _selClassIds,
-                          );
-                          if (picked != null) {
-                            setState(() {
-                              _selClassIds
-                                ..clear()
-                                ..addAll(picked);
-                              _selSubjectIds.clear();
-                            });
-
-                            if (_selBoardIds.isNotEmpty &&
-                                _selClassIds.isNotEmpty) {
+                    // Subjects (multi)
+                    Container(
+                      margin: EdgeInsets.only(top: 16),
+                      child: SizedBox(
+                        width: 600,
+                        child: _MultiSelectTile(
+                          label: 'Subjects you Teach : ',
+                          selectedNames: _labelsFor(
+                            _selSubjectIds,
+                            _leadMeta.subjects
+                                .map((s) => OptionInt(
+                                      s.subjectId ?? 0,
+                                      (s.subjectName ?? '').toString(),
+                                    ))
+                                .toList(),
+                          ),
+                          onTap: () async {
+                            if (_selBoardIds.isEmpty || _selClassIds.isEmpty) {
+                              Get.snackbar('Select Class',
+                                  'Please select Boards and Classes first',
+                                  snackPosition: SnackPosition.BOTTOM);
+                              return;
+                            }
+                            if (_leadMeta.subjects.isEmpty) {
                               await _leadMeta.loadSubjects(
                                 classId: _selClassIds.first,
                                 boardId: _selBoardIds.first,
                               );
                             }
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 10),
 
-                    // Subjects (multi)
-                    SizedBox(
-                      width: 600,
-                      child: _MultiSelectTile(
-                        label: 'Subjects you Teach : ',
-                        selectedNames: _labelsFor(
-                          _selSubjectIds,
-                          _leadMeta.subjects
-                              .map((s) => OptionInt(
-                                    s.subjectId ?? 0,
-                                    (s.subjectName ?? '').toString(),
-                                  ))
-                              .toList(),
-                        ),
-                        onTap: () async {
-                          if (_selBoardIds.isEmpty || _selClassIds.isEmpty) {
-                            Get.snackbar('Select Class',
-                                'Please select Boards and Classes first',
-                                snackPosition: SnackPosition.BOTTOM);
-                            return;
-                          }
-                          if (_leadMeta.subjects.isEmpty) {
-                            await _leadMeta.loadSubjects(
-                              classId: _selClassIds.first,
-                              boardId: _selBoardIds.first,
+                            final options = _leadMeta.subjects
+                                .map((s) => OptionInt(
+                                      s.subjectId ?? 0,
+                                      (s.subjectName ?? '').toString(),
+                                    ))
+                                .toList();
+
+                            final picked = await _showMultiSelect(
+                              context,
+                              title: 'Select Subjects',
+                              options: options,
+                              initial: _selSubjectIds,
                             );
-                          }
-
-                          final options = _leadMeta.subjects
-                              .map((s) => OptionInt(
-                                    s.subjectId ?? 0,
-                                    (s.subjectName ?? '').toString(),
-                                  ))
-                              .toList();
-
-                          final picked = await _showMultiSelect(
-                            context,
-                            title: 'Select Subjects',
-                            options: options,
-                            initial: _selSubjectIds,
-                          );
-                          if (picked != null) {
-                            setState(() {
-                              _selSubjectIds
-                                ..clear()
-                                ..addAll(picked);
-                            });
-                          }
-                        },
+                            if (picked != null) {
+                              setState(() {
+                                _selSubjectIds
+                                  ..clear()
+                                  ..addAll(picked);
+                              });
+                            }
+                          },
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 16,
+                    ),
+                    _textField(
+                      'Qualification : ',
+                      _qualificationCtrl,
+                      icon: Icons.book,
+                      hint: 'Qualification : ',
+                    ),
+
+                    SizedBox(
+                      height: 16,
+                    ),
 
                     // Experience (years)
                     _textField(
-                      'Experience (years)',
+                      'Experience (years) : ',
                       _expCtrl,
                       icon: Icons.work_outline,
                       hint: 'e.g. 3',
@@ -858,11 +953,184 @@ class _TutorProfileState extends State<TutorProfile> {
                   ),
                 ),
                 const SizedBox(height: 10),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Column(
+                    children: [
+                      _textField(
+                        'Facebook Page Link',
+                        _fbPageLinkCtrl,
+                        icon: Icons.facebook,
+                        hint: 'Facebook Page Link',
+                      ),
+                      _textField(
+                        'Instagram Page Link',
+                        _instaLinkCtrl,
+                        icon: Icons.face,
+                        hint: 'Insta Link',
+                      ),
+                      _textField(
+                        'Whatsapp Community / Group Link',
+                        _teleLinkCtrl,
+                        icon: Icons.telegram,
+                        hint: 'Whatsapp  Link',
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
         );
       }),
+    );
+  }
+
+  List<OptionInt> _boardOptions() =>
+      (_master.masterData.value?.data?.boardLead ?? [])
+          .map((b) => OptionInt(
+                (b.boardId is int)
+                    ? b.boardId!
+                    : int.tryParse('${b.boardId}') ?? 0,
+                b.boardLabel ?? '',
+              ))
+          .toList();
+
+  List<OptionInt> _classOptions() =>
+      _leadMeta.classes.map((c) => OptionInt(c.classId, c.className)).toList();
+
+  List<OptionInt> _subjectOptions() => _leadMeta.subjects
+      .map((s) => OptionInt(s.subjectId ?? 0, (s.subjectName ?? '').toString()))
+      .toList();
+
+  String _comma(List<String> items) => items.isEmpty ? '-' : items.join(', ');
+
+  List<String> _labelsForIds(List<int> ids, List<OptionInt> pool) {
+    final map = {for (final o in pool) o.id: o.label};
+    return ids.map((id) => map[id] ?? '#$id').toList();
+  }
+
+  Future<String> _buildShareMessage() async {
+    final url = await _publicProfileUrl();
+    final name =
+        _nameCtrl.text.trim().isEmpty ? 'Tutor' : _nameCtrl.text.trim();
+    final boards = _labelsForIds(_selBoardIds, _boardOptions());
+    final classes = _labelsForIds(_selClassIds, _classOptions());
+    final subjects = _labelsForIds(_selSubjectIds, _subjectOptions());
+
+    final qual = _qualificationCtrl.text.trim();
+    final exp = _expCtrl.text.trim();
+    final loc = _localityCtrl.text.trim();
+
+    final lines = <String>[
+      'Tutor’s @ www.urbantutors.pro',
+      'Name : $name',
+      'Boards: ${_comma(boards)}',
+      'Classes: ${_comma(classes)}',
+      'Subjects: ${_comma(subjects)}',
+      'Qualification: ${qual.isNotEmpty ? qual : "Test"}',
+      'Experience: ${exp.isNotEmpty ? "${exp} years" : "test"}',
+      if (loc.isNotEmpty || stateVal != null)
+        'Location: $loc${stateVal != null && stateVal!.isNotEmpty ? ', $stateVal' : ''}',
+      if (modeVal != null) 'Mode: $modeVal',
+      if (_fbPageLinkCtrl.text.trim().isNotEmpty)
+        'Facebook: ${_fbPageLinkCtrl.text.trim()}',
+      if (_instaLinkCtrl.text.trim().isNotEmpty)
+        'Instagram: ${_instaLinkCtrl.text.trim()}',
+      if (_teleLinkCtrl.text.trim().isNotEmpty)
+        'WhatsApp/Telegram: ${_teleLinkCtrl.text.trim()}',
+      '',
+      'Kindly, View My Profile @ $url',
+    ];
+
+    return lines.join('\n');
+  }
+
+  Future<String> _publicProfileUrl() async {
+    final uid = await StorageService.getUserId();
+    // TODO: replace with your actual public URL pattern
+    return 'https://urbantutors.app/profile/$uid';
+  }
+
+  Future<void> _shareGeneric() async {
+    final text = await _buildShareMessage();
+
+    // If a local avatar is chosen, attach it; some apps may show only image.
+    if (_profileImage != null) {
+      await Share.shareXFiles(
+        [XFile(_profileImage!.path)],
+        text: text,
+        subject: 'My Tutor Profile',
+      );
+    } else {
+      await Share.share(text, subject: 'My Tutor Profile');
+    }
+  }
+
+  Future<void> _shareToWhatsApp() async {
+    final url = await _publicProfileUrl();
+    final text = Uri.encodeComponent('Check out my tutor profile:\n$url');
+    final uri = Uri.parse('whatsapp://send?text=$text');
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      // fallback to generic share
+      await _shareGeneric();
+    }
+  }
+
+  Future<void> _copyLink() async {
+    final url = await _publicProfileUrl();
+    await Clipboard.setData(ClipboardData(text: url));
+    Get.snackbar('Copied', 'Profile link copied to clipboard',
+        snackPosition: SnackPosition.BOTTOM);
+  }
+
+  Future<void> _shareProfile() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      builder: (_) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.facebook),
+              title: const Text('Share to Facebook'),
+              onTap: () async {
+                Navigator.pop(context);
+                await _shareGeneric();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.insert_page_break_rounded),
+              title: const Text('Share to Intagram'),
+              onTap: () async {
+                Navigator.pop(context);
+                await _shareGeneric();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.share),
+              title: const Text('Share to WhatsApp'),
+              onTap: () async {
+                Navigator.pop(context);
+                await _shareToWhatsApp();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.link),
+              title: const Text('Copy profile link'),
+              onTap: () async {
+                Navigator.pop(context);
+                await _copyLink();
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 

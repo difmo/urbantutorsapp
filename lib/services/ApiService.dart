@@ -50,6 +50,41 @@ class ApiService {
     }
   }
 
+static Future<Response> postt(
+  String path,
+  dynamic data, {
+  String? token,
+  bool isJson = false,
+}) async {
+  final authToken = token ?? await StorageService.getToken();
+
+  final headers = <String, String>{};
+  if (authToken != null && authToken.isNotEmpty) {
+    headers['Authorization'] = 'Bearer $authToken';
+  }
+
+  final options = isJson
+      ? Options(headers: headers, contentType: Headers.jsonContentType) // 👈 JSON
+      : Options(headers: headers);
+
+  final payload = isJson
+      ? data // 👈 pass Map directly; Dio will JSON-encode
+      : (data is FormData
+          ? data
+          : FormData.fromMap(((data as Map?)?.cast<String, dynamic>()) ?? const {}));
+
+  try {
+    final res = await _dio.post(path, data: payload, options: options);
+    return res;
+  } on DioException catch (e) {
+    final server = e.response?.data;
+    final msg = (server is Map && server['message'] != null)
+        ? server['message'].toString()
+        : e.message ?? 'Network error';
+    throw Exception(msg);
+  }
+}
+
   static Future<Response> get(String path, {String? token}) async {
     final authToken = token ?? await StorageService.getToken();
     final headers = <String, String>{};
