@@ -4,7 +4,7 @@ import 'dart:ui';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
+import 'package:get/get.dart' hide MultipartFile;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,12 +16,6 @@ import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/TutorDrawer.dart';
 
-/// Google-style "Write a review" screen for tutors.
-/// - 5-star rating
-/// - Big text area
-/// - Add photos & videos tray (up to 6 photos + 1 video)
-/// - Cancel / Post actions
-/// - Sends to backend via ApiService.post as multipart FormData
 class ReviewTutor extends StatefulWidget {
   const ReviewTutor({super.key});
   @override
@@ -192,35 +186,32 @@ class _FeedbackStudentState extends State<ReviewTutor> {
       final uidStr = await StorageService.getUserId();
       final userId = int.tryParse('$uidStr') ?? 0;
 
-      // Build multipart map for ApiService.post (which converts Map -> FormData)
-      // final map = <String, dynamic>{
-      //   'user_id': userId,
-      //   'rating': _rating,                // 1..5
-      //   'title': '',                      // optional; keep blank to mimic Google UI
-      //   'review': _descCtrl.text.trim(),  // required
-      //   // add more fields if your API needs them, e.g. tutor_id / order_id
-      // };
+      final map = <String, dynamic>{
+        'user_id': userId,
+        'rating': _rating,
+        'title': '',
+        'review': _descCtrl.text.trim(),
+      };
 
-      // final files = <MultipartFile>[];
-      // for (final img in _images) {
-      //   files.add(await MultipartFile.fromFile(img.path, filename: img.name));
-      // }
-      // if (_video != null) {
-      //   files.add(await MultipartFile.fromFile(_video!.path, filename: _video!.name));
-      // }
+      final files = <MultipartFile>[];
+      for (final img in _images) {
+        files.add(await MultipartFile.fromFile(img.path, filename: img.name));
+      }
+      if (_video != null) {
+        files.add(
+            await MultipartFile.fromFile(_video!.path, filename: _video!.name));
+      }
 
-      // // If your backend expects a different key (e.g., "images[]" & "video"),
-      // // adjust here. Using media[] is common for multiple uploads.
-      // if (files.isNotEmpty) map['media[]'] = files;
+      // If your backend expects a different key (e.g., "images[]" & "video"),
+      // adjust here. Using media[] is common for multiple uploads.
+      if (files.isNotEmpty) map['media[]'] = files;
 
-      // // TODO: change endpoint to your real route
-      // await ApiService.post('/tutor/review', map);
-
+      // TODO: change endpoint to your real route
+      // await ApiService.post(Uri.parse("api/feedback"),map,null);
       Get.snackbar('Thanks!', 'Your review was posted.',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.green,
           colorText: Colors.white);
-
       // reset UI
       setState(() {
         _rating = 0;

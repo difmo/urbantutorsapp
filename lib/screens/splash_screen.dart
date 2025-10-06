@@ -52,7 +52,7 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _initTeacherProfile() async {
     await _profileUpdateController.fetchProfileForTutor();
     final status =
-        _profileUpdateController.tutorprofileData.value?.profile_status;
+        _profileUpdateController.tutorprofileData.value?.profileStatus;
     if (status != null) {
       print("running init profile ");
       StorageService.saveIsProfileStatus(status);

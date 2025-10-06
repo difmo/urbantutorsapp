@@ -64,7 +64,7 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
     _wTutorData = ever(profileUpdateController.tutorprofileData, (student) {
       AppLog.i('[UI] studentprofileData changed');
       if (!mounted || student == null) return;
-      nameController.text = student.studentName ?? '';
+      nameController.text = student.teacherName ?? '';
       phoneController.text = student.mobile?.toString() ?? '';
       priceController.text = student.price?.toString() ?? '';
       localityController.text = student.location ?? '';
@@ -92,7 +92,7 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
     // 2) Route ONCE depending on profile_status (do not re-attach on refresh)
     _wRouteOnce = once(profileUpdateController.tutorprofileData, (student) {
       if (!mounted || student == null) return;
-      final status = student.profile_status;
+      final status = student.profileStatus;
       // Stay on this screen for status == 0 (form incomplete)
       if (status == 1) {
         Get.offAll(() => const TeacherPendingScreen());

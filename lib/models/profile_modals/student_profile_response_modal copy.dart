@@ -8,6 +8,7 @@ class StudentProfileResponsdModal {
     this.data,
     required this.message,
   });
+
   factory StudentProfileResponsdModal.fromJson(Map<String, dynamic> json) {
     return StudentProfileResponsdModal(
       success: json['success'] ?? false,
@@ -39,6 +40,7 @@ class StudentProfileDataNew {
   final String? totalCoins;
   final String? totalSpentCoins;
   final String? totalAvailableCoins;
+  final List<TeachingDetails>?teachingDetails;
   final String? boardName;
   final String? courseName;
   final String? subjectName;
@@ -65,6 +67,7 @@ class StudentProfileDataNew {
     this.totalCoins,
     this.totalSpentCoins,
     this.totalAvailableCoins,
+    this.teachingDetails,
     this.boardName,
     this.courseName,
     this.subjectName,
@@ -87,17 +90,18 @@ class StudentProfileDataNew {
       profileId: json['profile_id'],
       profile_picture: json['profile_picture'],
       leadStatus: json['lead_status'],
-      studentName: json['student_name'] ?? json['tutorbureau'] ?? "test",
-      mobile: json['mobile'] ?? json['tutorbureau_number'] ?? "0000000000",
-      totalCoins: json['total_coins'] ?? "0",
-      totalSpentCoins: json['total_spent_coins'] ?? "1",
-      totalAvailableCoins: json['total_Available_coins'] ?? "10",
-      boardName: json['board_name'] ?? "",
-      courseName: json['course_name'] ?? "",
-      subjectName: json['subject_name'] ?? "",
-      price: json['price'] ?? "100",
-      location: json['location'] ?? "Test",
-      state: json['state'] ?? "test",
+      studentName: json['student_name'] ?? json['tutorbureau']??"test",
+      mobile: json['mobile'] ?? json['tutorbureau_number']??"0000000000",
+      totalCoins: json['total_coins']??"0",
+      totalSpentCoins: json['total_spent_coins']??"1",
+      totalAvailableCoins: json['total_Available_coins']??"10",
+      teachingDetails: json['teaching_details']??[],
+      boardName: json['board_name']??"",
+      courseName: json['course_name']??"",
+      subjectName: json['subject_name']??"",
+      price: json['price']??"100",
+      location: json['location']??"Test",
+      state: json['state']??"test",
       email: json['email'] ?? "test@gmail.com",
       idType: json['idtype'],
       frontId: json['frontid'],
@@ -129,6 +133,7 @@ class StudentProfileDataNew {
       "total_coins": totalCoins,
       "total_spent_coins": totalSpentCoins,
       "total_Available_coins": totalAvailableCoins,
+      "teaching_details":teachingDetails,
       "board_name": boardName,
       "course_name": courseName,
       "subject_name": subjectName,
@@ -143,5 +148,49 @@ class StudentProfileDataNew {
       "created_at": createdAt,
       "updated_at": updatedAt,
     };
+  }
+}
+
+class TeachingDetails {
+  final int? boardId;
+  final String? boardName;
+  final int? classId;
+  final String? className;
+  final int? subjectId;
+  final String? subjectName;
+
+  TeachingDetails({
+    this.boardId,
+    this.boardName,
+    this.classId,
+    this.className,
+    this.subjectId,
+    this.subjectName,
+  });
+
+  factory TeachingDetails.fromJson(Map<String, dynamic> json) {
+    return TeachingDetails(
+      boardId: json['board_id'],
+      boardName: json['board_name'],
+      classId: json['class_id'],
+      className: json['class_name'],
+      subjectId: json['subject_id'],
+      subjectName: json['subject_name'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'board_id': boardId,
+      'board_name': boardName,
+      'class_id': classId,
+      'class_name': className,
+      'subject_id': subjectId,
+      'subject_name': subjectName,
+    };
+  }
+
+  static List<TeachingDetails> listFromJson(List<dynamic> jsonList) {
+    return jsonList.map((json) => TeachingDetails.fromJson(json)).toList();
   }
 }

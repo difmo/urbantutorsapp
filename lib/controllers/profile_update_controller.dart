@@ -47,19 +47,18 @@ class ProfileUpdateController extends GetxController {
     isLoading.value = true;
     try {
       final response = await _profileUpdateService.getProfileForStudent();
-      setProfile(response.data);
-      final leadStatus = response.data!.leadStatus;
-      await StorageService.saveUserLeadStatus(leadStatus.toString());
+      isLoading.value = false;
       debugPrint("✅ Profile fetched successfully:  ${response.data}");
+      if (response.data == []) {
+        setProfile(null);
+      } else {
+        final leadStatus = response.data!.leadStatus;
+        await StorageService.saveUserLeadStatus(leadStatus.toString());
+        setProfile(response.data);
+      }
     } catch (e) {
       debugPrint("❌ Error in fetchProfileUpdate: $e");
-      // Get.snackbar(
-      //   'Error',
-      //   e.toString(),
-      //   snackPosition: SnackPosition.BOTTOM,
-      //   backgroundColor: Colors.redAccent,
-      //   colorText: Colors.white,
-      // );
+      isLoading.value = false;
     } finally {
       isLoading.value = false;
     }
@@ -74,9 +73,9 @@ class ProfileUpdateController extends GetxController {
     try {
       final response = await _profileUpdateService.getProfileForTutor();
       tutorprofileData.value = response.data;
-      if (tutorprofileData.value?.profile_status != null) {
+      if (tutorprofileData.value?.profileStatus != null) {
         StorageService.saveIsProfileStatus(
-            tutorprofileData.value!.profile_status!);
+            tutorprofileData.value!.profileStatus!);
       } else {
         StorageService.saveIsProfileStatus(0);
       }
@@ -128,35 +127,35 @@ class ProfileUpdateController extends GetxController {
     }
   }
 
-Future<bool> updateTutorProfile(updateData) async {
-  isLoading.value = true;
-  try {
-    final response = await _profileUpdateService.updateTutorProfile(updateData);
-    tutorprofileData.value = response.data;
-    debugPrint("✅ Profile updated successfully");
-    Get.snackbar(
-      'Success',
-      response.message,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-    );
-    return true;
-  } catch (e) {
-    debugPrint("❌ Error in updateProfile: $e");
-    Get.snackbar(
-      'Error',
-      e.toString(),
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.redAccent,
-      colorText: Colors.white,
-    );
-    return false;
-  } finally {
-    isLoading.value = false;  // 👈 no return here
+  Future<bool> updateTutorProfile(updateData) async {
+    isLoading.value = true;
+    try {
+      final response =
+          await _profileUpdateService.updateTutorProfile(updateData);
+      tutorprofileData.value = response.data;
+      debugPrint("✅ Profile updated successfully");
+      Get.snackbar(
+        'Success',
+        response.message,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+      return true;
+    } catch (e) {
+      debugPrint("❌ Error in updateProfile: $e");
+      Get.snackbar(
+        'Error',
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      isLoading.value = false; // 👈 no return here
+    }
   }
-}
-
 
   Future<bool> updateProfileForStudent(
       StudentProfileUpdateRequest updateData) async {
@@ -255,7 +254,8 @@ Future<bool> updateTutorProfile(updateData) async {
   Future<bool> updateAdminProfile(updateData) async {
     isLoading.value = true;
     try {
-      final response = await _profileUpdateService.updateAdminProfile(updateData);
+      final response =
+          await _profileUpdateService.updateAdminProfile(updateData);
       tutorprofileData.value = response.data;
       debugPrint("✅ Profile updated successfully");
       Get.snackbar(

@@ -30,12 +30,10 @@ class ProfileUpdateService {
         ApiConstants.USER_PROFIEL_FETCH,
         null,
       );
-
-      print("✅ Response from getProfileUpdate ser: ${response.data}");
-
+      print("✅ Response from getProfileForStudent :: ${response.data}");
       return StudentProfileResponsdModal.fromJson(response.data);
     } catch (e) {
-      print("❌ Error in getProfileUpdate (from ProfileUpdateService):");
+      print("❌ Error in getProfileForStudent :");
       print(e.toString());
       rethrow;
     }
@@ -100,37 +98,34 @@ class ProfileUpdateService {
     try {
       final response = await ApiService.post(
         "/teacher_profile_update",
-        updateData.toJson(),
+        updateData,
       );
 
       print("✅ Response from updateProfile: ${response.data}");
 
       return TutorProfileResponse.fromJson(response.data);
     } catch (e) {
-      print("❌ Error in updateProfile (from ProfileUpdateService):");
+      print("❌ Error in updateProfile For Tutor :");
       print(e.toString());
       rethrow;
     }
   }
 
-Future<TutorProfileResponse> updateTutorProfile(updateData) async {
-  print("diineskumar : ${updateData.toString()}");
-  print("update profile called for tutor ");
-  try {
-    final response = await ApiService.postt(
-      "/teacher_profile_update",
-      updateData,
-      isJson: true, // 👈 send as JSON, not FormData
-    );
-    print("✅ Response from updateProfile: ${response.data}");
-    return TutorProfileResponse.fromJson(response.data);
-  } catch (e) {
-    print("❌ Error in updateProfile (from ProfileUpdateService):");
-    print(e.toString());
-    rethrow;
+  Future<TutorProfileResponse> updateTutorProfile(updateData) async {
+    print("diineskumar : ${updateData.toString()}");
+    print("update profile called for tutor ");
+    try {
+      final response = await ApiService.postt(
+          "/teacher_profile_update", updateData,
+          isJson: true);
+      print("✅ Response from updateProfile: ${response.data}");
+      return TutorProfileResponse.fromJson(response.data);
+    } catch (e) {
+      print("❌ Error in updateTutorProfile");
+      print(e.toString());
+      rethrow;
+    }
   }
-}
-
 
   Future<TutorProfileResponse> updateAdminProfile(updateData) async {
     print("update profile called for tutor ");

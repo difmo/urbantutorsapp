@@ -47,10 +47,10 @@ class _OTPScreenState extends State<OTPScreen> {
 
   Future<void> _initProfile() async {
     await _profileUpdateController.fetchProfileForTutor();
-    if (_profileUpdateController.tutorprofileData.value?.profile_status !=
+    if (_profileUpdateController.tutorprofileData.value?.profileStatus !=
         null) {
       await StorageService.saveIsProfileStatus(
-          _profileUpdateController.tutorprofileData.value!.profile_status!);
+          _profileUpdateController.tutorprofileData.value!.profileStatus!);
     }
   }
 

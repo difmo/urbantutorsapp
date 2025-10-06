@@ -1,151 +1,187 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:urbantutorsapp/controllers/tutor_pro_controller.dart';
+import 'package:urbantutorsapp/models/nearby_student.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 
-class TutorChatScreen extends StatelessWidget {
-  const TutorChatScreen({super.key});
-  final ss = false;
+class TutorChatScreen extends StatefulWidget {
+  const TutorChatScreen({
+    super.key,
+    this.latitude = 28.0014, // you can inject live GPS here
+    this.longitude = 75.6663, // you can inject live GPS here
+    this.radiusKm = 10,
+    this.subscriptionPlanId = 1, // default Pro plan
+  });
+
+  final double latitude;
+  final double longitude;
+  final int radiusKm;
+  final int subscriptionPlanId;
+
+  @override
+  State<TutorChatScreen> createState() => _TutorChatScreenState();
+}
+
+class _TutorChatScreenState extends State<TutorChatScreen> {
+  late final TutorProController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = Get.isRegistered<TutorProController>()
+        ? Get.find<TutorProController>()
+        : Get.put(TutorProController());
+
+    // Defer network + Rx updates to next frame to avoid build conflicts
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _c.load(
+        latitude: widget.latitude,
+        longitude: widget.longitude,
+        radiusKm: widget.radiusKm,
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: ss == false
-          ? Center(
-              child: Container(
-              padding: EdgeInsets.all(16),
+      body: Obx(() {
+        if (_c.isLoading.value) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (_c.error.isNotEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    "Get Pro Membership Now, to Enable Features Like Free Chat with Students / Parents, Top View , Visble Contact Number for One Year.",
-                    textAlign: TextAlign.center,
-                    style:
-                        TextStyle(color: AppColors.primaryColor, fontSize: 25),
-                  ),
-                  SizedBox(
-                    height: 16,
-                  ),
-                  SizedBox(
-                    height: 48,
-                    width: 350,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            const Color(0xFF27AE60), // a distinct color
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      icon: const Icon(
-                        Icons.workspace_premium,
-                        size: 24,
-                      ),
-                      label: const Text(
-                        'Get Pro Membership Now ',
-                        style: TextStyle(fontSize: 24),
-                      ),
-                      onPressed: () => {},
+                  const Icon(Icons.error_outline, color: Colors.red, size: 42),
+                  const SizedBox(height: 10),
+                  Text(_c.error.value, textAlign: TextAlign.center),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => _c.load(
+                      latitude: widget.latitude,
+                      longitude: widget.longitude,
+                      radiusKm: widget.radiusKm,
                     ),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
                   ),
                 ],
               ),
-            ))
-          : Column(
-              children: [
-                // _buildAppBar(context),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.all(12),
+            ),
+          );
+        }
+
+        if (!_c.hasPro.value) {
+          return _ProUpsell(
+            onBuy: _c.isPurchasing.value
+                ? null
+                : () => _c.buyProAndReload(
+                      subscriptionPlanId: widget.subscriptionPlanId,
+                      latitude: widget.latitude,
+                      longitude: widget.longitude,
+                      radiusKm: widget.radiusKm,
+                    ),
+            busy: _c.isPurchasing.value,
+          );
+        }
+
+        // Has Pro → show nearby students
+        if (_c.students.isEmpty) {
+          return RefreshIndicator(
+            onRefresh: () => _c.load(
+              latitude: widget.latitude,
+              longitude: widget.longitude,
+              radiusKm: widget.radiusKm,
+            ),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: const [
+                SizedBox(height: 120),
+                Center(
+                  child: Column(
                     children: [
-                      _chatBubble(
-                        message: "Hello Tutor, I need help with math.",
-                        isSender: false,
-                        time: "5 min ago",
-                      ),
-                      _chatBubble(
-                        message: "Sure! Let me help you with that.",
-                        isSender: true,
-                        time: "4 min ago",
-                      ),
-                      _chatBubble(
-                        message: "Can we solve algebra equations?",
-                        isSender: false,
-                        time: "2 min ago",
-                      ),
+                      Icon(Icons.people_outline,
+                          size: 64, color: Colors.black26),
+                      SizedBox(height: 10),
+                      Text('No students found nearby',
+                          style: TextStyle(color: Colors.black54)),
                     ],
                   ),
                 ),
-                SafeArea(
-                  minimum: const EdgeInsets.only(bottom: 8),
-                  child: _messageInputField(),
-                ),
               ],
             ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () => _c.load(
+            latitude: widget.latitude,
+            longitude: widget.longitude,
+            radiusKm: widget.radiusKm,
+          ),
+          child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(16, 36, 16, 16),
+            itemCount: _c.students.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (_, i) => _NearbyStudentCard(student: _c.students[i]),
+          ),
+        );
+      }),
     );
   }
+}
 
-  Widget _buildAppBar(BuildContext context) {
-    return Container(
-      color: AppColors.primaryColor,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 35),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: const Icon(Icons.arrow_back, color: Colors.white),
-          ),
-          const SizedBox(width: 16),
-          const Text(
-            "Chat with Student",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+/// ======= UI PARTS =======
 
-  Widget _chatBubble({
-    required String message,
-    required bool isSender,
-    required String time,
-  }) {
-    return Align(
-      alignment: isSender ? Alignment.centerRight : Alignment.centerLeft,
+class _ProUpsell extends StatelessWidget {
+  const _ProUpsell({required this.onBuy, required this.busy});
+  final VoidCallback? onBuy;
+  final bool busy;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.all(12),
-        constraints: const BoxConstraints(maxWidth: 280),
-        decoration: BoxDecoration(
-          color: isSender ? AppColors.primaryColor : const Color(0xFFF1F1F1),
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isSender ? 16 : 0),
-            bottomRight: Radius.circular(isSender ? 0 : 16),
-          ),
-        ),
+        padding: const EdgeInsets.all(16),
+        constraints: const BoxConstraints(maxWidth: 540),
         child: Column(
-          crossAxisAlignment:
-              isSender ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              message,
-              style: TextStyle(
-                color: isSender ? Colors.white : Colors.black87,
-                fontSize: 15,
-              ),
+              "Get Pro Membership to unlock:\n• Free chat with students/parents\n• Top listing visibility\n• Visible contact number for one year",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.primaryColor, fontSize: 20),
             ),
-            const SizedBox(height: 4),
-            Text(
-              time,
-              style: TextStyle(
-                color:
-                    isSender ? Colors.white.withOpacity(0.7) : Colors.black54,
-                fontSize: 10,
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 48,
+              width: 350,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF27AE60),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                icon: busy
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.workspace_premium, size: 24),
+                label: Text(
+                  busy ? 'Processing...' : 'Get Pro Membership Now',
+                  style: const TextStyle(fontSize: 18),
+                ),
+                onPressed: onBuy,
               ),
             ),
           ],
@@ -153,54 +189,107 @@ class TutorChatScreen extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _messageInputField() {
+class _NearbyStudentCard extends StatelessWidget {
+  const _NearbyStudentCard({required this.student});
+  final NearbyStudent student;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
+            color: Colors.black.withOpacity(.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
+      padding: const EdgeInsets.all(12),
       child: Row(
         children: [
+          CircleAvatar(
+            radius: 26,
+            backgroundColor: AppColors.primaryColor.withOpacity(.12),
+            child: const Icon(Icons.person, color: Colors.black54),
+          ),
+          const SizedBox(width: 12),
           Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(30),
-                border:
-                    Border.all(color: AppColors.primaryColor.withOpacity(0.3)),
-              ),
-              child: TextField(
-                style: const TextStyle(color: Colors.black87),
-                decoration: InputDecoration(
-                  hintText: "Enter your message",
-                  hintStyle: TextStyle(color: Colors.black.withOpacity(0.6)),
-                  border: InputBorder.none,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(student.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 16)),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.school, size: 14, color: Colors.black45),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        student.subject.isEmpty
+                            ? 'Subject not specified'
+                            : student.subject,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: Colors.black54, fontSize: 12),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(Icons.place, size: 14, color: Colors.black45),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${student.distanceKm.toStringAsFixed(1)} km away',
+                      style:
+                          const TextStyle(color: Colors.black54, fontSize: 12),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(Icons.phone, size: 14, color: Colors.black45),
+                    const SizedBox(width: 4),
+                    Text(
+                      student.mobile.isEmpty ? 'Hidden' : student.mobile,
+                      style:
+                          const TextStyle(color: Colors.black87, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 10),
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.primaryColor,
-              shape: BoxShape.circle,
+          const SizedBox(width: 8),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
-            child: IconButton(
-              onPressed: () {
-                // TODO: send message
-              },
-              icon: const Icon(Icons.send, color: Colors.white),
-            ),
-          )
+            icon: const Icon(Icons.chat_bubble_outline),
+            label: const Text('Chat'),
+            onPressed: () {
+              // TODO: navigate to your actual chat screen with this student
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Open chat with ${student.name}')),
+              );
+            },
+          ),
         ],
       ),
     );

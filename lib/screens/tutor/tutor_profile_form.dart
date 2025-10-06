@@ -96,7 +96,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
     _wTutorData = ever(_p.tutorprofileData, (student) async {
       AppLog.i('[UI] tutorprofileData changed');
       if (!mounted || student == null) return;
-      nameController.text = student.studentName ?? '';
+      nameController.text = student.teacherName ?? '';
       priceController.text = student.price?.toString() ?? '';
       localityController.text = student.location ?? '';
       selectedState = student.state;
@@ -111,7 +111,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
     // single routing decision when tutorprofileData first arrives
     _wRouteOnce = once(_p.tutorprofileData, (student) {
       if (!mounted || student == null) return;
-      final status = student.profile_status;
+      final status = student.profileStatus;
       if (status == 0) {
         // stay here (incomplete)
       } else if (status == 1) {

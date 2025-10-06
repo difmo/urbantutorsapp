@@ -57,4 +57,45 @@ class LocationService {
     final data = (body['data'] as String?) ?? '';
     return _parseOptions(data);
   }
+
+  // ---------------- NEW ----------------
+  // /// Get device current location
+  // Future<Position> getCurrentPosition() async {
+  //   bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+  //   if (!serviceEnabled) {
+  //     throw Exception('Location services are disabled');
+  //   }
+
+  //   LocationPermission permission = await Geolocator.checkPermission();
+  //   if (permission == LocationPermission.denied) {
+  //     permission = await Geolocator.requestPermission();
+  //     if (permission == LocationPermission.denied) {
+  //       throw Exception('Location permissions are denied');
+  //     }
+  //   }
+
+  //   if (permission == LocationPermission.deniedForever) {
+  //     throw Exception('Location permissions are permanently denied');
+  //   }
+
+  //   return await Geolocator.getCurrentPosition(
+  //     desiredAccuracy: LocationAccuracy.high,
+  //   );
+  // }
+
+  // /// Reverse-geocode lat/lng to get place_id and formatted address
+  // Future<Map<String, String>> reverseGeocode(double lat, double lng) async {
+  //   // final placemarks = await geo.placemarkFromCoordinates(lat, lng);
+  //   // if (placemarks.isEmpty) return {};
+
+  //   // final place = placemarks.first;
+  //   final placeId = '${place.locality}-${place.postalCode}-${place.administrativeArea}';
+  //   final formattedAddress =
+  //       '${place.street}, ${place.locality}, ${place.administrativeArea}, ${place.country}';
+
+  //   return {
+  //     'place_id': placeId,
+  //     'formatted_address': formattedAddress,
+  //   };
+  // }
 }

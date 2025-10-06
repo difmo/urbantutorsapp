@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:urbantutorsapp/screens/tutor/feedback_tutor.dart';
-import 'package:urbantutorsapp/screens/tutor/course_tutor.dart';
+import 'package:urbantutorsapp/screens/tutor/mycourses_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/get_pro_membership.dart';
 import 'package:urbantutorsapp/screens/tutor/notification_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/review_tutor.dart';
@@ -35,9 +35,8 @@ class _StudentDrawerState extends State<Tutordrawer> {
   @override
   void initState() {
     super.initState();
-    // Ensure profile is present
-    if (_profile.studentprofileData.value == null) {
-      _profile.fetchProfileForStudent();
+    if (_profile.tutorprofileData.value == null) {
+      _profile.fetchProfileForTutor();
     }
   }
 
@@ -98,35 +97,6 @@ class _StudentDrawerState extends State<Tutordrawer> {
     Share.share('Check out Urban Tutors App: $playStoreLink');
   }
 
-  void _showDeleteDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Delete Account'),
-        content: const Text('Are you sure you want to delete your account?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.primaryColor,
-            ),
-            child: const Text('CANCEL'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: call delete endpoint if you have it
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.primaryColor,
-            ),
-            child: const Text('CONFIRM'),
-          ),
-        ],
-      ),
-    );
-  }
-
   // Helpers
   String _str(dynamic v, {String fallback = ''}) {
     final s = (v?.toString() ?? '').trim();
@@ -164,8 +134,8 @@ class _StudentDrawerState extends State<Tutordrawer> {
               // ===== Profile header =====
               Obx(() {
                 final loading = _profile.isLoading.value &&
-                    _profile.studentprofileData.value == null;
-                final p = _profile.studentprofileData.value;
+                    _profile.tutorprofileData.value == null;
+                final p = _profile.tutorprofileData.value;
 
                 if (loading) {
                   // Simple skeleton
@@ -207,9 +177,10 @@ class _StudentDrawerState extends State<Tutordrawer> {
                   );
                 }
 
-                final name = _str(p?.studentName, fallback: 'User');
+                final name = _str(p?.teacherName, fallback: 'User');
                 final mobile = _str(p?.mobile, fallback: '');
-                final course = _str(p?.courseName, fallback: '');
+                final course = _str(p?.teacherName, fallback: '');
+                final profileImage = p?.profilePicture;
                 final profileId =
                     _str(p?.profileId, fallback: ''); // if present in model
                 final displayName = _firstName(name);
@@ -295,17 +266,6 @@ class _StudentDrawerState extends State<Tutordrawer> {
                                 ],
                               ],
                             ),
-                            // if (course.isNotEmpty) ...[
-                            //   const SizedBox(height: 4),
-                            //   Text(
-                            //     course,
-                            //     style: const TextStyle(
-                            //       fontSize: 13,
-                            //       color: Colors.black54,
-                            //     ),
-                            //     overflow: TextOverflow.ellipsis,
-                            //   ),
-                            // ],
                           ],
                         ),
                       ),
@@ -347,14 +307,9 @@ class _StudentDrawerState extends State<Tutordrawer> {
               _drawerItem(
                 Icons.history,
                 'My Courses',
-                onTap: () => Get.to(() => const CourseTutor()),
+                onTap: () => Get.to(() => const MycoursesTutor()),
               ),
 
-              // _drawerItem(
-              //   Icons.history,
-              //   'Sell Courses',
-              //   onTap: () => Get.to(() => const CourseTutor()),
-              // ),
 
               _drawerItem(
                 Icons.share,
@@ -390,12 +345,6 @@ class _StudentDrawerState extends State<Tutordrawer> {
                 Icons.description,
                 'Term and Conditions',
                 onTap: () => {_openTerms()},
-              ),
-
-              _drawerItem(
-                Icons.delete_forever,
-                'Delete Account',
-                onTap: () => _showDeleteDialog(context),
               ),
               _drawerItem(
                 Icons.logout,

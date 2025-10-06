@@ -10,7 +10,6 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
-import 'package:urbantutorsapp/controllers/pay_course_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
@@ -63,15 +62,11 @@ class _TutorProfileState extends State<TutorProfile> {
   final _instaLinkCtrl = TextEditingController();
   final _teleLinkCtrl = TextEditingController();
 
-  // Single (legacy; still hydrated for compatibility)
-  int? _boardId;
-  int? _classId;
-
   // Multi-select state (NEW)
   final List<int> _selBoardIds = [];
   final List<int> _selClassIds = [];
   final List<int> _selSubjectIds = [];
-
+  final locCtrl = Get.put(LocationController());
   // Mode
   static const _modes = <String>['Online', 'Offline', 'Any'];
   String? modeVal;
@@ -88,14 +83,8 @@ class _TutorProfileState extends State<TutorProfile> {
   final ImagePicker _picker = ImagePicker();
   XFile? _profileImage;
   String? _profileImageUrl; // from server
-
   // Misc
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final PayCourseController _payCourseController =
-      Get.isRegistered<PayCourseController>()
-          ? Get.find<PayCourseController>()
-          : Get.put(PayCourseController());
-
   @override
   void initState() {
     super.initState();
@@ -104,15 +93,11 @@ class _TutorProfileState extends State<TutorProfile> {
         ? Get.find<CoinsController>()
         : Get.put(CoinsController());
     WidgetsBinding.instance.addPostFrameCallback((_) => _c.refreshAll());
-
-    // Kick off both (whichever returns first will be used)
     _master.fetchMasterData();
-    _p.fetchProfileForStudent();
-    _p.fetchProfileForTutor(); // ✅ also pull tutor profile
-
+    _p.fetchProfileForTutor();
+    locCtrl.getCurrentLocation();
     // Hydrate whenever any of these change AND master data exists
-    everAll([_p.studentprofileData, _p.tutorprofileData, _master.masterData],
-        (_) async {
+    everAll([_p.tutorprofileData, _master.masterData], (_) async {
       if (_master.masterData.value != null) {
         await _hydrate(); // will pick the best available profile
       }
@@ -123,8 +108,9 @@ class _TutorProfileState extends State<TutorProfile> {
     if (path == null || path.isEmpty) return null;
     if (path.startsWith('http')) return path;
     // ✅ fix the missing slash and point to your real host if different
-    const base = 'https://urbantutors.com/';
-    return '$base$path';
+    final imageUrl = 'https://urbantutors.pro/$path';
+    print("imageurl : $imageUrl");
+    return imageUrl;
   }
 
   @override
@@ -136,79 +122,45 @@ class _TutorProfileState extends State<TutorProfile> {
     super.dispose();
   }
 
-  T? _firstOrNull<T>(Iterable<T> it) => it.isEmpty ? null : it.first;
-
-  int? _toInt(dynamic v) {
-    if (v == null) return null;
-    if (v is int) return v;
-    return int.tryParse(v.toString());
-  }
-
-  List<int> _toIntList(dynamic v) {
-    if (v == null) return <int>[];
-    if (v is List) {
-      return v.map(_toInt).whereType<int>().toSet().toList();
-    }
-    if (v is String) {
-      return v
-          .split(RegExp(r'[,\s]+'))
-          .map(_toInt)
-          .whereType<int>()
-          .toSet()
-          .toList();
-    }
-    if (v is int) return <int>[v];
-    return <int>[];
-  }
-
-  // -------------------- Data helpers --------------------
-
-  // String? _resolveImageUrl(String? path) {
-  //   if (path == null || path.isEmpty) return null;
-  //   if (path.startsWith('http')) return path;
-  //   const base = 'https:/urbantutors.com/'; // TODO: replace with your API host
-  //   return '$base$path';
-  // }
-
   Future<void> _hydrate() async {
-    final p = _p.studentprofileData.value;
+    final p = _p.tutorprofileData.value;
     if (p == null) return;
 
-    // Text fields
-    _nameCtrl.text = (p.studentName ?? '').trim();
-    _emailCtrl.text = (p.email ?? '').trim();
-    _localityCtrl.text = p.location ?? '';
+    // Prepare values (no setState / controller updates yet)
+    final name = (p.teacherName ?? '').trim();
+    final mobile = (p.mobile ?? '').trim();
+    final email = (p.email ?? '').trim();
+    final state = p.state ?? '';
+    final location = p.location ?? '';
+    final profilePicture = _resolveImageUrl(p.profilePicture);
+    final teachingDetails = p.teachingDetails;
 
-    // Image from server
-    _profileImageUrl = _resolveImageUrl(p.profile_picture);
+    // Schedule the UI mutation after the current build/frame finishes.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // text controllers
+      _nameCtrl.text = name;
+      // _emailCtrl.text = mobile;
+      _emailCtrl.text = email;
+      _localityCtrl.text = location;
+      // image url
+      _profileImageUrl = profilePicture;
+      stateVal = state;
 
-    // Legacy (single) IDs
-    final nextBoardId =
-        (p.boardId is int) ? p.boardId : int.tryParse(p.boardId ?? '');
-    final nextClassId =
-        (p.courseId is int) ? p.courseId : int.tryParse(p.courseId ?? '');
+      // STEP 1: Extract IDs automatically from teachingDetails
+      if (teachingDetails.isNotEmpty) {
+        for (var item in teachingDetails) {
+          if (item.boardId != null) _selBoardIds.add(item.boardId!);
+          if (item.classId != null) _selClassIds.add(item.classId!);
+          if (item.subjectId != null) _selSubjectIds.add(item.subjectId!);
+        }
+      }
 
-    // Load classes for the (first) board, then set class id
-    if (nextBoardId != null) {
-      await _leadMeta.loadClasses(nextBoardId);
-    }
+      print("✅ Selected Board IDs: $_selBoardIds");
+      print("✅ Selected Class IDs: $_selClassIds");
+      print("✅ Selected Subject IDs: $_selSubjectIds");
 
-    setState(() {
-      _boardId = nextBoardId;
-      _classId = nextClassId;
-
-      // Initialize multi-selects from single values (backward compat)
-      _selBoardIds
-        ..clear()
-        ..addAll(nextBoardId != null ? [nextBoardId] : const []);
-      _selClassIds
-        ..clear()
-        ..addAll(nextClassId != null ? [nextClassId] : const []);
-      _selSubjectIds.clear(); // subjects not present in legacy payload
-
-      // Optional: hydrate experience/mode if present on your profile model
-      // _expCtrl.text = '${p.experienceYears ?? ''}';
-      // modeVal = p.mode; // 'Online' / 'Offline' / 'Any'
+      setState(() {});
     });
   }
 
@@ -305,17 +257,21 @@ class _TutorProfileState extends State<TutorProfile> {
 
       final profileBase64 = await _fileToBase64(_profileImage);
       final experienceYears = int.tryParse(_expCtrl.text.trim()) ?? 0;
+      print('Lat: ${locCtrl.latitude.value}');
+      print('Lng: ${locCtrl.longitude.value}');
+      print('Place ID: ${locCtrl.placeId.value}');
+      print('Address: ${locCtrl.address.value}');
 
       final request = {
         "user_id": userId,
-        "email": _emailCtrl,
+        "email": _emailCtrl.text.toString(),
         "location": _localityCtrl.text.trim(),
         "state": stateVal,
         "remark": experienceYears,
         "profile_picture": profileBase64 ?? '',
-        "place_id": "ghjghjghjhgj",
-        "latitude": "28.663",
-        "longitude": "97.2255",
+        "latitude": locCtrl.latitude.value,
+        "longitude": locCtrl.longitude.value,
+        "place_id": locCtrl.placeId.value,
         "board_id": _selBoardIds,
         "class_id": _selClassIds,
         "subject_id": _selSubjectIds,

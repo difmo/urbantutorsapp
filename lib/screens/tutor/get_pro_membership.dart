@@ -1,10 +1,11 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
+import 'package:get/get.dart' hide FormData;
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
+import 'package:urbantutorsapp/controllers/get_pro_membership_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
@@ -16,49 +17,15 @@ class GetProMembership extends StatefulWidget {
   const GetProMembership({super.key});
 
   @override
-  State<GetProMembership> createState() => _NotificationStudentState();
+  State<GetProMembership> createState() => _GetProMembershipState();
 }
 
-class _NotificationStudentState extends State<GetProMembership> {
-  final _formKey = GlobalKey<FormState>();
-  final _titleCtrl = TextEditingController();
-  final _descCtrl = TextEditingController();
-  // Text controllers
-  // GetX controllers
+class _GetProMembershipState extends State<GetProMembership> {
   late final CoinsController _c;
   late final ProfileUpdateController _p;
+  late final GetProMembershipController _g;
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  // --- lead/user meta ---
-  String? leadStatus; // "1" → active/requested, anything else → no request yet
-  String? userName;
-  String? userPhone;
-  bool _loadingUserMeta = true;
-  bool get hasActiveLead => leadStatus == "1";
-
-  Future<void> _loadUserMeta() async {
-    try {
-      final s = await StorageService.getUserLeadStatus(); // returns "0"/"1"?
-      final n = await StorageService.getUserName();
-      final p = await StorageService.getUserPhoneNumber();
-      if (!mounted) return;
-      setState(() {
-        leadStatus = s ?? "0";
-        userName = n ?? "";
-        userPhone = p ?? "";
-        _loadingUserMeta = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        leadStatus = "0";
-        userName = "";
-        userPhone = "";
-        _loadingUserMeta = false;
-      });
-    }
-  }
 
   // Safe number formatter
   num _toNum(dynamic v) {
@@ -73,37 +40,19 @@ class _NotificationStudentState extends State<GetProMembership> {
     _c = Get.isRegistered<CoinsController>()
         ? Get.find<CoinsController>()
         : Get.put(CoinsController());
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _c.refreshAll();
-    });
-
     _p = Get.isRegistered<ProfileUpdateController>()
         ? Get.find<ProfileUpdateController>()
         : Get.put(ProfileUpdateController());
-    _p.fetchProfileForStudent();
+    _g = Get.isRegistered<GetProMembershipController>()
+        ? Get.find<GetProMembershipController>()
+        : Get.put(GetProMembershipController());
 
-    _loadUserMeta(); // ✅ proper async load of lead status & user info
-  }
-
-  String _initial(String? name) {
-    final n = (name ?? '').trim();
-    if (n.isEmpty) return 'S';
-    return n.characters.first.toUpperCase();
-  }
-
-  String _firstName(String? name) {
-    final n = (name ?? '').trim();
-    if (n.isEmpty) return 'Student';
-    final parts = n.split(RegExp(r'\s+'));
-    return parts.first;
-  }
-
-  @override
-  void dispose() {
-    _titleCtrl.dispose();
-    _descCtrl.dispose();
-    super.dispose();
+    // Defer RX-changing work to next frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _c.refreshAll();
+      _p.fetchProfileForStudent();
+      _g.load();
+    });
   }
 
   @override
@@ -197,17 +146,192 @@ class _NotificationStudentState extends State<GetProMembership> {
         actions: [
           Builder(
             builder: (ctx) => IconButton(
-              icon: const Icon(
-                Icons.menu,
-                color: Colors.white,
-                size: 45,
-              ),
+              icon: const Icon(Icons.menu, color: Colors.white, size: 45),
               onPressed: () => Scaffold.maybeOf(ctx)?.openEndDrawer(),
             ),
           ),
         ],
       ),
-      body: Container(),
+      body: Obx(() {
+        if (_g.isLoading.value) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (_g.error.isNotEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 42),
+                  const SizedBox(height: 10),
+                  Text(_g.error.value, textAlign: TextAlign.center),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _g.load,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: _g.hasPro.value
+                ? _MembershipDetailsCard(details: _g.details, onRefresh: _g.load)
+                : _ProUpsell(
+                    busy: _g.isPurchasing.value,
+                    onBuy: _g.isPurchasing.value ? null : () => _g.buy(subscriptionPlanId: 1),
+                  ),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class _MembershipDetailsCard extends StatelessWidget {
+  const _MembershipDetailsCard({required this.details, required this.onRefresh});
+  final Map<String, dynamic> details;
+  final VoidCallback onRefresh;
+
+  String _s(dynamic v) => (v ?? '').toString();
+
+  @override
+  Widget build(BuildContext context) {
+    final plan = _s(details['plan_name'] ?? details['subscription_name'] ?? 'Pro Membership');
+    final started = _s(details['start_date'] ?? details['created_at'] ?? '');
+    final ends = _s(details['end_date'] ?? details['expires_at'] ?? '');
+    final status = details['status'];
+    final active = (status == 1 || status == '1' || status == true);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(.03), blurRadius: 6, offset: const Offset(0, 2)),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Icon(Icons.workspace_premium, color: Colors.amber, size: 28),
+            const SizedBox(width: 8),
+            Text(plan, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: active ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: active ? const Color(0xFF81C784) : const Color(0xFFE57373)),
+              ),
+              child: Text(active ? 'Active' : 'Inactive',
+                  style: TextStyle(
+                    color: active ? const Color(0xFF1B5E20) : const Color(0xFFB71C1C),
+                    fontWeight: FontWeight.w700,
+                  )),
+            ),
+          ]),
+          const SizedBox(height: 12),
+          _row('Start date', started.isEmpty ? '—' : started),
+          const SizedBox(height: 6),
+          _row('End date', ends.isEmpty ? '—' : ends),
+          const SizedBox(height: 6),
+          _row('Status code', '$status'),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: onRefresh,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Refresh'),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Support: support@urbantutors.pro')),
+                  );
+                },
+                icon: const Icon(Icons.help_outline),
+                label: const Text('Support'),
+              ),
+            ],
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _row(String k, String v) {
+    return Row(
+      children: [
+        SizedBox(width: 110, child: Text(k, style: const TextStyle(color: Colors.black54))),
+        const SizedBox(width: 6),
+        Expanded(child: Text(v, style: const TextStyle(fontWeight: FontWeight.w600))),
+      ],
+    );
+  }
+}
+
+class _ProUpsell extends StatelessWidget {
+  const _ProUpsell({required this.onBuy, required this.busy});
+  final VoidCallback? onBuy;
+  final bool busy;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 560),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              "Get Pro Membership to unlock:\n• Free chat with students/parents\n• Top listing visibility\n• Visible contact number for one year",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.primaryColor, fontSize: 20),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 48,
+              width: 340,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF27AE60),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: busy
+                    ? const SizedBox(
+                        width: 22, height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.workspace_premium),
+                label: Text(busy ? 'Processing...' : 'Get Pro Membership Now', style: const TextStyle(fontSize: 18)),
+                onPressed: onBuy,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text('Plan: 1 year (Plan ID: 1)', style: TextStyle(color: Colors.black54)),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -262,13 +386,12 @@ class _Header extends StatelessWidget {
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(.18),
-                    borderRadius: BorderRadius.circular(22),
-                    border:
-                        Border.all(width: 1, color: AppColors.primaryColor)),
+                  color: Colors.white.withOpacity(.18),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(width: 1, color: AppColors.primaryColor),
+                ),
                 child: Row(
                   children: [
                     const SizedBox(width: 6),

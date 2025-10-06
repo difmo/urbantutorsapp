@@ -9,7 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/feedback_student.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/notification_student.dart';
-import 'package:urbantutorsapp/screens/student/childs_screens/student_profile.dart';
+import 'package:urbantutorsapp/screens/student/childs_screens/student_profile_screen.dart';
 import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import '../theme/theme_constants.dart';
@@ -24,7 +24,6 @@ class StudentDrawer extends StatefulWidget {
 
 class _StudentDrawerState extends State<StudentDrawer> {
   String selectedLabel = 'Term and Conditions';
-  // Reuse if already registered
   final ProfileUpdateController _profile =
       Get.isRegistered<ProfileUpdateController>()
           ? Get.find<ProfileUpdateController>()
@@ -33,7 +32,6 @@ class _StudentDrawerState extends State<StudentDrawer> {
   @override
   void initState() {
     super.initState();
-    // Ensure profile is present
     if (_profile.studentprofileData.value == null) {
       _profile.fetchProfileForStudent();
     }
@@ -96,35 +94,6 @@ class _StudentDrawerState extends State<StudentDrawer> {
     Share.share('Check out Urban Tutors App: $playStoreLink');
   }
 
-  void _showDeleteDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Delete Account'),
-        content: const Text('Are you sure you want to delete your account?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.primaryColor,
-            ),
-            child: const Text('CANCEL'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: call delete endpoint if you have it
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.primaryColor,
-            ),
-            child: const Text('CONFIRM'),
-          ),
-        ],
-      ),
-    );
-  }
-
   // Helpers
   String _str(dynamic v, {String fallback = ''}) {
     final s = (v?.toString() ?? '').trim();
@@ -159,14 +128,12 @@ class _StudentDrawerState extends State<StudentDrawer> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // ===== Profile header =====
               Obx(() {
                 final loading = _profile.isLoading.value &&
                     _profile.studentprofileData.value == null;
                 final p = _profile.studentprofileData.value;
 
                 if (loading) {
-                  // Simple skeleton
                   return Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 20),
@@ -293,17 +260,6 @@ class _StudentDrawerState extends State<StudentDrawer> {
                                 ],
                               ],
                             ),
-                            // if (course.isNotEmpty) ...[
-                            //   const SizedBox(height: 4),
-                            //   Text(
-                            //     course,
-                            //     style: const TextStyle(
-                            //       fontSize: 13,
-                            //       color: Colors.black54,
-                            //     ),
-                            //     overflow: TextOverflow.ellipsis,
-                            //   ),
-                            // ],
                           ],
                         ),
                       ),
@@ -335,7 +291,7 @@ class _StudentDrawerState extends State<StudentDrawer> {
                 'Transactions',
                 onTap: () => Get.to(() => const TransactionsStudent()),
               ),
-              
+
               _drawerItem(
                 Icons.history,
                 'History',
@@ -371,11 +327,11 @@ class _StudentDrawerState extends State<StudentDrawer> {
                 'Get Support',
                 onTap: () => Get.to(() => const SupportStudent()),
               ),
-              _drawerItem(
-                Icons.delete_forever,
-                'Delete Account',
-                onTap: () => _showDeleteDialog(context),
-              ),
+              // _drawerItem(
+              //   Icons.delete_forever,
+              //   'Delete Account',
+              //   onTap: () => _showDeleteDialog(context),
+              // ),
               _drawerItem(
                 Icons.logout,
                 'Logout',

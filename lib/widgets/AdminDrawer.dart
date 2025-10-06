@@ -374,11 +374,11 @@ class _StudentDrawerState extends State<Admindrawer> {
                 'Get Support',
                 onTap: () => Get.to(() => const AdminSupportScreen()),
               ),
-              _drawerItem(
-                Icons.delete_forever,
-                'Delete Account',
-                onTap: () => _showDeleteDialog(context),
-              ),
+              // _drawerItem(
+              //   Icons.delete_forever,
+              //   'Delete Account',
+              //   onTap: () => _showDeleteDialog(context),
+              // ),
               _drawerItem(
                 Icons.logout,
                 'Logout',

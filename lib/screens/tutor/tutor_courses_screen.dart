@@ -1,56 +1,32 @@
-// lib/screens/student/pay_courses_screen.dart
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/pay_course_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
-import 'package:urbantutorsapp/models/pay_course_models.dart';
 import 'package:urbantutorsapp/screens/splash_screen.dart';
+import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/StudentDrawer.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class TutorCoursesScreen extends StatefulWidget {
   const TutorCoursesScreen({super.key});
 
   @override
-  State<TutorCoursesScreen> createState() => _PDFCoursesScreenState();
+  State<TutorCoursesScreen> createState() => _TutorCoursesScreenState();
 }
 
-class _PDFCoursesScreenState extends State<TutorCoursesScreen> {
-  final PayCourseController _payCourseController =
-      Get.find<PayCourseController>();
-
-  static const blue = Color(0xFF4A90E2);
+class _TutorCoursesScreenState extends State<TutorCoursesScreen> {
+  late final CoinsController _c;
+  late final ProfileUpdateController _p;
+  late final PayCourseController _pay;
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final int _currentIndex = 0;
-
-  late final CoinsController _c;
-  late final ProfileUpdateController _p; // ⬅️ NEW
-
-  @override
-  void initState() {
-    super.initState();
-    print("Loaded courses:");
-    for (var course in _payCourseController.courses) {
-      print(course.toJson());
-    }
-    _c = Get.isRegistered<CoinsController>()
-        ? Get.find<CoinsController>()
-        : Get.put(CoinsController());
-    _c.refreshAll();
-
-    _p = Get.isRegistered<ProfileUpdateController>()
-        ? Get.find<ProfileUpdateController>()
-        : Get.put(ProfileUpdateController());
-    // Try to ensure profile is present
-    _p.fetchProfileForStudent();
-  }
 
   num _toNum(dynamic v) {
     if (v == null) return 0;
@@ -58,64 +34,44 @@ class _PDFCoursesScreenState extends State<TutorCoursesScreen> {
     return num.tryParse(v.toString()) ?? 0;
   }
 
-  String _initial(String? name) {
-    final n = (name ?? '').trim();
-    if (n.isEmpty) return 'S';
-    return n.characters.first.toUpperCase();
-  }
+  @override
+  void initState() {
+    super.initState();
 
-  String _firstName(String? name) {
-    final n = (name ?? '').trim();
-    if (n.isEmpty) return 'Student';
-    final parts = n.split(RegExp(r'\s+'));
-    return parts.first;
-  }
+    _c = Get.isRegistered<CoinsController>()
+        ? Get.find<CoinsController>()
+        : Get.put(CoinsController());
 
-  String _greet() {
-    final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
+    _p = Get.isRegistered<ProfileUpdateController>()
+        ? Get.find<ProfileUpdateController>()
+        : Get.put(ProfileUpdateController());
+
+    _pay = Get.isRegistered<PayCourseController>()
+        ? Get.find<PayCourseController>()
+        : Get.put(PayCourseController());
+
+    // Defer Rx actions to next frame (avoid setState during build)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _c.refreshAll();
+      _p.fetchProfileForStudent();
+      _pay.load(); // already called in onInit, but safe here too
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final primary = AppColors.primaryColor;
     final accent = AppColors.accentColor;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
       key: _scaffoldKey,
-      extendBodyBehindAppBar: true,
-      endDrawer: StudentDrawer(onMenuTap: (label) async {
-        if (label == 'Logout') {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isLoggedIn', false);
-          await prefs.remove('user_name');
-          await prefs.remove('user_phone');
-          await prefs.remove('user_role');
-          await StorageService.clearTokenAndRole();
-          await StorageService.clear();
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Logged out successfully')),
-          );
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const SplashScreen()),
-            (route) => false,
-          );
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Navigating to $label')),
-          );
-        }
-      }),
+     
       body: Obx(() {
-        if (_payCourseController.isLoading.value) {
+        if (_pay.isLoading.value) {
           return const Center(child: CircularProgressIndicator());
         }
-        if (_payCourseController.error.isNotEmpty) {
+        if (_pay.error.isNotEmpty) {
           return Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -123,52 +79,59 @@ class _PDFCoursesScreenState extends State<TutorCoursesScreen> {
                 const Icon(Icons.error_outline,
                     color: Colors.redAccent, size: 32),
                 const SizedBox(height: 8),
-                Text(_payCourseController.error.value,
-                    textAlign: TextAlign.center),
+                Text(_pay.error.value, textAlign: TextAlign.center),
                 const SizedBox(height: 12),
                 ElevatedButton(
-                    onPressed: _payCourseController.load,
-                    child: const Text('Retry')),
+                  onPressed: _pay.load,
+                  child: const Text('Retry'),
+                ),
               ],
             ),
           );
         }
-        if (_payCourseController.courses.isEmpty) {
+        if (_pay.courses.isEmpty) {
           return const Center(child: Text('No courses available'));
         }
 
         return RefreshIndicator(
-          onRefresh: _payCourseController.refreshNow,
+          onRefresh: _pay.refreshNow,
           child: SafeArea(
             child: ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              itemCount: _payCourseController.courses.length,
+              itemCount: _pay.courses.length,
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, i) {
-                final item = _payCourseController.courses[i];
+                final item = _pay.courses[i];
+                final buying = _pay.purchasingCourseId.value == item.id;
+                final opening = _pay.openingCourseId.value == item.id;
+
                 return Container(
                   decoration: BoxDecoration(
-                      borderRadius: BorderRadius.all(Radius.circular(8)),
-                      border:
-                          Border.all(width: 1, color: AppColors.primaryColor)),
+                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                    border: Border.all(width: 1, color: AppColors.primaryColor),
+                    color: Colors.white,
+                  ),
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(14),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Title + rating + coins
                         Row(
                           children: [
-                            Text(
-                              item.courseName,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF222B45),
+                            Expanded(
+                              child: Text(
+                                item.courseName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF222B45),
+                                ),
                               ),
                             ),
-                            Spacer(),
-                            const Icon(Icons.star,
-                                color: Colors.amber, size: 18),
+                            const Icon(Icons.star, color: Colors.amber, size: 18),
                             const SizedBox(width: 4),
                             Text(
                               item.rating.toStringAsFixed(1),
@@ -177,12 +140,11 @@ class _PDFCoursesScreenState extends State<TutorCoursesScreen> {
                                 color: Color(0xFF222B45),
                               ),
                             ),
-                            SizedBox(
-                              width: 8,
-                            ),
+                            const SizedBox(width: 8),
                             _CoinsChip(coins: item.coins),
                           ],
                         ),
+
                         const SizedBox(height: 6),
                         Text(
                           item.description,
@@ -193,91 +155,68 @@ class _PDFCoursesScreenState extends State<TutorCoursesScreen> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 10),
                         const SizedBox(height: 12),
-                        (item.pdf?.isNotEmpty ?? false)
-                            ? Row(
-                                children: [
-                                  // PREVIEW
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            const Color(0xFF4A90E2),
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                      ),
-                                      icon: const Icon(Icons.picture_as_pdf),
-                                      label: const Text('Preview'),
-                                      onPressed: () => _openPdf(item.pdf!),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
 
-                                  // BUY NOW
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(
-                                            0xFF27AE60), // a distinct color
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                      ),
-                                      icon: const Icon(
-                                          Icons.shopping_cart_checkout),
-                                      label: const Text('Buy now'),
-                                      onPressed: () => _onBuy(item),
-                                    ),
+                        Row(
+                          children: [
+                            // PREVIEW
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF4A90E2),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                ],
-                              )
-                            : Row(
-                                children: [
-                                  // PREVIEW
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            const Color(0xFF4A90E2),
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8),
+                                ),
+                                icon: opening
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
                                         ),
-                                      ),
-                                      icon: const Icon(Icons.picture_as_pdf),
-                                      label: const Text('Preview'),
-                                      onPressed: () => _openPdf(item.pdf!),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
+                                      )
+                                    : const Icon(Icons.picture_as_pdf),
+                                label: Text(opening ? 'Opening...' : 'Preview'),
+                                onPressed: opening
+                                    ? null
+                                    : () async {
+                                        final url = await _pay.getPreviewUrl(item);
+                                        if (url == null) return;
+                                        await _pay.launchUrlExternal(url);
+                                      },
+                              ),
+                            ),
+                            const SizedBox(width: 10),
 
-                                  // BUY NOW
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(
-                                            0xFF27AE60), // a distinct color
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                      ),
-                                      icon: const Icon(
-                                          Icons.shopping_cart_checkout),
-                                      label: const Text('Buy now'),
-                                      onPressed: () => _onBuy(item),
-                                    ),
+                            // BUY NOW
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF27AE60),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                ],
-                              )
+                                ),
+                                icon: buying
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Icon(Icons.shopping_cart_checkout),
+                                label: Text(buying ? 'Processing...' : 'Buy now'),
+                                onPressed: buying ? null : () => _pay.buy(item),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -289,38 +228,6 @@ class _PDFCoursesScreenState extends State<TutorCoursesScreen> {
       }),
     );
   }
-
-  Future<void> _openPdf(String url) async {
-    // If no scheme, treat as relative
-    Uri uri = Uri.tryParse(url)?.hasScheme == true
-        ? Uri.parse(url)
-        : Uri.parse(
-            'https://urbantutors.pro/public/admin/uploads/paycourse/${Uri.encodeComponent(url)}',
-          );
-
-    // Rebuild to ensure proper encoding of path/query
-    uri = Uri(
-      scheme: uri.scheme,
-      host: uri.host,
-      path: uri.path, // already encoded by Uri
-      query: uri.query,
-      fragment: uri.fragment,
-    );
-
-    if (!await canLaunchUrl(uri)) return;
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-}
-
-void _onBuy(PayCourse item) {
-  // final link = (item.buyUrl?.isNotEmpty ?? false) ? item.buyUrl! : (item.pdf ?? '');
-  // if (link.isEmpty) {
-  //   ScaffoldMessenger.of(context).showSnackBar(
-  //     const SnackBar(content: Text('No purchase link available')),
-  //   );
-  //   return;
-  // }
-  // _openPdf(link); // or replace with your payment / checkout flow
 }
 
 class _CoinsChip extends StatelessWidget {
@@ -336,19 +243,15 @@ class _CoinsChip extends StatelessWidget {
         color: isFree ? const Color(0xFFE8F5E9) : const Color(0xFFFFF7E6),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-            color: isFree ? const Color(0xFFB2DFDB) : const Color(0xFFFFE0B2)),
+          color: isFree ? const Color(0xFFB2DFDB) : const Color(0xFFFFE0B2),
+        ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(width: 6),
-          Text(isFree ? 'Free' : '$coins coins',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color:
-                    isFree ? const Color(0xFF065F46) : const Color(0xFF92400E),
-              )),
-        ],
+      child: Text(
+        isFree ? 'Free' : '$coins coins',
+        style: TextStyle(
+          fontWeight: FontWeight.w700,
+          color: isFree ? const Color(0xFF065F46) : const Color(0xFF92400E),
+        ),
       ),
     );
   }
@@ -360,9 +263,9 @@ class _Header extends StatelessWidget {
     required this.accent,
     required this.onCoinTap,
     required this.balance,
-    required this.initial, // ⬅️ NEW
-    required this.greeting, // ⬅️ NEW
-    required this.name, // ⬅️ NEW
+    required this.initial,
+    required this.greeting,
+    required this.name,
   });
 
   final Color primary;
@@ -373,30 +276,18 @@ class _Header extends StatelessWidget {
   final String initial;
   final String greeting;
   final String name;
-  String _capFirst(String s) {
-    final t = s.trim();
-    if (t.isEmpty) return '';
-    return t[0].toUpperCase() + t.substring(1);
-  }
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        SizedBox(
-          width: 8,
-        ),
-        // Avatar with gradient ring
-
-        const SizedBox(width: 12),
-
-        // Greeting + name (ellipsized)
+        const SizedBox(width: 8),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Courses",
+                greeting,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
@@ -408,8 +299,6 @@ class _Header extends StatelessWidget {
             ],
           ),
         ),
-
-        // Coins chip
         InkWell(
           borderRadius: BorderRadius.circular(22),
           onTap: onCoinTap,
@@ -418,21 +307,16 @@ class _Header extends StatelessWidget {
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(.18),
-                    borderRadius: BorderRadius.circular(22),
-                    border:
-                        Border.all(width: 1, color: AppColors.primaryColor)),
+                  color: Colors.white.withOpacity(.18),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(width: 1, color: AppColors.primaryColor),
+                ),
                 child: Row(
                   children: [
-                    // const Icon(Icons.monetization_on,
-                    //     size: 16, color: Colors.white),
-                    const SizedBox(width: 6),
-
                     Text(
-                      '${balance == "0" ? "Upgrade" : "$balance coins"} ',
+                      balance == "0" ? "Upgrade" : "$balance coins",
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,

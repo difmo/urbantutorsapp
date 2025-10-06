@@ -11,7 +11,7 @@ class AdminPendingScreen extends StatelessWidget {
     final controller = Get.find<ProfileUpdateController>();
     await controller.fetchProfileForTutor();
 
-    final status = controller.tutorprofileData.value?.profile_status;
+    final status = controller.tutorprofileData.value?.profileStatus;
 
     if (status != null && status == 2) {
       await StorageService.saveIsProfileStatus(status);

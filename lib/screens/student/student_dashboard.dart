@@ -20,6 +20,7 @@ import 'package:urbantutorsapp/screens/student/search_tutor_screen.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/CustomStudentNavBar.dart';
 import 'package:urbantutorsapp/widgets/StudentDrawer.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../theme/theme_constants.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
@@ -323,12 +324,14 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  onTap: () {
-                    // Navigator.push(
-                    //   context,
-                    //   MaterialPageRoute(
-                    //       builder: (_) => const SearchTutorScreen()),
-                    // );
+                  onTap: () async {
+                    final Uri url = Uri.parse('https://makemycareer.in/');
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url,
+                          mode: LaunchMode.externalApplication);
+                    } else {
+                      Get.snackbar('Error', 'Could not launch $url');
+                    }
                   },
                 ),
                 const SizedBox(height: 8),
