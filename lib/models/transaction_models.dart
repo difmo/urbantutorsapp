@@ -45,18 +45,18 @@ class TransactionEntry {
   });
 
   factory TransactionEntry.fromJson(Map<String, dynamic> json) {
-    num? _num(dynamic v) =>
-        v == null ? null : (v is num ? v : num.tryParse(v.toString()));
-    int? _int(dynamic v) => _num(v)?.toInt();
+    num(dynamic v) =>
+        v == null ? null : (v ? v : num(v).tryParse(v.toString()));
+     int(dynamic v) => num(v)?.toInt();
 
     return TransactionEntry(
-      id: _int(json['id']) ?? 0,
-      userId: _int(json['user_id']) ?? 0,
+      id: int(json['id']) ?? 0,
+      userId: int(json['user_id']) ?? 0,
       crBalance: (json['cr_balance'] ?? '0').toString(),
       drBalance: (json['dr_balance'] ?? '0').toString(),
-      grabLeadId: _int(json['grablead_id']),
-      studentGetCourseId: _int(json['stuentgetcourse_id']),
-      transactionsId: _int(json['trasactions_id']),
+      grabLeadId: int(json['grablead_id']),
+      studentGetCourseId: int(json['stuentgetcourse_id']),
+      transactionsId: int(json['trasactions_id']),
       reason: (json['reason'] ?? '').toString(),
       createdAt: (json['created_at'] ?? '').toString(),
     );

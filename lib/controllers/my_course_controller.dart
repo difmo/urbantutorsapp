@@ -25,7 +25,7 @@ class MyCourseController extends GetxController {
     error.value = '';
     try {
       final uidStr = await StorageService.getUserId();
-      final userId = int.tryParse('${uidStr ?? ''}') ?? 0;
+      final userId = int.tryParse(uidStr ?? '') ?? 0;
       if (userId <= 0) throw Exception('No user id found');
 
       final payload = await _svc.fetchMyCourses(userId);

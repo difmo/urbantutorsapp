@@ -20,7 +20,7 @@ import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/AdminDrawer.dart';
 
 class PromotAdmin extends StatefulWidget {
-  const PromotAdmin({Key? key}) : super(key: key);
+  const PromotAdmin({super.key});
 
   @override
   State<PromotAdmin> createState() => _PromotAdminState();

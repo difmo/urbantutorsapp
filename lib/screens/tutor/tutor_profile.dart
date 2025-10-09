@@ -985,7 +985,7 @@ class _TutorProfileState extends State<TutorProfile> {
       'Classes: ${_comma(classes)}',
       'Subjects: ${_comma(subjects)}',
       'Qualification: ${qual.isNotEmpty ? qual : "Test"}',
-      'Experience: ${exp.isNotEmpty ? "${exp} years" : "test"}',
+      'Experience: ${exp.isNotEmpty ? "$exp years" : "test"}',
       if (loc.isNotEmpty || stateVal != null)
         'Location: $loc${stateVal != null && stateVal!.isNotEmpty ? ', $stateVal' : ''}',
       if (modeVal != null) 'Mode: $modeVal',

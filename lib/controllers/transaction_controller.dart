@@ -23,7 +23,7 @@ class TransactionController extends GetxController {
     error.value = '';
     try {
       final uidStr = await StorageService.getUserId();
-      final uid = int.tryParse('${uidStr ?? ''}') ?? 0;
+      final uid = int.tryParse(uidStr ?? '') ?? 0;
       if (uid <= 0) throw Exception('No user id found');
 
       userId.value = uid;

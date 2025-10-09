@@ -41,16 +41,16 @@ class PayCourse {
   });
 
   factory PayCourse.fromJson(Map<String, dynamic> json) {
-    num _num(dynamic v) => (v is num) ? v : (num.tryParse('$v') ?? 0);
-    double _dbl(dynamic v) => _num(v).toDouble();
-    int _int(dynamic v) => _num(v).toInt();
+    num(dynamic v) => (v ) ? v : (num(v).tryParse('$v') ?? 0);
+    double dbl(dynamic v) => num(v).toDouble();
+   int(dynamic v) => num(v).toInt();
 
     return PayCourse(
-      id: _int(json['id']),
+      id: int(json['id']),
       courseName: (json['course_name'] ?? json['name'] ?? '').toString(),
       description: (json['description'] ?? '').toString(),
-      coins: _int(json['coins']),
-      rating: _dbl(json['rating']),
+      coins: int(json['coins']),
+      rating: dbl(json['rating']), 
       pdf: (json['pdf'] ?? '').toString().isEmpty ? null : json['pdf'].toString(),
       thumbnail: (json['thumbnail'] ?? '').toString().isEmpty ? null : json['thumbnail'].toString(),
     );

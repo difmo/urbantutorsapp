@@ -346,7 +346,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 unselectedLabelColor: Colors.white70,
                 indicatorColor: Colors.white,
                 indicatorWeight: 2,
-                overlayColor: MaterialStateProperty.all(Colors.transparent),
+                overlayColor: WidgetStateProperty.all(Colors.transparent),
                 splashFactory: NoSplash.splashFactory,
                 // (Optional) slightly smaller text to visually reduce height
                 labelStyle: const TextStyle(fontSize: 13),
@@ -578,49 +578,6 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
     if (!mounted) return;
     await _refreshLeads();
-  }
-}
-
-class _HamburgerButton extends StatelessWidget {
-  const _HamburgerButton({
-    super.key,
-    required this.onTap,
-    this.color = Colors.white,
-  });
-
-  final VoidCallback onTap;
-  final Color color;
-
-  Widget _bar() => Container(
-        width: 26,
-        height: 2.2,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(2),
-        ),
-      );
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      customBorder: const CircleBorder(),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(10.0),
-        child: SizedBox(
-          width: 28,
-          height: 22,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _bar(),
-              _bar(),
-              _bar(),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
 

@@ -7,15 +7,9 @@ import 'package:urbantutorsapp/screens/admin/feedback_admin.dart';
 import 'package:urbantutorsapp/screens/admin/history_admin.dart';
 import 'package:urbantutorsapp/screens/admin/notification_admin.dart';
 import 'package:urbantutorsapp/screens/admin/transaction_admin.dart';
-import 'package:urbantutorsapp/screens/student/childs_screens/history_student.dart';
-import 'package:urbantutorsapp/screens/student/childs_screens/support_student.dart';
-import 'package:urbantutorsapp/screens/student/childs_screens/transactions_student.dart';
-import 'package:urbantutorsapp/screens/tutor/tutor_support_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
-import 'package:urbantutorsapp/screens/student/childs_screens/feedback_student.dart';
-import 'package:urbantutorsapp/screens/student/childs_screens/notification_student.dart';
 import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import '../theme/theme_constants.dart';

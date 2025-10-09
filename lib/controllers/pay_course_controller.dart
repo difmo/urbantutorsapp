@@ -49,7 +49,7 @@ class PayCourseController extends GetxController {
     purchasingCourseId.value = course.id;
     try {
       final uidStr = await StorageService.getUserId();
-      final userId = int.tryParse('${uidStr ?? ''}') ?? 0;
+      final userId = int.tryParse(uidStr ?? '') ?? 0;
       if (userId <= 0) throw Exception('No user id found');
 
       final res = await _svc.purchaseCourse(userId: userId, courseId: course.id);

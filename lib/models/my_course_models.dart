@@ -55,20 +55,20 @@ class MyCourseItem {
   });
 
   factory MyCourseItem.fromJson(Map<String, dynamic> json) {
-    num _num(dynamic v) => v is num ? v : (num.tryParse('$v') ?? 0);
-    double _dbl(dynamic v) => _num(v).toDouble();
-    int _int(dynamic v) => _num(v).toInt();
+    num(dynamic v) => v ? v : (num(v).tryParse('$v') ?? 0);
+    double dbl(dynamic v) => num(v).toDouble();
+     int(dynamic v) => num(v).toInt();
 
     return MyCourseItem(
-      courseId: _int(json['course_id']),
-      userId: _int(json['user_id']),
+      courseId: int(json['course_id']),
+      userId: int(json['user_id']),
       image: (json['image'] ?? '').toString(),
       courseName: (json['course_name'] ?? '').toString(),
-      number: _int(json['number']),
-      rating: _dbl(json['rating']),
-      coins: _int(json['coins']),
+      number: int(json['number']),
+      rating: dbl(json['rating']),
+      coins: int(json['coins']),
       description: (json['description'] ?? '').toString(),
-      status: _int(json['status']),
+      status: int(json['status']),
       createdAt: (json['created_at'] ?? '').toString(),
       updatedAt: (json['updated_at'] ?? '').toString(),
     );

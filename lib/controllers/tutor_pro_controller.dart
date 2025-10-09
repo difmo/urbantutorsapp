@@ -24,7 +24,7 @@ class TutorProController extends GetxController {
     error.value = '';
     try {
       final uidStr = await StorageService.getUserId();
-      _userId = int.tryParse('${uidStr ?? ''}') ?? 0;
+      _userId = int.tryParse(uidStr ?? '') ?? 0;
       if (_userId <= 0) throw Exception('No user id found');
 
       hasPro.value = await _svc.hasActivePro(_userId);

@@ -165,9 +165,9 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
 
     // Legacy IDs
     final nextBoardId =
-        (p.boardId is int) ? p.boardId : int.tryParse('${p.boardId ?? ''}');
+        (p.boardId is int) ? p.boardId : int.tryParse(p.boardId ?? '');
     final nextClassId =
-        (p.courseId is int) ? p.courseId : int.tryParse('${p.courseId ?? ''}');
+        (p.courseId is int) ? p.courseId : int.tryParse(p.courseId ?? '');
 
     if (nextBoardId != null) {
       await _leadMeta.loadClasses(nextBoardId);
