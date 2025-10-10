@@ -75,6 +75,7 @@ class _ChatUserListScreenState extends State<ChatUserListScreen> {
                     borderRadius: BorderRadius.circular(50),
                     border: Border.all(color: AppColors.primaryColor),
                   ),
+                  // test
                   child: CircleAvatar(
                     radius: 26,
                     backgroundColor: primaryColor.withOpacity(0.1),
