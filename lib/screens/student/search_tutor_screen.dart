@@ -82,7 +82,7 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
   String? userName;
   String? userPhone;
   bool _loadingUserMeta = true;
-  bool get hasActiveLead => leadStatus == "1";
+  bool get hasActiveLead => leadStatus == "0";
 
   Future<void> _loadUserMeta() async {
     try {
@@ -236,7 +236,11 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Lead updated successfully')),
       );
-      Navigator.pop(context, true);
+      setState(() {
+        leadStatus = "1";
+      });
+
+      // Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

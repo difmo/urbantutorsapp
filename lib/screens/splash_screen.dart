@@ -17,7 +17,7 @@ import 'package:urbantutorsapp/utils/storage_helper.dart';
 import '../theme/theme_constants.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -115,7 +115,8 @@ class _SplashScreenState extends State<SplashScreen>
           if (profileStatus == 0) {
             dashboard = StudentPendingScreen();
           } else if (profileStatus == 1) {
-            dashboard = StudentProfileFormScreen();
+             dashboard = StudentDashboardScreen();
+            // dashboard = StudentProfileFormScreen();
           } else if (profileStatus == 2) {
             dashboard = StudentDashboardScreen();
           } else {

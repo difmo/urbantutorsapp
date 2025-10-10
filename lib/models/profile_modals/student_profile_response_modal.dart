@@ -87,7 +87,8 @@ class StudentProfileDataNew {
       profileId: json['profile_id'],
       profile_picture: json['profile_picture'],
       leadStatus: json['lead_status'],
-      studentName: json['student_name'] ?? json['tutorbureau'] ?? "test",
+      studentName:
+          json['student_name'] ?? json['tutorbureau'] ?? json['name'] ?? "test",
       mobile: json['mobile'] ?? json['tutorbureau_number'] ?? "0000000000",
       totalCoins: json['total_coins'] ?? "0",
       totalSpentCoins: json['total_spent_coins'] ?? "1",

@@ -10,12 +10,22 @@ class PayCoursesPayload {
   });
 
   factory PayCoursesPayload.fromJson(Map<String, dynamic> json) {
-    final data = (json['data'] as List? ?? [])
-        .map((e) => PayCourse.fromJson(e as Map<String, dynamic>))
-        .toList();
+    final raw = json['data'];
+    final items = <PayCourse>[];
+    if (raw is List) {
+      for (final e in raw) {
+        if (e is Map<String, dynamic>) {
+          items.add(PayCourse.fromJson(e));
+        } else if (e is Map) {
+          // in case it's Map<dynamic, dynamic>
+          items.add(PayCourse.fromJson(Map<String, dynamic>.from(e)));
+        }
+      }
+    }
+
     return PayCoursesPayload(
       success: json['success'] == true,
-      items: data,
+      items: items,
       message: (json['message'] ?? '').toString(),
     );
   }
@@ -27,8 +37,10 @@ class PayCourse {
   final String description;
   final int coins;
   final double rating;
-  final String? pdf;        // optional (sometimes present)
-  final String? thumbnail;  // optional
+  final String? pdf; // optional
+  final String? thumbnail; // optional
+  final int? status;
+  final int? number;
 
   PayCourse({
     required this.id,
@@ -38,34 +50,66 @@ class PayCourse {
     required this.rating,
     this.pdf,
     this.thumbnail,
+    this.status,
+    this.number,
   });
 
   factory PayCourse.fromJson(Map<String, dynamic> json) {
-    num(dynamic v) => (v ) ? v : (num(v).tryParse('$v') ?? 0);
-    double dbl(dynamic v) => num(v).toDouble();
-   int(dynamic v) => num(v).toInt();
+    // helper parsers
+    int _parseInt(dynamic v) {
+      if (v == null) return 0;
+      if (v is int) return v;
+      if (v is double) return v.toInt();
+      final s = v.toString();
+      return int.tryParse(s) ?? double.tryParse(s)?.toInt() ?? 0;
+    }
+
+    double _parseDouble(dynamic v) {
+      if (v == null) return 0.0;
+      if (v is double) return v;
+      if (v is int) return v.toDouble();
+      final s = v.toString();
+      return double.tryParse(s) ?? 0.0;
+    }
+
+    String? _parseNullableString(dynamic v) {
+      if (v == null) return null;
+      final s = v.toString().trim();
+      return s.isEmpty ? null : s;
+    }
+
+    // pick course name from possible keys
+    String _courseNameFromJson(Map<String, dynamic> j) {
+      final n = (j['course_name'] ?? j['name'] ?? '').toString().trim();
+      return n.isEmpty ? 'Unknown Course' : n;
+    }
 
     return PayCourse(
-      id: int(json['id']),
-      courseName: (json['course_name'] ?? json['name'] ?? '').toString(),
+      id: _parseInt(json['id']),
+      courseName: _courseNameFromJson(json),
       description: (json['description'] ?? '').toString(),
-      coins: int(json['coins']),
-      rating: dbl(json['rating']), 
-      pdf: (json['pdf'] ?? '').toString().isEmpty ? null : json['pdf'].toString(),
-      thumbnail: (json['thumbnail'] ?? '').toString().isEmpty ? null : json['thumbnail'].toString(),
+      coins: _parseInt(json['coins']),
+      rating: _parseDouble(json['rating']),
+      pdf: _parseNullableString(json['pdf']),
+      thumbnail: _parseNullableString(json['thumbnail'] ?? json['image']),
+      status: json.containsKey('status') ? _parseInt(json['status']) : null,
+      number: json.containsKey('number') ? _parseInt(json['number']) : null,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'course_name': courseName,
-    'description': description,
-    'coins': coins,
-    'rating': rating,
-    'pdf': pdf,
-    'thumbnail': thumbnail,
-  };
+        'id': id,
+        'course_name': courseName,
+        'description': description,
+        'coins': coins,
+        'rating': rating,
+        'pdf': pdf,
+        'thumbnail': thumbnail,
+        'status': status,
+        'number': number,
+      };
 }
+
 
 class PurchaseResponse {
   final bool success;

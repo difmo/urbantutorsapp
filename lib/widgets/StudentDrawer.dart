@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/history_student.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/support_student.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/transactions_student.dart';
+import 'package:urbantutorsapp/screens/student/mycourses_student.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
@@ -292,6 +293,11 @@ class _StudentDrawerState extends State<StudentDrawer> {
                 onTap: () => Get.to(() => const TransactionsStudent()),
               ),
 
+              _drawerItem(
+                Icons.history,
+                'My Courses',
+                onTap: () => Get.to(() => const MycoursesStudent()),
+              ),
               _drawerItem(
                 Icons.history,
                 'History',

@@ -1,24 +1,32 @@
+// services/my_course_service.dart
+
 import 'package:dio/dio.dart';
 import 'package:urbantutorsapp/models/my_course_models.dart';
 import 'package:urbantutorsapp/services/ApiService.dart';
 
 class MyCourseService {
-  /// POST /mycourse  (form-data: user_id)
+  /// POST /mycourse
   Future<MyCoursePayload> fetchMyCourses(int userId) async {
     final res = await ApiService.post(
       '/mycourse',
       FormData.fromMap({'user_id': userId.toString()}),
     );
-    return MyCoursePayload.fromJson(res.data as Map<String, dynamic>);
+    // res.data expected to be Map<String, dynamic>
+    final data = res.data;
+    if (data is Map<String, dynamic>) {
+      return MyCoursePayload.fromJson(data);
+    }
+    // try to convert
+    return MyCoursePayload.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
-  /// GET /viewpdf/{course_id} → returns type + url (same as your pay-course flow)
-  Future<Map<String, String>> getViewInfo(int courseId) async {
+  /// GET /viewpdf/{course_id} → returns type + url
+  Future<ViewInfo> getViewInfo(int courseId) async {
     final res = await ApiService.get('/viewpdf/$courseId');
-    final data = (res.data as Map<String, dynamic>);
-    final d = (data['data'] is Map<String, dynamic>) ? data['data'] as Map<String, dynamic> : {};
-    final url = (d['url'] ?? d['file'] ?? d['pdf'] ?? '').toString();
-    final type = (d['type'] ?? d['Type'] ?? '').toString();
-    return {'url': url, 'type': type};
+    final data = res.data;
+    if (data is Map<String, dynamic>) {
+      return ViewInfo.fromJson(data);
+    }
+    return ViewInfo.fromJson(Map<String, dynamic>.from(data as Map));
   }
 }

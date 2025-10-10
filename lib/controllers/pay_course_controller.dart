@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -27,6 +30,7 @@ class PayCourseController extends GetxController {
     error.value = '';
     try {
       final payload = await _svc.fetchCourses();
+      print("Loaded ho gya  :$payload");
       courses.assignAll(payload.items);
     } catch (e) {
       error.value = e.toString();
@@ -44,21 +48,69 @@ class PayCourseController extends GetxController {
     }
   }
 
-  Future<void> buy(PayCourse course) async {
-    if (purchasingCourseId.value != 0) return;
+  Future<PurchaseResult> buy(PayCourse course) async {
+    if (purchasingCourseId.value != 0) {
+      // already buying something
+      return PurchaseResult(false, 'A purchase is already in progress.');
+    }
+
     purchasingCourseId.value = course.id;
     try {
       final uidStr = await StorageService.getUserId();
       final userId = int.tryParse(uidStr ?? '') ?? 0;
-      if (userId <= 0) throw Exception('No user id found');
+      if (userId <= 0) {
+        return PurchaseResult(
+            false, 'User not logged in. Please login and try again.');
+      }
 
-      final res = await _svc.purchaseCourse(userId: userId, courseId: course.id);
-      if (!res.success) throw Exception(res.message.isEmpty ? 'Purchase failed' : res.message);
+      // call the service with timeout
+      final res = await _svc
+          .purchaseCourse(userId: userId, courseId: course.id)
+          .timeout(const Duration(seconds: 15));
 
-      Get.snackbar('Success', res.message.isEmpty ? 'Course purchased' : res.message);
-    } catch (e) {
-      Get.snackbar('Error', e.toString());
-      rethrow;
+      // handle service-level failure
+      if (!res.success) {
+        // optionally, detect specific API error codes/messages
+        final msg = (res.message ?? '').toString();
+        if (msg.toLowerCase().contains('insufficient')) {
+          throw InsufficientBalanceException(msg);
+        }
+        throw ApiException(msg.isEmpty ? 'Purchase failed' : msg);
+      }
+
+      // success
+      final successMessage = (res.message?.isNotEmpty ?? false)
+          ? res.message!
+          : 'Course purchased successfully';
+      Get.snackbar('Success', successMessage,
+          snackPosition: SnackPosition.BOTTOM);
+      return PurchaseResult(true, successMessage);
+    } on InsufficientBalanceException catch (e) {
+      Get.snackbar('Insufficient balance', e.message,
+          snackPosition: SnackPosition.BOTTOM);
+      return PurchaseResult(false, e.message);
+    } on SocketException catch (_) {
+      const msg =
+          'Network error. Please check your internet connection and try again.';
+      Get.snackbar('Network error', msg, snackPosition: SnackPosition.BOTTOM);
+      return PurchaseResult(false, msg);
+    } on TimeoutException catch (_) {
+      const msg = 'Request timed out. Please try again.';
+      Get.snackbar('Timeout', msg, snackPosition: SnackPosition.BOTTOM);
+      return PurchaseResult(false, msg);
+    } on ApiException catch (e) {
+      Get.snackbar('Error', e.message, snackPosition: SnackPosition.BOTTOM);
+      return PurchaseResult(false, e.message);
+    } on FormatException catch (_) {
+      const msg = 'Unexpected response from server. Please try again later.';
+      Get.snackbar('Error', msg, snackPosition: SnackPosition.BOTTOM);
+      return PurchaseResult(false, msg);
+    } catch (e, st) {
+      // last-resort fallback
+      final msg = e?.toString() ?? 'An unknown error occurred';
+      print('buy() unknown error: $e\n$st');
+      Get.snackbar('Error', msg, snackPosition: SnackPosition.BOTTOM);
+      return PurchaseResult(false, msg);
     } finally {
       purchasingCourseId.value = 0;
     }
@@ -98,4 +150,26 @@ class PayCourseController extends GetxController {
       Get.snackbar('Error', 'Cannot open: $url');
     }
   }
+}
+
+/// small result type so callers can react accordingly
+class PurchaseResult {
+  final bool success;
+  final String message;
+  PurchaseResult(this.success, this.message);
+}
+
+class InsufficientBalanceException implements Exception {
+  final String message;
+  InsufficientBalanceException(
+      [this.message = 'Insufficient balance. Please purchase more coins.']);
+  @override
+  String toString() => message;
+}
+
+class ApiException implements Exception {
+  final String message;
+  ApiException([this.message = 'API error']);
+  @override
+  String toString() => message;
 }

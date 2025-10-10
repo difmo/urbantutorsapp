@@ -42,16 +42,23 @@ class _PDFCoursesScreenState extends State<PDFCoursesScreen> {
     for (var course in _payCourseController.courses) {
       print(course.toJson());
     }
+
+    // Register controllers synchronously (no updates yet)
     _c = Get.isRegistered<CoinsController>()
         ? Get.find<CoinsController>()
         : Get.put(CoinsController());
-    _c.refreshAll();
 
     _p = Get.isRegistered<ProfileUpdateController>()
         ? Get.find<ProfileUpdateController>()
         : Get.put(ProfileUpdateController());
-    // Try to ensure profile is present
-    _p.fetchProfileForStudent();
+
+    // Run the actions that trigger Rx updates after the first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // safe to trigger Rx updates now
+      _c.refreshAll();
+      _p.fetchProfileForStudent();
+      _payCourseController.load();
+    });
   }
 
   num _toNum(dynamic v) {
@@ -303,7 +310,9 @@ class _PDFCoursesScreenState extends State<PDFCoursesScreen> {
                                       icon: const Icon(
                                           Icons.shopping_cart_checkout),
                                       label: const Text('Buy now'),
-                                      onPressed: () => _onBuy(item),
+                                      onPressed: () {
+                                        _onBuy(item);
+                                      },
                                     ),
                                   ),
                                 ],
@@ -313,19 +322,24 @@ class _PDFCoursesScreenState extends State<PDFCoursesScreen> {
                                   // PREVIEW
                                   Expanded(
                                     child: ElevatedButton.icon(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            const Color(0xFF4A90E2),
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor:
+                                              const Color(0xFF4A90E2),
+                                          foregroundColor: Colors.white,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
                                         ),
-                                      ),
-                                      icon: const Icon(Icons.picture_as_pdf),
-                                      label: const Text('Preview'),
-                                      onPressed: () => _openPdf(item.pdf!),
-                                    ),
+                                        icon: const Icon(Icons.picture_as_pdf),
+                                        label: const Text('Preview'),
+                                        onPressed: () {
+                                          if (item.pdf != null) {
+                                            // pdf not found
+                                          } else {
+                                            _openPdf(item.pdf.toString());
+                                          }
+                                        }),
                                   ),
                                   const SizedBox(width: 10),
 
@@ -381,17 +395,24 @@ class _PDFCoursesScreenState extends State<PDFCoursesScreen> {
     if (!await canLaunchUrl(uri)) return;
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
-}
 
-void _onBuy(PayCourse item) {
-  // final link = (item.buyUrl?.isNotEmpty ?? false) ? item.buyUrl! : (item.pdf ?? '');
-  // if (link.isEmpty) {
-  //   ScaffoldMessenger.of(context).showSnackBar(
-  //     const SnackBar(content: Text('No purchase link available')),
-  //   );
-  //   return;
-  // }
-  // _openPdf(link); // or replace with your payment / checkout flow
+  void _onBuy(PayCourse item) async {
+    final result = await _payCourseController.buy(item);
+    if (!result.success) {
+      // already shown snack; you could show dialog here if desired
+      return;
+    }
+
+    // Only open the PDF / purchase link on success
+    final link = (item.pdf?.isNotEmpty ?? false) ? item.pdf! : '';
+    if (link.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No purchase link available')),
+      );
+      return;
+    }
+    await _openPdf(link);
+  }
 }
 
 class _CoinsChip extends StatelessWidget {

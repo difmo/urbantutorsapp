@@ -50,7 +50,7 @@ class MyCourseController extends GetxController {
     openingCourseId.value = item.courseId;
     try {
       final view = await _svc.getViewInfo(item.courseId);
-      var url = (view['url'] ?? '').trim();
+      var url = (view.url ?? '').trim();
       if (url.isEmpty) throw Exception('No preview available for this course');
 
       if (!url.contains('://')) {

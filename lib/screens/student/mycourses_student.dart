@@ -14,14 +14,14 @@ import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/TutorDrawer.dart';
 
-class MycoursesTutor extends StatefulWidget {
-  const MycoursesTutor({super.key});
+class MycoursesStudent extends StatefulWidget {
+  const MycoursesStudent({super.key});
 
   @override
-  State<MycoursesTutor> createState() => _CourseTutorState();
+  State<MycoursesStudent> createState() => _CourseTutorState();
 }
 
-class _CourseTutorState extends State<MycoursesTutor> {
+class _CourseTutorState extends State<MycoursesStudent> {
   late final CoinsController _c;
   late final ProfileUpdateController _p;
   late final MyCourseController _mc;

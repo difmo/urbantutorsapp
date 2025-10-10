@@ -55,6 +55,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   int? _boardId;
   int? _classId;
 
+  String? selectedBoardName = "Board";
+  String? selectedClassName = 'Class';
   late final CoinsController _c;
 
   // Image picker
@@ -142,22 +144,15 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       return int.tryParse(v.toString());
     }
 
-    final nextBoardId = parseInt(p.boardId);
-    final nextClassId = parseInt(p.courseId);
+    selectedBoardName = p.boardName;
+    selectedClassName = p.courseName;
 
-    // Load classes for the board first, then set class id
-    if (nextBoardId != null) {
-      try {
-        await _leadMeta.loadClasses(nextBoardId);
-      } catch (e, st) {
-        debugPrint('Failed to load classes for board $nextBoardId: $e\n$st');
-      }
-    }
+    // Load classes for the board first, then set class i
 
     if (!mounted) return;
     setState(() {
-      _boardId = nextBoardId;
-      _classId = nextClassId;
+      _boardId = p.boardId;
+      _classId = p.courseId;
     });
   }
 
@@ -236,7 +231,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     return num.tryParse(v.toString()) ?? 0;
   }
 
-  final PayCourseController _payCourseController = Get.find<PayCourseController>();
+  final PayCourseController _payCourseController =
+      Get.find<PayCourseController>();
 
   static const blue = Color(0xFF4A90E2);
 
@@ -448,8 +444,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
           final prof = _p.studentprofileData.value;
           final name = prof?.studentName?.trim();
           final initial = _initialFromName(name);
-          final displayName =
-              (name == null || name.isEmpty) ? 'Student' : name.split(' ').first;
+          final displayName = (name == null || name.isEmpty)
+              ? 'Student'
+              : name.split(' ').first;
 
           if (loadingCoins && wallet == null && prof == null) {
             return const SizedBox(
@@ -535,7 +532,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                   ),
                 )
               : const SizedBox.shrink();
-        
+
           return SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             child: Form(
@@ -587,7 +584,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-        
+
                   // Basic
                   _sectionCard(
                     title: 'Basic:',
@@ -603,7 +600,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                           ]),
                     ],
                   ),
-        
+
                   // Academics
                   _sectionCard(
                     title: 'Academics:',
@@ -615,7 +612,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                         return DropdownButtonFormField<int>(
                           value: _boardId,
                           isExpanded: true,
-                          decoration: _dec('Board', icon: Icons.school),
+                          decoration:
+                              _dec(selectedBoardName!, icon: Icons.school),
                           items: boards
                               .map((b) => DropdownMenuItem<int>(
                                     value: b.boardId,
@@ -634,7 +632,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                         );
                       }),
                       const SizedBox(height: 12),
-        
+
                       // Class
                       Obx(() {
                         final classes = _leadMeta.classes;
@@ -642,7 +640,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                         return DropdownButtonFormField<int>(
                           value: _classId,
                           isExpanded: true,
-                          decoration: _dec('Class',
+                          decoration: _dec(selectedClassName!,
                               icon: Icons.menu_book,
                               suffixIcon: busy
                                   ? const Padding(
@@ -670,7 +668,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                       }),
                     ],
                   ),
-        
+
                   // Location
                   _sectionCard(
                     title: 'Location:',
@@ -681,7 +679,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                         return Autocomplete<String>(
                           optionsBuilder: (TextEditingValue tev) {
                             final q = tev.text.trim();
-                            if (q.isEmpty) return const Iterable<String>.empty();
+                            if (q.isEmpty)
+                              return const Iterable<String>.empty();
                             return opts;
                           },
                           onSelected: (val) {
@@ -703,7 +702,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                 _loc.onQueryChanged(q);
                               }
                             });
-        
+
                             return TextFormField(
                               controller: textCtrl,
                               focusNode: focusNode,
