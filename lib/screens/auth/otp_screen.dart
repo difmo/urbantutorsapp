@@ -44,16 +44,7 @@ class _OTPScreenState extends State<OTPScreen> {
   bool isResending = false;
   final ProfileUpdateController _profileUpdateController =
       Get.put(ProfileUpdateController());
-
-  Future<void> _initProfile() async {
-    await _profileUpdateController.fetchProfileForTutor();
-    if (_profileUpdateController.tutorprofileData.value?.profileStatus !=
-        null) {
-      await StorageService.saveIsProfileStatus(
-          _profileUpdateController.tutorprofileData.value!.profileStatus!);
-    }
-  }
-
+  final AuthController auth = Get.find<AuthController>();
   Future<bool> isProfiledataEmpty() async {
     await _profileUpdateController.fetchProfileForStudent();
     if (_profileUpdateController.studentprofileData.value!.boardName!.isEmpty) {
@@ -72,10 +63,8 @@ class _OTPScreenState extends State<OTPScreen> {
       final auth = Get.find<AuthController>();
       LoginResponse loginResponse = await auth.verifyOtp(
           widget.phone, otp, name, widget.roleId.toString(), firebaseToken);
-
       prefs.setString("userData", jsonEncode(loginResponse.data.toJson()));
       final roleId = loginResponse.data.userData!.roles[0].roleId;
-      final userId = loginResponse.data.userData!.id;
       final profileStatus = loginResponse.data.userData!.profileStatus ?? 0;
       print("Role id from otp screen $roleId");
       print("Profile status from otp screen $profileStatus");
@@ -131,14 +120,31 @@ class _OTPScreenState extends State<OTPScreen> {
     }
   }
 
-  void _resendCode() {
+  Future<void> _resendCode() async {
     setState(() => isResending = true);
-    Future.delayed(const Duration(seconds: 2), () {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('OTP resent')),
-      );
+    final prefs = await SharedPreferences.getInstance();
+    final name = await prefs.getString('reg_name');
+    print(widget.roleId);
+    print(widget.role);
+    try {
+      final otp =
+          await auth.sendOtp(widget.phone, name: name!, roleId: widget.roleId);
+      if (otp != null) {
+        debugPrint('🔐 OTP for testing: $otp');
+      }
+
+      Future.delayed(const Duration(seconds: 2), () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('OTP resent')),
+        );
+        setState(() => isResending = false);
+      });
+    } catch (e) {
       setState(() => isResending = false);
-    });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
   }
 
   @override

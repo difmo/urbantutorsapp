@@ -53,6 +53,14 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
 
   bool _overlayLoading = false;
 
+  // Capitalize helpers
+  String _capitalizeEach(String text) {
+    return text.split(' ').map((word) {
+      if (word.isEmpty) return '';
+      return word[0].toUpperCase() + word.substring(1);
+    }).join(' ');
+  }
+
   @override
   void initState() {
     super.initState();
@@ -143,7 +151,6 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
     return "data:image/${file.path.split('.').last};base64,${base64Encode(bytes)}";
   }
 
-
   Future<void> onSavePressed() async {
     String? userIdd = await StorageService.getUserId();
     // Basic guard
@@ -211,7 +218,6 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Profile image + name
                   Row(
                     children: [
                       Stack(
@@ -246,8 +252,28 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
                       Expanded(
                         child: TextField(
                           controller: nameController,
+                          onChanged: (val) {
+                            final formatted = _capitalizeEach(val);
+                            if (formatted != val) {
+                              // prevent endless loop
+                              final cursorPos = nameController.selection;
+                              nameController.value = TextEditingValue(
+                                text: formatted,
+                                selection: cursorPos.copyWith(
+                                  baseOffset: formatted.length,
+                                  extentOffset: formatted.length,
+                                ),
+                              );
+                            }
+                          },
+                          onEditingComplete: () {
+                            final formatted =
+                                _capitalizeEach(nameController.text);
+                            nameController.text = formatted;
+                          },
+                          textCapitalization: TextCapitalization.words,
                           decoration:
-                              const InputDecoration(labelText: "Full Name"),
+                              const InputDecoration(labelText: "Bureau Name"),
                         ),
                       ),
                     ],
@@ -350,8 +376,6 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
                     );
                   }),
                   const SizedBox(height: 16),
-
-// (Optional) debugging readouts
                   Obx(() => Text(
                       'Location results: ${_locationController.suggestions.length}',
                       style:
@@ -362,10 +386,6 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
                           style:
                               const TextStyle(fontSize: 12, color: Colors.red))
                       : const SizedBox.shrink()),
-
-                  // imports at top of file
-
-// inside build():
                   Obx(() {
                     final boards = _masterDataController
                             .masterData.value?.data?.boardLead ??
@@ -412,7 +432,6 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
                   const SizedBox(height: 16),
 
                   const SizedBox(height: 16),
-
                   // CLASS
                   Obx(() {
                     final classItems = _leadMetaController.classes;

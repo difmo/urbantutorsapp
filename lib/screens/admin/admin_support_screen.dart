@@ -284,7 +284,7 @@ class _NotificationStudentState extends State<AdminSupportScreen> {
               ),
               const SizedBox(height: 12),
               _faqItem("How can I upgrade my plan?"),
-              _faqItem("Where can I access my course notes?"),
+              _faqItem("Where can I access my Courses?"),
               _faqItem("How do I connect with a private tutor?"),
               _faqItem("What payment methods are accepted?"),
 

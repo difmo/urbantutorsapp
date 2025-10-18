@@ -1,3 +1,4 @@
+import 'package:urbantutorsapp/models/profile_modals/admin_profile_response_modal.dart';
 import 'package:urbantutorsapp/models/profile_modals/student_profile_request_modal.dart';
 import 'package:urbantutorsapp/models/profile_modals/student_profile_response_modal.dart';
 import 'package:urbantutorsapp/models/profile_modals/student_update_response.dart';
@@ -34,6 +35,21 @@ class ProfileUpdateService {
       return StudentProfileResponsdModal.fromJson(response.data);
     } catch (e) {
       print("❌ Error in getProfileForStudent :");
+      print(e.toString());
+      rethrow;
+    }
+  }
+
+  Future<AdminProfileResponseModel> getProfileForAdmin() async {
+    try {
+      final response = await ApiService.post(
+        ApiConstants.USER_PROFIEL_FETCH,
+        null,
+      );
+      print("✅ Response from getProfileForAdmin :: ${response.data}");
+      return AdminProfileResponseModel.fromJson(response.data);
+    } catch (e) {
+      print("❌ Error in getProfileForAdmin :");
       print(e.toString());
       rethrow;
     }
@@ -128,15 +144,34 @@ class ProfileUpdateService {
   }
 
   Future<TutorProfileResponse> updateAdminProfile(updateData) async {
-    print("update profile called for tutor ");
+    print("update profile called for tutor");
     try {
       final response = await ApiService.post(
-        "/teacher_profile_update",
+        "/tutorburo_profile_update",
         updateData,
       );
+      if (response.data) {
+        print("✅ Response from updateAdminProfile: ${response.data}");
+        return TutorProfileResponse.fromJson(response.data);
+      } else {
+        print("✅ Response from updateAdminProfile: ${response.data}");
+        return TutorProfileResponse.fromJson(response.data);
+      }
+    } catch (e) {
+      print("❌ Error in updateProfile (from ProfileUpdateService):");
+      print(e.toString());
+      rethrow;
+    }
+  }
 
-      print("✅ Response from updateProfile: ${response.data}");
-
+  Future<TutorProfileResponse> updateAdminProfileVerifiy(updateData) async {
+    print("updateAdminProfileVerifiy");
+    try {
+      final response = await ApiService.post(
+        "/tutorburo_profile_verify",
+        updateData,
+      );
+      print("✅ Response from updateAdminProfile: ${response.data}");
       return TutorProfileResponse.fromJson(response.data);
     } catch (e) {
       print("❌ Error in updateProfile (from ProfileUpdateService):");

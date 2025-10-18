@@ -160,8 +160,8 @@ class _StudentDrawerState extends State<Admindrawer> {
             children: [
               Obx(() {
                 final loading = _profile.isLoading.value &&
-                    _profile.studentprofileData.value == null;
-                final p = _profile.studentprofileData.value;
+                    _profile.adminProfileData.value == null;
+                final p = _profile.adminProfileData.value;
 
                 if (loading) {
                   // Simple skeleton
@@ -203,13 +203,12 @@ class _StudentDrawerState extends State<Admindrawer> {
                   );
                 }
 
-                final name = _str(p?.studentName, fallback: 'User');
-                final mobile = _str(p?.mobile, fallback: '');
-                final course = _str(p?.courseName, fallback: '');
-                final profileId =
-                    _str(p?.profileId, fallback: ''); // if present in model
+                final name = _str(p?.tutorburoName, fallback: 'User');
+                final mobile = _str(p?.phone, fallback: '');
+                final profileId = _str('B00000${p?.tutorburoProfileId}',
+                    fallback: ''); // if present in model
                 final displayName = _firstName(name);
-
+                final profileImage = p?.profilePicture;
                 return Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
@@ -234,18 +233,30 @@ class _StudentDrawerState extends State<Admindrawer> {
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                     width: 2, color: AppColors.primaryColor)),
-                            child: CircleAvatar(
-                              radius: 30,
-                              backgroundColor: primaryColor.withOpacity(0.12),
-                              child: Text(
-                                _initialFrom(name),
-                                style: const TextStyle(
-                                  fontSize: 22,
-                                  color: Colors.black87,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
+                            child: profileImage != null &&
+                                    profileImage.isNotEmpty
+                                ? ClipOval(
+                                    child: FadeInImage.assetNetwork(
+                                      placeholder: 'assets/icons/logogog.jpeg',
+                                      image:
+                                          'https://urbantutors.pro/$profileImage',
+                                      fit: BoxFit.cover,
+                                      width: 40,
+                                      height: 40,
+                                    ),
+                                  )
+                                : CircleAvatar(
+                                    radius: 20,
+                                    backgroundColor: Colors.blue,
+                                    child: Text(
+                                      displayName,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
                           ),
                         ],
                       ),

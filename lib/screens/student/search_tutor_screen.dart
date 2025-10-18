@@ -82,7 +82,7 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
   String? userName;
   String? userPhone;
   bool _loadingUserMeta = true;
-  bool get hasActiveLead => leadStatus == "0";
+  bool get hasActiveLead => leadStatus == "1";
 
   Future<void> _loadUserMeta() async {
     try {
@@ -386,28 +386,28 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Requests",
+                            "Thank You...",
                             style: TextStyle(
                               fontWeight: FontWeight.w800,
-                              color: Color(0xFF111827),
+                              color: Colors.red,
                               fontSize: 16,
                             ),
                           ),
                           SizedBox(height: 8),
                           Text(
-                            "You already have an active tutor request. We’ll show matching tutors here.",
+                            "Kindly, wait your request is submitted. Tutors will connect you soon. Untill you can  explore our App features.",
                             style: TextStyle(color: Color(0xFF6B7280)),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    TextButton(
-                      onPressed: () {
-                        // TODO: navigate to your request list screen
-                      },
-                      child: const Text("View all requests"),
-                    ),
+                    // const SizedBox(height: 12),
+                    // TextButton(
+                    //   onPressed: () {
+                    //     // TODO: navigate to your request list screen
+                    //   },
+                    //   child: const Text("View all requests"),
+                    // ),
                   ],
                 ),
               ),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
+import 'package:urbantutorsapp/widgets/custom_input_field2.dart';
 import 'package:url_launcher/url_launcher.dart'; // ⬅️ Added for opening link
 import 'package:urbantutorsapp/controllers/auth_controller.dart';
 import 'package:urbantutorsapp/widgets/custom_button.dart';
@@ -38,6 +39,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('reg_name', _nameController.text.trim());
       await prefs.setString('reg_phone', _phoneController.text.trim());
+      print(_nameController.text.toString());
+      print(_phoneController.text.toString());
+      print(widget.roleId);
+      print(widget.role);
       try {
         final otp = await auth.sendOtp(_phoneController.text.trim(),
             name: _nameController.text.toString(), roleId: widget.roleId);
@@ -141,15 +146,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  CustomInputField(
+                  CustomInputField2(
                     controller: _nameController,
-                    label: 'Full Name',
-                    icon: FontAwesomeIcons.user,
-                    validator: (v) =>
-                        v == null || v.trim().isEmpty ? 'Required' : null,
-                    labelStyle: const TextStyle(color: Colors.grey),
+                    label: "Full Name",
+                    icon: Icons.person,
+                    validator: (val) {
+                      if (val == null || val.isEmpty)
+                        return "Please enter your full name";
+                      return null;
+                    },
+                    capitalizeEach: _capitalizeEach,
                   ),
                   const SizedBox(height: 16),
+
                   CustomInputField(
                     controller: _phoneController,
                     label: 'Mobile Number',
@@ -161,6 +170,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ? 'Enter valid 10-digit mobile number'
                         : null,
                   ),
+
                   const SizedBox(height: 16),
 
                   // ✅ Terms & Conditions checkbox
@@ -209,6 +219,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
       ),
     );
+  }
+
+  String _capitalizeEach(String text) {
+    return text.split(' ').map((word) {
+      if (word.isEmpty) return '';
+      return word[0].toUpperCase() + word.substring(1);
+    }).join(' ');
   }
 }
 

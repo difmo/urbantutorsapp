@@ -36,7 +36,7 @@ class _DashboardHomeTabState extends State<DashboardHomeTab>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 3, vsync: this)
+    _tab = TabController(length: 3, vsync: this, initialIndex: 1)
       ..addListener(() => setState(() {})); // rebuild when tab changes
 
     _coins = Get.isRegistered<CoinsController>()
@@ -49,55 +49,6 @@ class _DashboardHomeTabState extends State<DashboardHomeTab>
         : Get.put(ProfileUpdateController());
     // Try to ensure profile is present
     _p.fetchProfileForStudent();
-  }
-
-  String _initial(String? name) {
-    final n = (name ?? '').trim();
-    if (n.isEmpty) return 'S';
-    return n.characters.first.toUpperCase();
-  }
-
-  String _firstName(String? name) {
-    final n = (name ?? '').trim();
-    if (n.isEmpty) return 'Student';
-    final parts = n.split(RegExp(r'\s+'));
-    return parts.first;
-  }
-
-  String _greet() {
-    final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
-  }
-
-  Future<void> _handleMenuTap(String label) async {
-    Navigator.of(context).pop();
-    if (label == 'Logout') {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
-      await StorageService.clear();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Logged out successfully')),
-      );
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const SplashScreen()),
-        (_) => false,
-      );
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Navigating to $label')),
-      );
-    }
-  }
-
-  num _toNum(dynamic v) {
-    if (v == null) return 0;
-    if (v is num) return v;
-    return num.tryParse(v.toString()) ?? 0;
   }
 
   bool _isGrabbed(TutorLead e) =>
@@ -352,8 +303,10 @@ class _DashboardHomeTabState extends State<DashboardHomeTab>
           if (items.isEmpty)
             const Padding(
               padding: EdgeInsets.all(24),
-              child: Center(child: Text('No nearby (offline) leads found')),
-            ),
+              child: Center(
+                  child: Text(
+                      'No Nearby (Offline/Online) Leads Found. Kindly, Wait!')),
+            ), 
           ...items.map(
             (e) => GestureDetector(
               onTap: () => _openDetails(e),

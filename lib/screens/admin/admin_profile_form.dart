@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
+import 'package:urbantutorsapp/screens/admin/admin_dashboard.dart';
+import 'package:urbantutorsapp/screens/admin/admin_pending_screen.dart';
 import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
 import 'package:urbantutorsapp/screens/tutor/teacher_pending_screen.dart';
@@ -58,46 +60,26 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
   @override
   void initState() {
     super.initState();
-    profileUpdateController.fetchProfileForTutor();
+    profileUpdateController.fetchProfileForAdmin();
     _masterDataController.fetchMasterData();
-    profileUpdateController.fetchProfileForStudent();
-    _wTutorData = ever(profileUpdateController.tutorprofileData, (student) {
-      AppLog.i('[UI] studentprofileData changed');
+    _wTutorData = ever(profileUpdateController.adminProfileData, (student) {
+      AppLog.i('[UI] AdminProfileData changed');
       if (!mounted || student == null) return;
-      nameController.text = student.teacherName ?? '';
-      phoneController.text = student.mobile?.toString() ?? '';
-      priceController.text = student.price?.toString() ?? '';
-      localityController.text = student.location ?? '';
+      nameController.text = _capitalizeEach(student.fullName ?? '');
+      phoneController.text =
+          _digitsOnly(student.tutorburoMobile?.toString() ?? '');
+      localityController.text = _capitalizeEach(student.location ?? '');
       selectedState = student.state;
-      selectedIdType = student.idType;
-      remarkController.text = student.remark ?? '';
-      // if (student.frontId != null && student.frontId!.isNotEmpty) {
-      //   _frontIdImage = XFile.fromData(
-      //     base64Decode(student.frontId!.split(',').last),
-      //     name: 'front_id_${student.studentName ?? ""}.jpg',
-      //     mimeType: 'image/jpeg',
-      //     path: 'https://urbantutors.pro/${student.frontId}',
-      //   );
-      // }
-      // if (student.frontBack != null && student.frontBack!.isNotEmpty) {
-      //   _backIdImage = XFile.fromData(
-      //     base64Decode(student.frontBack!.split(',').last),
-      //     name: 'back_id_${student.studentName ?? ""}.jpg',
-      //     mimeType: 'image/jpeg',
-      //     path: 'https://urbantutors.pro/${student.frontBack}',
-      //   );
-      // }
       setState(() {});
     });
     // 2) Route ONCE depending on profile_status (do not re-attach on refresh)
-    _wRouteOnce = once(profileUpdateController.tutorprofileData, (student) {
+    _wRouteOnce = once(profileUpdateController.adminProfileData, (student) {
       if (!mounted || student == null) return;
-      final status = student.profileStatus;
-      // Stay on this screen for status == 0 (form incomplete)
+      final status = student.tutorburoProfileStatus;
       if (status == 1) {
-        Get.offAll(() => const TeacherPendingScreen());
+        Get.offAll(() => const AdminProfileForm());
       } else if (status == 2) {
-        Get.offAll(() => const TutorDashboard());
+        Get.offAll(() => const AdminDashboard());
       } else if (status == null) {
         Get.offAll(() => const WelcomeScreen());
       }
@@ -106,19 +88,18 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
 
   @override
   void dispose() {
-    // Dispose workers to avoid setState after dispose
     _wTutorData.dispose();
     _wRouteOnce.dispose();
     _wMasterData.dispose();
     _wIsFetchingClasses.dispose();
     _wIsFetchingSubjects.dispose();
 
-    // Dispose text controllers
     nameController.dispose();
     emailController.dispose();
     localityController.dispose();
     remarkController.dispose();
     priceController.dispose();
+    phoneController.dispose();
     super.dispose();
   }
 
@@ -148,14 +129,26 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
     return "data:image/${file.path.split('.').last};base64,${base64Encode(bytes)}";
   }
 
-  void _refreshTutorProfile() {
+  void _refreshAdminProfile() {
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) => TeacherPendingScreen()),
+      MaterialPageRoute(builder: (_) => AdminPendingScreen()),
       (route) => false,
     );
     // Only triggers fetch; DOES NOT add any listeners.
-    profileUpdateController.fetchProfileForTutor();
+    profileUpdateController.fetchProfileForAdmin();
+  }
+
+  // Capitalize helpers
+  String _capitalizeEach(String text) {
+    return text.split(' ').map((word) {
+      if (word.isEmpty) return '';
+      return word[0].toUpperCase() + word.substring(1);
+    }).join(' ');
+  }
+
+  String _digitsOnly(String s) {
+    return s.replaceAll(RegExp(r'[^0-9]'), '');
   }
 
   Future<void> onSavePressed() async {
@@ -165,28 +158,41 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
       return;
     }
 
+    // Validate phone number: numeric and reasonable length (10+ digits)
+    final phoneDigits = _digitsOnly(phoneController.text);
+    if (phoneDigits.length < 10) {
+      Get.snackbar('Validation',
+          'Please enter a valid phone number (at least 10 digits)');
+      return;
+    }
+
     if (mounted) setState(() => _overlayLoading = true);
     try {
+      // Ensure text fields have capitalized first letters
       final profileBase64 = await _fileToBase64(_profileImage) ?? '';
       final frontBase64 = await _fileToBase64(_frontIdImage) ?? '';
       final backBase64 = await _fileToBase64(_backIdImage) ?? '';
+
       final req = {
         "user_id": userIdStr,
-        "tutorbureau": nameController.text.toString(),
-        "tutorbureau_number": phoneController.text.toString(),
-        "location": "Delhi",
-        "state": "Delhi",
-        "idtype": "Aadhar",
+        "tutor_bureau_name": _capitalizeEach(nameController.text.trim()),
+        "tutor_bureau_email": emailController.text.toString().trim(),
+        "profile_verify_phone": phoneDigits,
+        "location": _capitalizeEach(localityController.text.trim()),
+        "state": selectedState ?? "Delhi",
+        "idtype": selectedIdType ?? "Aadhar",
         "profile_picture": profileBase64,
         "frontid": frontBase64,
-        "frontback": backBase64,
+        "backid": backBase64,
         "place_id": "125479359",
         "latitude": "28.663",
         "longitude": "97.2255",
       };
-      await profileUpdateController.updateAdminProfile(req);
+
+      await profileUpdateController.updateAdminProfileVerify(req);
+      print(" ProfileUpdateThings : $req");
       Get.snackbar('Success', 'Profile updated successfully');
-      _refreshTutorProfile();
+      _refreshAdminProfile();
     } catch (e) {
       Get.snackbar('Error', e.toString());
     } finally {
@@ -284,6 +290,26 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
                       Expanded(
                         child: TextField(
                           controller: nameController,
+                          onChanged: (val) {
+                            final formatted = _capitalizeEach(val);
+                            if (formatted != val) {
+                              // prevent endless loop
+                              final cursorPos = nameController.selection;
+                              nameController.value = TextEditingValue(
+                                text: formatted,
+                                selection: cursorPos.copyWith(
+                                  baseOffset: formatted.length,
+                                  extentOffset: formatted.length,
+                                ),
+                              );
+                            }
+                          },
+                          onEditingComplete: () {
+                            final formatted =
+                                _capitalizeEach(nameController.text);
+                            nameController.text = formatted;
+                          },
+                          textCapitalization: TextCapitalization.words,
                           decoration:
                               const InputDecoration(labelText: "Bureau Name"),
                         ),
@@ -293,12 +319,15 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
                   const SizedBox(height: 16),
                   TextField(
                     controller: phoneController,
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration:
                         const InputDecoration(labelText: "Phone Number"),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: emailController,
+                    keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(labelText: "Email ID"),
                   ),
                   const SizedBox(height: 16),
@@ -316,7 +345,7 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
                       },
                       onSelected: (val) {
                         AppLog.i('[UI] Locality selected → $val');
-                        localityController.text = val;
+                        localityController.text = _capitalizeEach(val);
                         _locationController.onQueryChanged('');
                       },
                       fieldViewBuilder:
@@ -338,6 +367,7 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
                         return TextField(
                           controller: textCtrl,
                           focusNode: focusNode,
+                          textCapitalization: TextCapitalization.words,
                           decoration: InputDecoration(
                             labelText: 'Locality',
                             hintText: 'Type city/area (e.g., lko)…',
@@ -377,7 +407,7 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
                                   final item = list[i];
                                   return ListTile(
                                     dense: true,
-                                    title: Text(item),
+                                    title: Text(_capitalizeEach(item)),
                                     onTap: () => onSelected(item),
                                   );
                                 },
@@ -457,9 +487,7 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
                           child: _idUploadBox("Back ID", _backIdImage, "back")),
                     ],
                   ),
-
                   const SizedBox(height: 24),
-
                   Center(
                     child: ElevatedButton(
                       onPressed: onSavePressed,

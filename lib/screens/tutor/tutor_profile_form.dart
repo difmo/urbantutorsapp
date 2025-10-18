@@ -1,3 +1,4 @@
+// <keep your existing imports>
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -24,6 +25,9 @@ class TutorProfileFormScreen extends StatefulWidget {
 }
 
 class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
+  // Form key
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
   // Text controllers
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
@@ -74,6 +78,14 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
   XFile? _backIdImage;
 
   bool _overlayLoading = false;
+
+  // Validation error flags for multi-selects / id images
+  bool _boardError = false;
+  bool _classError = false;
+  bool _subjectError = false;
+  bool _profileImageError = false;
+  bool _frontIdError = false;
+  bool _backIdError = false;
 
   // GetX workers (dispose later)
   late final Worker _wTutorData;
@@ -172,6 +184,14 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
     });
   }
 
+  // Capitalize helpers
+  String _capitalizeEach(String text) {
+    return text.split(' ').map((word) {
+      if (word.isEmpty) return '';
+      return word[0].toUpperCase() + word.substring(1);
+    }).join(' ');
+  }
+
   @override
   void dispose() {
     // Dispose workers
@@ -257,7 +277,64 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
     return int.tryParse(v);
   }
 
+  // Simple email validator
+  bool _isValidEmail(String email) {
+    final re = RegExp(r"^[\w\.\-]+@([\w\-]+\.)+[a-zA-Z]{2,}$");
+    return re.hasMatch(email);
+  }
+
   Future<void> onSavePressed() async {
+    // Reset image/multi-select error flags before validating
+    setState(() {
+      _boardError = false;
+      _classError = false;
+      _subjectError = false;
+      _frontIdError = false;
+      _backIdError = false;
+    });
+
+    // Validate form fields
+    final formValid = _formKey.currentState?.validate() ?? false;
+
+    // Validate multi-selects
+    final hasBoard = _selBoardIds.isNotEmpty;
+    final hasClass = _selClassIds.isNotEmpty;
+    final hasSubject = _selSubjectIds.isNotEmpty;
+
+    bool multiSelectsOk = true;
+    if (!hasBoard) {
+      _boardError = true;
+      multiSelectsOk = false;
+    }
+    if (!hasClass) {
+      _classError = true;
+      multiSelectsOk = false;
+    }
+    if (!hasSubject) {
+      _subjectError = true;
+      multiSelectsOk = false;
+    }
+
+    // Validate ID images
+    final profileImageOk = _profileImage != null;
+    final frontOk = _frontIdImage != null;
+    final backOk = _backIdImage != null;
+    if (profileImageOk) _profileImageError = true;
+    if (!frontOk) _frontIdError = true;
+    if (!backOk) _backIdError = true;
+
+    setState(() {}); // update UI for errors
+
+    if (!formValid ||
+        !multiSelectsOk ||
+        !frontOk ||
+        !backOk ||
+        !profileImageOk) {
+      Get.snackbar('Error', 'Please fill all required fields.',
+          snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
+
     final userIdStr = await StorageService.getUserId();
     if (userIdStr == null) {
       Get.snackbar('Error', 'User not logged in');
@@ -279,10 +356,10 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
         "user_id": int.parse(userIdStr),
         "email": emailController.text.trim(),
         "location": localityController.text.trim(),
-        "state": selectedState,
+        "state": selectedState ?? "Uttar Pradesh",
         "idType": selectedIdType ?? "",
         "remark": remarkController.text.trim(),
-        "profile_picture":profileBase64,
+        "profile_picture": profileBase64,
         "fee_min": selectedFeeMin ?? 0,
         "fee_max": selectedFeeMax ?? 0,
         "price": (selectedFeeMax ?? 0).toDouble(),
@@ -298,10 +375,11 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
         "backid": backBase64,
       };
 
-      await _p.updateTutorProfile(request);
-
-      Get.snackbar('Success', 'Profile updated successfully');
-      _refreshTutorProfile();
+      final ss = await _p.updateTutorProfile(request);
+      if (ss) {
+        Get.snackbar('Success', 'Profile updated successfully');
+        _refreshTutorProfile();
+      }
     } catch (e) {
       Get.snackbar('Error', e.toString());
     } finally {
@@ -354,497 +432,625 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Profile image + name
-                  Row(
-                    children: [
-                      Stack(
-                        children: [
-                          CircleAvatar(
-                            radius: 40,
-                            backgroundImage: _profileImage != null
-                                ? FileImage(File(_profileImage!.path))
-                                : null,
-                            backgroundColor: Colors.grey.shade300,
-                            child: _profileImage == null
-                                ? const Icon(Icons.person,
-                                    size: 50, color: Colors.white)
-                                : null,
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Profile image + name
+                    Row(
+                      children: [
+                        Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 40,
+                              backgroundImage: _profileImage != null
+                                  ? FileImage(File(_profileImage!.path))
+                                  : null,
+                              backgroundColor: Colors.grey.shade300,
+                              child: _profileImage == null
+                                  ? const Icon(Icons.person,
+                                      size: 50, color: Colors.white)
+                                  : null,
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: InkWell(
+                                onTap: () => _showPickerOptions("profile"),
+                                child: const CircleAvatar(
+                                  radius: 14,
+                                  backgroundColor: Colors.blue,
+                                  child: Icon(Icons.camera_alt,
+                                      size: 16, color: Colors.white),
+                                ),
+                              ),
+                            )
+                          ],
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: nameController,
+                            onChanged: (val) {
+                              final formatted = _capitalizeEach(val);
+                              if (formatted != val) {
+                                // prevent endless loop
+                                final cursorPos = nameController.selection;
+                                nameController.value = TextEditingValue(
+                                  text: formatted,
+                                  selection: cursorPos.copyWith(
+                                    baseOffset: formatted.length,
+                                    extentOffset: formatted.length,
+                                  ),
+                                );
+                              }
+                            },
+                            onEditingComplete: () {
+                              final formatted =
+                                  _capitalizeEach(nameController.text);
+                              nameController.text = formatted;
+                            },
+                            textCapitalization: TextCapitalization.words,
+                            decoration:
+                                const InputDecoration(labelText: "Full Name"),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) {
+                                return 'Full name is required';
+                              }
+                              return null;
+                            },
                           ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: InkWell(
-                              onTap: () => _showPickerOptions("profile"),
-                              child: const CircleAvatar(
-                                radius: 14,
-                                backgroundColor: Colors.blue,
-                                child: Icon(Icons.camera_alt,
-                                    size: 16, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    TextFormField(
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(labelText: "Email ID"),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Email is required';
+                        }
+                        if (!_isValidEmail(v.trim())) {
+                          return 'Enter a valid email';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Locality (Autocomplete fed by server suggestions)
+                    Obx(() {
+                      final loading = _loc.isSearching.value;
+                      final opts = _loc.suggestions;
+
+                      // We'll show a lightweight validation error below the widget
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Autocomplete<String>(
+                            optionsBuilder: (TextEditingValue tev) {
+                              final q = tev.text.trim();
+                              if (q.isEmpty)
+                                return const Iterable<String>.empty();
+                              return opts;
+                            },
+                            onSelected: (val) {
+                              AppLog.i('[UI] Locality selected → $val');
+                              localityController.text = val;
+                              _loc.onQueryChanged('');
+                            },
+                            fieldViewBuilder: (context, textCtrl, focusNode,
+                                onFieldSubmitted) {
+                              if (textCtrl.text != localityController.text) {
+                                textCtrl.text = localityController.text;
+                                textCtrl.selection = TextSelection.fromPosition(
+                                  TextPosition(offset: textCtrl.text.length),
+                                );
+                              }
+                              textCtrl.addListener(() {
+                                final q = textCtrl.text;
+                                if (localityController.text != q) {
+                                  localityController.text = q;
+                                }
+                                _loc.onQueryChanged(q);
+                              });
+
+                              return TextField(
+                                controller: textCtrl,
+                                focusNode: focusNode,
+                                decoration: InputDecoration(
+                                  labelText: 'Locality',
+                                  hintText: 'Type city/area…',
+                                  suffixIcon: loading
+                                      ? const Padding(
+                                          padding: EdgeInsets.all(10),
+                                          child: SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 2),
+                                          ),
+                                        )
+                                      : const Icon(Icons.location_on_outlined),
+                                ),
+                                onSubmitted: (_) => onFieldSubmitted(),
+                              );
+                            },
+                            optionsViewBuilder: (context, onSelected, options) {
+                              final list = options.toList();
+                              return Align(
+                                alignment: Alignment.topLeft,
+                                child: Material(
+                                  elevation: 4,
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      maxHeight: 280,
+                                      maxWidth:
+                                          MediaQuery.of(context).size.width -
+                                              32,
+                                    ),
+                                    child: ListView.separated(
+                                      padding: EdgeInsets.zero,
+                                      itemCount: list.length,
+                                      separatorBuilder: (_, __) =>
+                                          const Divider(height: 1),
+                                      itemBuilder: (context, i) {
+                                        final item = list[i];
+                                        return ListTile(
+                                          dense: true,
+                                          title: Text(item),
+                                          onTap: () => onSelected(item),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 6),
+                          // show validation text if locality empty on save
+                          Builder(builder: (ctx) {
+                            // We show error if user attempted to submit and locality empty.
+                            // Because locality isn't a FormField, we rely on overall validation in onSavePressed
+                            // The actual error message is controlled via setState when submit is attempted.
+                            return SizedBox.shrink();
+                          }),
+                        ],
+                      );
+                    }),
+                    const SizedBox(height: 16),
+
+                    // State
+                    DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(labelText: "State"),
+                      value: selectedState,
+                      items: const [
+                        "Andhra Pradesh",
+                        "Arunachal Pradesh",
+                        "Assam",
+                        "Bihar",
+                        "Chhattisgarh",
+                        "Goa",
+                        "Gujarat",
+                        "Haryana",
+                        "Himachal Pradesh",
+                        "Jharkhand",
+                        "Karnataka",
+                        "Kerala",
+                        "Madhya Pradesh",
+                        "Maharashtra",
+                        "Manipur",
+                        "Meghalaya",
+                        "Mizoram",
+                        "Nagaland",
+                        "Odisha",
+                        "Punjab",
+                        "Rajasthan",
+                        "Sikkim",
+                        "Tamil Nadu",
+                        "Telangana",
+                        "Tripura",
+                        "Uttar Pradesh",
+                        "Uttarakhand",
+                        "West Bengal",
+                        "Delhi"
+                      ]
+                          .map((st) =>
+                              DropdownMenuItem(value: st, child: Text(st)))
+                          .toList(),
+                      onChanged: (val) => setState(() => selectedState = val),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'State is required';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    // Boards (multi)
+                    SizedBox(
+                     width: 700, child: Column( crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _MultiSelectTile(
+                            label: 'Boards you Teach:',
+                            selectedNames: _labelsFor(
+                              _selBoardIds,
+                              (_master.masterData.value?.data?.boardLead ?? [])
+                                  .map((b) => OptionInt(
+                                        (b.boardId is int)
+                                            ? b.boardId
+                                            : int.tryParse('${b.boardId}') ?? 0,
+                                        b.boardLabel ?? '',
+                                      ))
+                                  .toList(),
+                            ),
+                            onTap: () async {
+                              final options = (_master
+                                          .masterData.value?.data?.boardLead ??
+                                      [])
+                                  .map((b) => OptionInt(
+                                        (b.boardId is int)
+                                            ? b.boardId!
+                                            : int.tryParse('${b.boardId}') ?? 0,
+                                        b.boardLabel ?? '',
+                                      ))
+                                  .toList();
+
+                              final picked = await _showMultiSelect(
+                                context,
+                                title: 'Select Boards',
+                                options: options,
+                                initial: _selBoardIds,
+                              );
+                              if (picked != null) {
+                                setState(() {
+                                  _selBoardIds
+                                    ..clear()
+                                    ..addAll(picked);
+                                  _selClassIds.clear();
+                                  _selSubjectIds.clear();
+                                  _boardError = false;
+                                  _classError = false;
+                                  _subjectError = false;
+                                });
+
+                                if (_selBoardIds.isNotEmpty) {
+                                  await _leadMeta
+                                      .loadClasses(_selBoardIds.first);
+                                }
+                              }
+                            },
+                          ),
+                          if (_boardError)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                'Select at least one board',
+                                style: TextStyle(
+                                  color: Colors.red.shade700,
+                                  fontSize: 12,
+                                ),
                               ),
                             ),
-                          )
                         ],
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextField(
-                          controller: nameController,
-                          decoration:
-                              const InputDecoration(labelText: "Full Name"),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  TextField(
-                    controller: emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(labelText: "Email ID"),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Locality (Autocomplete fed by server suggestions)
-                  Obx(() {
-                    final loading = _loc.isSearching.value;
-                    final opts = _loc.suggestions;
-
-                    return Autocomplete<String>(
-                      optionsBuilder: (TextEditingValue tev) {
-                        final q = tev.text.trim();
-                        if (q.isEmpty) return const Iterable<String>.empty();
-                        return opts;
-                      },
-                      onSelected: (val) {
-                        AppLog.i('[UI] Locality selected → $val');
-                        localityController.text = val;
-                        _loc.onQueryChanged('');
-                      },
-                      fieldViewBuilder:
-                          (context, textCtrl, focusNode, onFieldSubmitted) {
-                        if (textCtrl.text != localityController.text) {
-                          textCtrl.text = localityController.text;
-                          textCtrl.selection = TextSelection.fromPosition(
-                            TextPosition(offset: textCtrl.text.length),
-                          );
-                        }
-                        textCtrl.addListener(() {
-                          final q = textCtrl.text;
-                          if (localityController.text != q) {
-                            localityController.text = q;
-                          }
-                          _loc.onQueryChanged(q);
-                        });
-
-                        return TextField(
-                          controller: textCtrl,
-                          focusNode: focusNode,
-                          decoration: InputDecoration(
-                            labelText: 'Locality',
-                            hintText: 'Type city/area…',
-                            suffixIcon: loading
-                                ? const Padding(
-                                    padding: EdgeInsets.all(10),
-                                    child: SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2),
-                                    ),
-                                  )
-                                : const Icon(Icons.location_on_outlined),
-                          ),
-                          onSubmitted: (_) => onFieldSubmitted(),
-                        );
-                      },
-                      optionsViewBuilder: (context, onSelected, options) {
-                        final list = options.toList();
-                        return Align(
-                          alignment: Alignment.topLeft,
-                          child: Material(
-                            elevation: 4,
-                            borderRadius: BorderRadius.circular(8),
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxHeight: 280,
-                                maxWidth:
-                                    MediaQuery.of(context).size.width - 32,
-                              ),
-                              child: ListView.separated(
-                                padding: EdgeInsets.zero,
-                                itemCount: list.length,
-                                separatorBuilder: (_, __) =>
-                                    const Divider(height: 1),
-                                itemBuilder: (context, i) {
-                                  final item = list[i];
-                                  return ListTile(
-                                    dense: true,
-                                    title: Text(item),
-                                    onTap: () => onSelected(item),
-                                  );
-                                },
-                              ),
+                    ),
+                    const SizedBox(height: 10),
+// Classes (multi)
+                    SizedBox(
+                      width: 600,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _MultiSelectTile(
+                            label: 'Classes you Teach:',
+                            selectedNames: _labelsFor(
+                              _selClassIds,
+                              _leadMeta.classes
+                                  .map((c) => OptionInt(c.classId, c.className))
+                                  .toList(),
                             ),
-                          ),
-                        );
-                      },
-                    );
-                  }),
-                  const SizedBox(height: 16),
-
-                  // State
-                  DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(labelText: "State"),
-                    value: selectedState,
-                    items: const [
-                      "Andhra Pradesh",
-                      "Arunachal Pradesh",
-                      "Assam",
-                      "Bihar",
-                      "Chhattisgarh",
-                      "Goa",
-                      "Gujarat",
-                      "Haryana",
-                      "Himachal Pradesh",
-                      "Jharkhand",
-                      "Karnataka",
-                      "Kerala",
-                      "Madhya Pradesh",
-                      "Maharashtra",
-                      "Manipur",
-                      "Meghalaya",
-                      "Mizoram",
-                      "Nagaland",
-                      "Odisha",
-                      "Punjab",
-                      "Rajasthan",
-                      "Sikkim",
-                      "Tamil Nadu",
-                      "Telangana",
-                      "Tripura",
-                      "Uttar Pradesh",
-                      "Uttarakhand",
-                      "West Bengal",
-                      "Delhi"
-                    ]
-                        .map((st) =>
-                            DropdownMenuItem(value: st, child: Text(st)))
-                        .toList(),
-                    onChanged: (val) => setState(() => selectedState = val),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Boards (multi)
-                  SizedBox(
-                    width: 600,
-                    child: _MultiSelectTile(
-                      label: 'Boards you Teach:',
-                      selectedNames: _labelsFor(
-                        _selBoardIds,
-                        (_master.masterData.value?.data?.boardLead ?? [])
-                            .map((b) => OptionInt(
-                                  (b.boardId is int)
-                                      ? b.boardId!
-                                      : int.tryParse('${b.boardId}') ?? 0,
-                                  b.boardLabel ?? '',
-                                ))
-                            .toList(),
-                      ),
-                      onTap: () async {
-                        final options =
-                            (_master.masterData.value?.data?.boardLead ?? [])
-                                .map((b) => OptionInt(
-                                      (b.boardId is int)
-                                          ? b.boardId!
-                                          : int.tryParse('${b.boardId}') ?? 0,
-                                      b.boardLabel ?? '',
-                                    ))
-                                .toList();
-
-                        final picked = await _showMultiSelect(
-                          context,
-                          title: 'Select Boards',
-                          options: options,
-                          initial: _selBoardIds,
-                        );
-                        if (picked != null) {
-                          setState(() {
-                            _selBoardIds
-                              ..clear()
-                              ..addAll(picked);
-                            _selClassIds.clear();
-                            _selSubjectIds.clear();
-                          });
-
-                          if (_selBoardIds.isNotEmpty) {
-                            await _leadMeta.loadClasses(_selBoardIds.first);
-                          }
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Classes (multi)
-                  SizedBox(
-                    width: 600,
-                    child: _MultiSelectTile(
-                      label: 'Classes you Teach:',
-                      selectedNames: _labelsFor(
-                        _selClassIds,
-                        _leadMeta.classes
-                            .map((c) => OptionInt(c.classId, c.className))
-                            .toList(),
-                      ),
-                      onTap: () async {
-                        if (_selBoardIds.isEmpty) {
-                          Get.snackbar(
-                            'Select Board',
-                            'Please select at least one Board first',
-                            snackPosition: SnackPosition.BOTTOM,
-                          );
-                          return;
-                        }
-                        if (_leadMeta.classes.isEmpty) {
-                          await _leadMeta.loadClasses(_selBoardIds.first);
-                        }
-
-                        final options = _leadMeta.classes
-                            .map((c) => OptionInt(c.classId, c.className))
-                            .toList();
-
-                        final picked = await _showMultiSelect(
-                          context,
-                          title: 'Select Classes',
-                          options: options,
-                          initial: _selClassIds,
-                        );
-                        if (picked != null) {
-                          setState(() {
-                            _selClassIds
-                              ..clear()
-                              ..addAll(picked);
-                            _selSubjectIds.clear();
-                          });
-
-                          if (_selBoardIds.isNotEmpty &&
-                              _selClassIds.isNotEmpty) {
-                            await _leadMeta.loadSubjects(
-                              classId: _selClassIds.first,
-                              boardId: _selBoardIds.first,
-                            );
-                          }
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Subjects (multi)
-                  SizedBox(
-                    width: 600,
-                    child: _MultiSelectTile(
-                      label: 'Subjects you Teach:',
-                      selectedNames: _labelsFor(
-                        _selSubjectIds,
-                        _leadMeta.subjects
-                            .map((s) => OptionInt(
-                                  s.subjectId ?? 0,
-                                  (s.subjectName ?? '').toString(),
-                                ))
-                            .toList(),
-                      ),
-                      onTap: () async {
-                        if (_selBoardIds.isEmpty || _selClassIds.isEmpty) {
-                          Get.snackbar(
-                            'Select Class',
-                            'Please select Boards and Classes first',
-                            snackPosition: SnackPosition.BOTTOM,
-                          );
-                          return;
-                        }
-                        if (_leadMeta.subjects.isEmpty) {
-                          await _leadMeta.loadSubjects(
-                            classId: _selClassIds.first,
-                            boardId: _selBoardIds.first,
-                          );
-                        }
-
-                        final options = _leadMeta.subjects
-                            .map((s) => OptionInt(
-                                  s.subjectId ?? 0,
-                                  (s.subjectName ?? '').toString(),
-                                ))
-                            .toList();
-
-                        final picked = await _showMultiSelect(
-                          context,
-                          title: 'Select Subjects',
-                          options: options,
-                          initial: _selSubjectIds,
-                        );
-                        if (picked != null) {
-                          setState(() {
-                            _selSubjectIds
-                              ..clear()
-                              ..addAll(picked);
-                          });
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Experience
-                  DropdownButtonFormField<String>(
-                    decoration:
-                        const InputDecoration(labelText: "Experience in Years"),
-                    value: selectedIdExperienceInYears,
-                    items: const [
-                      "Fresher",
-                      "1",
-                      "2",
-                      "3",
-                      "4",
-                      "5",
-                      "6",
-                      "7",
-                      "8",
-                      "9",
-                      "10",
-                      "10+"
-                    ]
-                        .map((id) =>
-                            DropdownMenuItem(value: id, child: Text(id)))
-                        .toList(),
-                    onChanged: (val) =>
-                        setState(() => selectedIdExperienceInYears = val),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Modes
-                  DropdownButtonFormField<String>(
-                    decoration:
-                        const InputDecoration(labelText: "Select Modes"),
-                    value: selectedIdMode,
-                    items: const ["Online", "Offline", "Both"]
-                        .map((id) =>
-                            DropdownMenuItem(value: id, child: Text(id)))
-                        .toList(),
-                    onChanged: (val) => setState(() => selectedIdMode = val),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Fee range
-                  Row(
-                    children: [
-                      // MIN
-                      Expanded(
-                        child: DropdownButtonFormField<int>(
-                          decoration: const InputDecoration(
-                              labelText: "Select Fee Range (min)"),
-                          value: selectedFeeMin,
-                          isExpanded: true,
-                          items: minOptions
-                              .map((v) => DropdownMenuItem(
-                                  value: v, child: Text('₹$v/Hr')))
-                              .toList(),
-                          onChanged: (val) {
-                            setState(() {
-                              selectedFeeMin = val;
-                              // clamp max >= min & >= 300
-                              final clampMinForMax =
-                                  (val == null) ? 300 : (val < 300 ? 300 : val);
-                              if (selectedFeeMax != null &&
-                                  selectedFeeMax! < clampMinForMax) {
-                                selectedFeeMax = clampMinForMax;
+                            onTap: () async {
+                              if (_selBoardIds.isEmpty) {
+                                Get.snackbar(
+                                  'Select Board',
+                                  'Please select at least one Board first',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                );
+                                return;
                               }
-                            });
-                          },
-                          validator: (v) => v == null ? 'Required' : null,
-                        ),
+                              if (_leadMeta.classes.isEmpty) {
+                                await _leadMeta.loadClasses(_selBoardIds.first);
+                              }
+
+                              final options = _leadMeta.classes
+                                  .map((c) => OptionInt(c.classId, c.className))
+                                  .toList();
+
+                              final picked = await _showMultiSelect(
+                                context,
+                                title: 'Select Classes',
+                                options: options,
+                                initial: _selClassIds,
+                              );
+                              if (picked != null) {
+                                setState(() {
+                                  _selClassIds
+                                    ..clear()
+                                    ..addAll(picked);
+                                  _selSubjectIds.clear();
+                                  _classError = false;
+                                  _subjectError = false;
+                                });
+
+                                if (_selBoardIds.isNotEmpty &&
+                                    _selClassIds.isNotEmpty) {
+                                  await _leadMeta.loadSubjects(
+                                    classId: _selClassIds.first,
+                                    boardId: _selBoardIds.first,
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                          if (_classError)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text('Select at least one class',
+                                  style: TextStyle(
+                                      color: Colors.red.shade700,
+                                      fontSize: 12)),
+                            ),
+                        ],
                       ),
-                      const SizedBox(width: 20),
-                      // MAX
-                      Expanded(
-                        child: DropdownButtonFormField<int>(
-                          decoration: const InputDecoration(
-                              labelText: "Select Fee Range (max)"),
-                          value: selectedFeeMax,
-                          isExpanded: true,
-                          items: maxOptionsBase
-                              .where((v) =>
-                                  v >=
-                                  ((selectedFeeMin == null)
-                                      ? 300
-                                      : (selectedFeeMin! < 300
-                                          ? 300
-                                          : selectedFeeMin!)))
-                              .map((v) => DropdownMenuItem(
-                                  value: v, child: Text('₹$v/Hr')))
-                              .toList(),
-                          onChanged: (val) =>
-                              setState(() => selectedFeeMax = val),
-                          validator: (v) {
-                            if (v == null) return 'Required';
-                            final minAllowed = (selectedFeeMin == null)
-                                ? 300
-                                : (selectedFeeMin! < 300
-                                    ? 300
-                                    : selectedFeeMin!);
-                            if (v < minAllowed) {
-                              return 'Must be ≥ ₹$minAllowed';
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // ID Type
-                  DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(labelText: "ID Type"),
-                    value: selectedIdType,
-                    items: const ["Aadhar", "Voter ID", "Passport"]
-                        .map((id) =>
-                            DropdownMenuItem(value: id, child: Text(id)))
-                        .toList(),
-                    onChanged: (val) => setState(() => selectedIdType = val),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // ID images
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _idUploadBox("Front ID", _frontIdImage, "front"),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _idUploadBox("Back ID", _backIdImage, "back"),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: onSavePressed,
-                      child: const Text("Save and Proceed"),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 10),
+
+                    // Subjects (multi)
+                    SizedBox(
+                      width: 600,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _MultiSelectTile(
+                            label: 'Subjects you Teach:',
+                            selectedNames: _labelsFor(
+                              _selSubjectIds,
+                              _leadMeta.subjects
+                                  .map((s) => OptionInt(
+                                        s.subjectId ?? 0,
+                                        (s.subjectName ?? '').toString(),
+                                      ))
+                                  .toList(),
+                            ),
+                            onTap: () async {
+                              if (_selBoardIds.isEmpty ||
+                                  _selClassIds.isEmpty) {
+                                Get.snackbar(
+                                  'Select Class',
+                                  'Please select Boards and Classes first',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                );
+                                return;
+                              }
+                              if (_leadMeta.subjects.isEmpty) {
+                                await _leadMeta.loadSubjects(
+                                  classId: _selClassIds.first,
+                                  boardId: _selBoardIds.first,
+                                );
+                              }
+
+                              final options = _leadMeta.subjects
+                                  .map((s) => OptionInt(
+                                        s.subjectId ?? 0,
+                                        (s.subjectName ?? '').toString(),
+                                      ))
+                                  .toList();
+
+                              final picked = await _showMultiSelect(
+                                context,
+                                title: 'Select Subjects',
+                                options: options,
+                                initial: _selSubjectIds,
+                              );
+                              if (picked != null) {
+                                setState(() {
+                                  _selSubjectIds
+                                    ..clear()
+                                    ..addAll(picked);
+                                  _subjectError = false;
+                                });
+                              }
+                            },
+                          ),
+                          if (_subjectError)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text('Select at least one subject',
+                                  style: TextStyle(
+                                      color: Colors.red.shade700,
+                                      fontSize: 12)),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Experience
+                    DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(
+                          labelText: "Experience in Years"),
+                      value: selectedIdExperienceInYears,
+                      items: const [
+                        "Fresher",
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
+                        "8",
+                        "9",
+                        "10",
+                        "10+"
+                      ]
+                          .map((id) =>
+                              DropdownMenuItem(value: id, child: Text(id)))
+                          .toList(),
+                      onChanged: (val) =>
+                          setState(() => selectedIdExperienceInYears = val),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Experience is required';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Modes
+                    DropdownButtonFormField<String>(
+                      decoration:
+                          const InputDecoration(labelText: "Select Modes"),
+                      value: selectedIdMode,
+                      items: const ["Online", "Offline", "Both"]
+                          .map((id) =>
+                              DropdownMenuItem(value: id, child: Text(id)))
+                          .toList(),
+                      onChanged: (val) => setState(() => selectedIdMode = val),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Mode is required';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Fee range
+                    Row(
+                      children: [
+                        // MIN
+                        Expanded(
+                          child: DropdownButtonFormField<int>(
+                            decoration: const InputDecoration(
+                                labelText: "Select Fee Range (min)"),
+                            value: selectedFeeMin,
+                            isExpanded: true,
+                            items: minOptions
+                                .map((v) => DropdownMenuItem(
+                                    value: v, child: Text('₹$v/Hr')))
+                                .toList(),
+                            onChanged: (val) {
+                              setState(() {
+                                selectedFeeMin = val;
+                                // clamp max >= min & >= 300
+                                final clampMinForMax = (val == null)
+                                    ? 300
+                                    : (val < 300 ? 300 : val);
+                                if (selectedFeeMax != null &&
+                                    selectedFeeMax! < clampMinForMax) {
+                                  selectedFeeMax = clampMinForMax;
+                                }
+                              });
+                            },
+                            validator: (v) => v == null ? 'Required' : null,
+                          ),
+                        ),
+                        const SizedBox(width: 20),
+                        // MAX
+                        Expanded(
+                          child: DropdownButtonFormField<int>(
+                            decoration: const InputDecoration(
+                                labelText: "Select Fee Range (max)"),
+                            value: selectedFeeMax,
+                            isExpanded: true,
+                            items: maxOptionsBase
+                                .where((v) =>
+                                    v >=
+                                    ((selectedFeeMin == null)
+                                        ? 300
+                                        : (selectedFeeMin! < 300
+                                            ? 300
+                                            : selectedFeeMin!)))
+                                .map((v) => DropdownMenuItem(
+                                    value: v, child: Text('₹$v/Hr')))
+                                .toList(),
+                            onChanged: (val) =>
+                                setState(() => selectedFeeMax = val),
+                            validator: (v) {
+                              if (v == null) return 'Required';
+                              final minAllowed = (selectedFeeMin == null)
+                                  ? 300
+                                  : (selectedFeeMin! < 300
+                                      ? 300
+                                      : selectedFeeMin!);
+                              if (v < minAllowed) {
+                                return 'Must be ≥ ₹$minAllowed';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // ID Type
+                    DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(labelText: "ID Type"),
+                      value: selectedIdType,
+                      items: const ["Aadhar", "Voter ID", "Passport"]
+                          .map((id) =>
+                              DropdownMenuItem(value: id, child: Text(id)))
+                          .toList(),
+                      onChanged: (val) => setState(() => selectedIdType = val),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'ID Type is required';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // ID images
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _idUploadBox(
+                              "Front ID", _frontIdImage, "front",
+                              error: _frontIdError),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _idUploadBox("Back ID", _backIdImage, "back",
+                              error: _backIdError),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    Center(
+                      child: ElevatedButton(
+                        onPressed: onSavePressed,
+                        child: const Text("Save and Proceed"),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -864,7 +1070,8 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
     return selectedIds.map((id) => map[id]).whereType<String>().toList();
   }
 
-  Widget _idUploadBox(String label, XFile? file, String type) {
+  Widget _idUploadBox(String label, XFile? file, String type,
+      {bool error = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -876,7 +1083,8 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
             width: double.infinity,
             height: 120,
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade400),
+              border: Border.all(
+                  color: error ? Colors.red.shade700 : Colors.grey.shade400),
               borderRadius: BorderRadius.circular(8),
             ),
             clipBehavior: Clip.antiAlias,
@@ -887,6 +1095,12 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                 : Image.file(File(file.path), fit: BoxFit.cover),
           ),
         ),
+        if (error)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text('Upload the $label image',
+                style: TextStyle(color: Colors.red.shade700, fontSize: 12)),
+          ),
       ],
     );
   }
@@ -963,6 +1177,7 @@ class _MultiSelectTile extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
+        width: double.infinity,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.grey.shade100,
@@ -1002,6 +1217,7 @@ class _MultiSelectTile extends StatelessWidget {
     );
   }
 }
+// test
 
 class OptionInt {
   final int id;

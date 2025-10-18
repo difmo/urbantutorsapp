@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:urbantutorsapp/models/profile_modals/admin_profile_response_modal.dart';
 import 'package:urbantutorsapp/models/profile_modals/student_profile_request_modal.dart';
 import 'package:urbantutorsapp/models/profile_modals/student_profile_response_modal.dart';
 import 'package:urbantutorsapp/models/profile_modals/tutor_profile_request_modal.dart';
@@ -14,13 +17,36 @@ class ProfileUpdateController extends GetxController {
 
   var isLoading = false.obs;
   var studentprofileData = Rxn<StudentProfileDataNew>();
+  var adminProfileData = Rxn<AdminProfileData>();
   var masterData = Rxn<MasterData>();
   var tutorprofileData = Rxn<TutorProfileData>();
 
   @override
   void onInit() {
     super.onInit();
-    fetchProfileForStudent();
+    // fetchProfileForStudent();
+    // fetchProfileForAdmin();
+  }
+
+  Future<void> fetchProfileForAdmin() async {
+    isLoading.value = true;
+    try {
+      final response = await _profileUpdateService.getProfileForAdmin();
+      isLoading.value = false;
+      debugPrint("✅ Admin Profile fetched successfully:  ${response.data}");
+      if (response.data == []) {
+        setAdminProfile(null);
+      } else {
+        final leadStatus = response.data!.tutorburoProfileStatus;
+        await StorageService.saveUserLeadStatus(leadStatus.toString());
+        setAdminProfile(response.data);
+      }
+    } catch (e) {
+      debugPrint("❌ Error in fetchProfileUpdate: $e");
+      isLoading.value = false;
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   Future<void> fetchMasterData() async {
@@ -66,6 +92,10 @@ class ProfileUpdateController extends GetxController {
 
   void setProfile(StudentProfileDataNew? p) {
     studentprofileData.value = p;
+  }
+
+  void setAdminProfile(AdminProfileData? p) {
+    adminProfileData.value = p;
   }
 
   Future<void> fetchProfileForTutor() async {
@@ -141,6 +171,7 @@ class ProfileUpdateController extends GetxController {
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
+      isLoading.value = false;
       return true;
     } catch (e) {
       debugPrint("❌ Error in updateProfile: $e");
@@ -256,16 +287,20 @@ class ProfileUpdateController extends GetxController {
     try {
       final response =
           await _profileUpdateService.updateAdminProfile(updateData);
-      tutorprofileData.value = response.data;
-      debugPrint("✅ Profile updated successfully");
-      Get.snackbar(
-        'Success',
-        response.message,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
-      return true;
+      if (!response.success) {
+        Get.snackbar(
+          'Success',
+          response.message,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+        return false;
+      } else {
+        tutorprofileData.value = response.data;
+        debugPrint("Profile updated successfully");
+        return true;
+      }
     } catch (e) {
       debugPrint("❌ Error in updateProfile: $e");
       Get.snackbar(
@@ -279,6 +314,58 @@ class ProfileUpdateController extends GetxController {
     } finally {
       isLoading.value = false;
       return false;
+    }
+  }
+
+  Future<bool> updateAdminProfileVerify(Map<String, dynamic> updateData) async {
+    isLoading.value = true;
+    try {
+      final response =
+          await _profileUpdateService.updateAdminProfileVerifiy(updateData);
+
+      // Assuming response.success is a boolean on the returned model
+      if (response.success != true) {
+        Get.snackbar(
+          'Error',
+          response.message ?? 'Failed to update profile',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.redAccent,
+          colorText: Colors.white,
+        );
+        return false;
+      }
+
+      // Success path
+      tutorprofileData.value = response.data;
+      debugPrint("✅ Profile updated successfully");
+      Get.snackbar(
+        'Success',
+        response.message ?? 'Profile updated successfully',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+      return true;
+    } on TimeoutException catch (te) {
+      debugPrint("⏱ Timeout: $te");
+      Get.snackbar('Timeout', 'Request timed out. Please try again.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.orange,
+          colorText: Colors.white);
+      return false;
+    } catch (e, st) {
+      debugPrint("❌ Error in updateProfile: $e\n$st");
+      Get.snackbar(
+        'Error',
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      // only cleanup here — do NOT return from finally
+      isLoading.value = false;
     }
   }
 }

@@ -83,7 +83,7 @@ class StudentProfileDataNew {
   factory StudentProfileDataNew.fromJson(Map<String, dynamic> json) {
     return StudentProfileDataNew(
       id: json['id'] ?? 0,
-      profile_status: json['profile_status'] ?? 0,
+      profile_status: json['profile_status'] ?? json['tutorburo_profile_status']??0,
       profileId: json['profile_id'],
       profile_picture: json['profile_picture'],
       leadStatus: json['lead_status'],

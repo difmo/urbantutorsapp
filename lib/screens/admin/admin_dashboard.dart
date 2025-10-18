@@ -220,8 +220,9 @@ class _AdminDashboardState extends State<AdminDashboard>
               _coins.loadingCoins.value || _coins.loadingMyCoins.value;
           final wallet = _coins.myCoins.value;
           final balanceStr = _toNum(wallet?.available).toStringAsFixed(0);
-          final prof = _p.studentprofileData.value;
-          final name = prof?.studentName?.trim();
+          final prof = _p.adminProfileData.value;
+          final name = prof?.tutorburoName?.trim();
+             final profilePicture= prof?.profilePicture?.trim();
           final initial = _initial(name);
           final displayName = _firstName(name);
           final greet = _greet();
@@ -250,18 +251,28 @@ class _AdminDashboardState extends State<AdminDashboard>
                   ),
                 ),
                 padding: const EdgeInsets.all(2),
-                child: CircleAvatar(
-                  backgroundColor: Colors.transparent,
-                  radius: 18,
-                  child: Text(
-                    initial,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
+                child: profilePicture != null && profilePicture.isNotEmpty
+                    ? ClipOval(
+                        child: FadeInImage.assetNetwork(
+                          placeholder: 'assets/icons/logogog.jpeg',
+                          image: 'https://urbantutors.pro/$profilePicture',
+                          fit: BoxFit.cover,
+                          width: 40,
+                          height: 40,
+                        ),
+                      )
+                    : CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.blue,
+                        child: Text(
+                          initial,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
               ),
               const SizedBox(width: 10),
               Expanded(

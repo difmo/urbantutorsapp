@@ -10,9 +10,7 @@ class TeacherPendingScreen extends StatelessWidget {
   Future<void> _refreshProfile(BuildContext context) async {
     final controller = Get.find<ProfileUpdateController>();
     await controller.fetchProfileForTutor();
-
     final status = controller.tutorprofileData.value?.profileStatus;
-
     if (status != null && status == 2) {
       await StorageService.saveIsProfileStatus(status);
       Navigator.pushReplacement(

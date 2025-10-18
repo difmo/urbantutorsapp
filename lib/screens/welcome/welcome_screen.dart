@@ -9,7 +9,7 @@ class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
   void navigateToNext(BuildContext context, String role, int roleId) async {
-    print("roll print ho jaa bhai maan bhi jaa bhai");
+    print("roll print ho jaa bhai maan bhi jaa bhai$role : $roleId");
     if (role == "Private Tutor") {
       Navigator.push<bool>(
         context,

@@ -209,18 +209,30 @@ class _StudentDrawerState extends State<Tutordrawer> {
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                     width: 2, color: AppColors.primaryColor)),
-                            child: CircleAvatar(
-                              radius: 30,
-                              backgroundColor: primaryColor.withOpacity(0.12),
-                              child: Text(
-                                _initialFrom(name),
-                                style: const TextStyle(
-                                  fontSize: 22,
-                                  color: Colors.black87,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
+                            child: profileImage != null &&
+                                    profileImage.isNotEmpty
+                                ? ClipOval(
+                                    child: FadeInImage.assetNetwork(
+                                      placeholder: 'assets/icons/logogog.jpeg',
+                                      image:
+                                          'https://urbantutors.pro/$profileImage',
+                                      fit: BoxFit.cover,
+                                      width: 40,
+                                      height: 40,
+                                    ),
+                                  )
+                                : CircleAvatar(
+                                    radius: 20,
+                                    backgroundColor: Colors.blue,
+                                    child: Text(
+                                      displayName,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
                           ),
                         ],
                       ),
@@ -309,7 +321,6 @@ class _StudentDrawerState extends State<Tutordrawer> {
                 'My Courses',
                 onTap: () => Get.to(() => const MycoursesTutor()),
               ),
-
 
               _drawerItem(
                 Icons.share,

@@ -17,7 +17,7 @@ import 'package:urbantutorsapp/utils/storage_helper.dart';
 import '../theme/theme_constants.dart';
 
 class SplashScreen extends StatefulWidget {
-const SplashScreen({super.key});
+  const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -70,11 +70,11 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _initAdminProfile() async {
-    await _profileUpdateController.fetchProfileForStudent();
+    await _profileUpdateController.fetchProfileForAdmin();
     final status =
-        _profileUpdateController.studentprofileData.value?.profile_status;
+        _profileUpdateController.adminProfileData.value?.tutorburoProfileStatus;
     if (status != null) {
-      print("running init profile ");
+      print("running init Admin profile ");
       StorageService.saveIsProfileStatus(status);
     }
   }
@@ -115,7 +115,7 @@ class _SplashScreenState extends State<SplashScreen>
           if (profileStatus == 0) {
             dashboard = StudentPendingScreen();
           } else if (profileStatus == 1) {
-             dashboard = StudentDashboardScreen();
+            dashboard = StudentDashboardScreen();
             // dashboard = StudentProfileFormScreen();
           } else if (profileStatus == 2) {
             dashboard = StudentDashboardScreen();

@@ -9,10 +9,8 @@ class AdminPendingScreen extends StatelessWidget {
   const AdminPendingScreen({super.key});
   Future<void> _refreshProfile(BuildContext context) async {
     final controller = Get.find<ProfileUpdateController>();
-    await controller.fetchProfileForTutor();
-
-    final status = controller.tutorprofileData.value?.profileStatus;
-
+    await controller.fetchProfileForAdmin();
+    final status = controller.adminProfileData.value?.tutorburoProfileStatus;
     if (status != null && status == 2) {
       await StorageService.saveIsProfileStatus(status);
       Navigator.pushReplacement(

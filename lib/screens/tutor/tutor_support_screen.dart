@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 
 class SupportTutor extends StatelessWidget {
-  const SupportTutor({super.key});
-
+  SupportTutor({super.key});
+  final TextEditingController textsss = TextEditingController();
   @override
   Widget build(BuildContext context) {
     final primaryColor = AppColors.primaryColor;
@@ -71,10 +71,12 @@ class SupportTutor extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            _faqItem("How can I upgrade my plan?"),
-            _faqItem("Where can I access my course notes?"),
-            _faqItem("How do I connect with a private tutor?"),
-            _faqItem("What payment methods are accepted?"),
+            _faqItem("How can I upgrade my plan ?",
+                "Go to upgrade (above), choose plan and recharge."),
+            _faqItem("Where can I access my purchased Courses ?",
+                "Select my Courses in the drawer section. "),
+            _faqItem("How do I connect with a Student ?",
+                "Get a Pro Membership to connect directly or you can grab your suitable leads by purchased coins. "),
 
             const SizedBox(height: 30),
             const Divider(),
@@ -87,6 +89,7 @@ class SupportTutor extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             TextField(
+              controller: textsss,
               maxLines: 4,
               decoration: InputDecoration(
                 hintText: "Type your issue or question here...",
@@ -100,7 +103,9 @@ class SupportTutor extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                textsss.text = "";
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -159,11 +164,12 @@ class SupportTutor extends StatelessWidget {
     );
   }
 
-  Widget _faqItem(String question) {
+  Widget _faqItem(String question, String ans) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: const Icon(Icons.help_outline, color: Colors.blueGrey),
       title: Text(question),
+      subtitle: Text(ans),
       onTap: () {},
     );
   }
