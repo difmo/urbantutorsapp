@@ -109,7 +109,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
       AppLog.i('[UI] tutorprofileData changed');
       if (!mounted || student == null) return;
       nameController.text = student.teacherName ?? '';
-      priceController.text = student.price?.toString() ?? '';
+      // priceController.text = student.price?.toString() ?? '';
       localityController.text = student.location ?? '';
       selectedState = student.state;
       selectedIdType = student.idType;
@@ -137,7 +137,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
     // reflect master data changes
     _wMasterData = ever(_master.masterData, (val) {
-      final boards = val?.data?.boardLead ?? [];
+      final boards = val?.data.boardLead ?? [];
       AppLog.i('[UI] masterData updated, boards=${boards.length}');
       if (!mounted) return;
       setState(() {});
@@ -534,8 +534,9 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                           Autocomplete<String>(
                             optionsBuilder: (TextEditingValue tev) {
                               final q = tev.text.trim();
-                              if (q.isEmpty)
+                              if (q.isEmpty) {
                                 return const Iterable<String>.empty();
+                              }
                               return opts;
                             },
                             onSelected: (val) {
@@ -681,7 +682,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                             label: 'Boards you Teach:',
                             selectedNames: _labelsFor(
                               _selBoardIds,
-                              (_master.masterData.value?.data?.boardLead ?? [])
+                              (_master.masterData.value?.data.boardLead ?? [])
                                   .map((b) => OptionInt(
                                         (b.boardId is int)
                                             ? b.boardId
@@ -692,11 +693,11 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                             ),
                             onTap: () async {
                               final options = (_master
-                                          .masterData.value?.data?.boardLead ??
+                                          .masterData.value?.data.boardLead ??
                                       [])
                                   .map((b) => OptionInt(
                                         (b.boardId is int)
-                                            ? b.boardId!
+                                            ? b.boardId
                                             : int.tryParse('${b.boardId}') ?? 0,
                                         b.boardLabel ?? '',
                                       ))

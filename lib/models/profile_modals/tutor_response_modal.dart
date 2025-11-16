@@ -1,3 +1,5 @@
+// tutor_profile_model.dart
+
 class TutorProfileResponse {
   final bool success;
   final TutorProfileData? data;
@@ -11,9 +13,9 @@ class TutorProfileResponse {
 
   factory TutorProfileResponse.fromJson(Map<String, dynamic> json) {
     return TutorProfileResponse(
-      success: json['success'] == true,
-      data: json['data'] != null
-          ? TutorProfileData.fromJson(json['data'] as Map<String, dynamic>)
+      success: json['success'] == true || json['success']?.toString() == '1',
+      data: json['data'] != null && json['data'] is Map
+          ? TutorProfileData.fromJson(Map<String, dynamic>.from(json['data']))
           : null,
       message: json['message']?.toString() ?? '',
     );
@@ -33,34 +35,36 @@ class TutorProfileData {
   final String? teacherName;
   final int? profileStatus;
   final String? profileId;
-  final String? rating;
-  final String? totalFeedbacks;
-  final String? positionShow;
+  final int? rating;
+  final int? totalFeedbacks;
+  final int? positionShow;
+  final int? experienceYears;
+  final String? fbLink;
+  final String? frontId;
+  final String? instaLink;
+  final String? whLink;
+  final String? email;
   final String? profilePicture;
   final String? mobile;
-  final String? email;
-  final String? totalCoins;
-  final String? totalSpentCoins;
-  final String? totalAvailableCoins;
-  final String? minAmount;
-  final String? maxAmount;
-
+  final double? totalCoins;
+  final double? totalSpentCoins;
+  final double? totalAvailableCoins;
+  final double? minAmount;
+  final double? maxAmount;
   final String? location;
   final String? placeId;
   final double? latitude;
   final double? longitude;
   final String? state;
   final String? idType;
-  final String? frontId;
   final String? frontBack;
+  final String? remark;
   final String? status;
   final String? createdAt;
   final String? updatedAt;
-  final String? remark;
-
   final List<TeachingDetails> teachingDetails;
-  final String? mostExperienceSubjectName;
-  final String? price;
+  final String? mode;
+
 
   TutorProfileData({
     required this.id,
@@ -70,9 +74,14 @@ class TutorProfileData {
     this.rating,
     this.totalFeedbacks,
     this.positionShow,
+    this.experienceYears,
+    this.fbLink,
+    this.frontId,
+    this.instaLink,
+    this.whLink,
+    this.email,
     this.profilePicture,
     this.mobile,
-    this.email,
     this.totalCoins,
     this.totalSpentCoins,
     this.totalAvailableCoins,
@@ -84,75 +93,80 @@ class TutorProfileData {
     this.longitude,
     this.state,
     this.idType,
-    this.frontId,
     this.frontBack,
+    this.remark,
     this.status,
     this.createdAt,
     this.updatedAt,
-    this.remark,
     this.teachingDetails = const [],
-    this.mostExperienceSubjectName,
-    this.price,
+    this.mode,
   });
 
+  // --- helpers to parse robustly ---
+  static int? _parseInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    return int.tryParse(v.toString());
+  }
+
+  static double? _parseDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    return double.tryParse(v.toString());
+  }
+
+  static List<TeachingDetails> _parseTeachingDetails(dynamic td) {
+    if (td == null) return <TeachingDetails>[];
+    if (td is List) {
+      return td
+          .where((e) => e != null)
+          .map((e) =>
+              TeachingDetails.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+    }
+    if (td is Map) {
+      return [TeachingDetails.fromJson(Map<String, dynamic>.from(td))];
+    }
+    return <TeachingDetails>[];
+  }
+
   factory TutorProfileData.fromJson(Map<String, dynamic> json) {
-    double? parseDouble(dynamic v) {
-      if (v == null) return null;
-      if (v is double) return v;
-      if (v is int) return v.toDouble();
-      final s = v.toString();
-      return double.tryParse(s);
-    }
-
-    List<TeachingDetails> parseTeachingDetails(dynamic td) {
-      if (td == null) return <TeachingDetails>[];
-      if (td is List) {
-        return td
-            .where((e) => e != null)
-            .map((e) => TeachingDetails.fromJson(Map<String, dynamic>.from(e)))
-            .toList();
-      }
-      return <TeachingDetails>[];
-    }
-
     return TutorProfileData(
-      id: json['id'] is int
-          ? json['id'] as int
-          : int.tryParse(json['id']?.toString() ?? '') ?? 0,
+      id: _parseInt(json['id']) ?? 0,
       teacherName: json['teacher_name']?.toString(),
-      profileStatus: json['profile_status'] is int
-          ? json['profile_status'] as int
-          : int.tryParse(json['profile_status']?.toString() ?? ''),
+      profileStatus: _parseInt(json['profile_status']),
       profileId: json['profile_id']?.toString(),
-      rating: json['rating']?.toString(),
-      totalFeedbacks: json['total_feedbacks']?.toString(),
-      positionShow:
-          json['positionShow']?.toString() ?? json['positionShow']?.toString(),
-      profilePicture: json['profile_picture']?.toString() ??
-          json['profile_picture']?.toString(),
+      rating: _parseInt(json['rating']),
+      totalFeedbacks: _parseInt(json['total_feedbacks']),
+      positionShow: _parseInt(json['positionShow']),
+      experienceYears: _parseInt(json['experience_years']),
+      fbLink: json['fb_link']?.toString(),
+      frontId: json['frontid']?.toString(),
+      instaLink: json['insta_link']?.toString(),
+      whLink: json['wh_link']?.toString(),
+      email: json['email']?.toString(),
+      profilePicture: json['profile_picture']?.toString(),
       mobile: json['mobile']?.toString(),
-      email: json['email'] ?? "test@gmail.com",
-      totalCoins: json['total_coins']?.toString(),
-      totalSpentCoins: json['total_spent_coins']?.toString(),
-      totalAvailableCoins: json['total_Available_coins']?.toString() ??
-          json['total_Available_coins']?.toString(),
-      minAmount: json['min_amount']?.toString(),
-      maxAmount: json['max_amount']?.toString(),
+      totalCoins: _parseDouble(json['total_coins']),
+      totalSpentCoins: _parseDouble(json['total_spent_coins']),
+      totalAvailableCoins: _parseDouble(json['total_Available_coins']),
+      minAmount: _parseDouble(json['min_amount']),
+      maxAmount: _parseDouble(json['max_amount']),
       location: json['location']?.toString(),
       placeId: json['place_id']?.toString(),
-      latitude: parseDouble(json['latitude']),
-      longitude: parseDouble(json['longitude']),
+      latitude: _parseDouble(json['latitude']),
+      longitude: _parseDouble(json['longitude']),
       state: json['state']?.toString(),
       idType: json['idtype']?.toString(),
-      frontId: json['frontid']?.toString(),
       frontBack: json['frontback']?.toString(),
       remark: json['remark']?.toString(),
       status: json['status']?.toString(),
       createdAt: json['created_at']?.toString(),
       updatedAt: json['updated_at']?.toString(),
-      teachingDetails: parseTeachingDetails(json['teaching_details']),
-      mostExperienceSubjectName: json['mostexperiensubject_name']?.toString(),
-      price: json['price']?.toString(),
+      teachingDetails:
+          _parseTeachingDetails(json['teaching_details'] ?? json['teachingDetails']),
+             mode: json['mode']?.toString(),
     );
   }
 
@@ -165,28 +179,32 @@ class TutorProfileData {
       'rating': rating,
       'total_feedbacks': totalFeedbacks,
       'positionShow': positionShow,
+      'experience_years': experienceYears,
+      'fb_link': fbLink,
+      'frontid': frontId,
+      'insta_link': instaLink,
+      'wh_link': whLink,
+      'email': email,
       'profile_picture': profilePicture,
       'mobile': mobile,
-      'total_coins': totalCoins,
-      'total_spent_coins': totalSpentCoins,
-      'total_Available_coins': totalAvailableCoins,
-      'min_amount': minAmount,
-      'max_amount': maxAmount,
+      'total_coins': totalCoins?.toString(),
+      'total_spent_coins': totalSpentCoins?.toString(),
+      'total_Available_coins': totalAvailableCoins?.toString(),
+      'min_amount': minAmount?.toString(),
+      'max_amount': maxAmount?.toString(),
       'location': location,
       'place_id': placeId,
-      'latitude': latitude,
-      'longitude': longitude,
+      'latitude': latitude?.toString(),
+      'longitude': longitude?.toString(),
       'state': state,
       'idtype': idType,
-      'frontid': frontId,
       'frontback': frontBack,
       'remark': remark,
       'status': status,
       'created_at': createdAt,
       'updated_at': updatedAt,
       'teaching_details': teachingDetails.map((e) => e.toJson()).toList(),
-      'mostexperiensubject_name': mostExperienceSubjectName,
-      'price': price,
+       'mode': mode,
     };
   }
 }
@@ -208,19 +226,19 @@ class TeachingDetails {
     this.subjectName,
   });
 
-  factory TeachingDetails.fromJson(Map<String, dynamic> json) {
-    int? parseInt(dynamic v) {
-      if (v == null) return null;
-      if (v is int) return v;
-      return int.tryParse(v.toString());
-    }
+  static int? _parseInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    return int.tryParse(v.toString());
+  }
 
+  factory TeachingDetails.fromJson(Map<String, dynamic> json) {
     return TeachingDetails(
-      boardId: parseInt(json['board_id']),
+      boardId: _parseInt(json['board_id']),
       boardName: json['board_name']?.toString(),
-      classId: parseInt(json['class_id']),
+      classId: _parseInt(json['class_id']),
       className: json['class_name']?.toString(),
-      subjectId: parseInt(json['subject_id']),
+      subjectId: _parseInt(json['subject_id']),
       subjectName: json['subject_name']?.toString(),
     );
   }
@@ -234,13 +252,5 @@ class TeachingDetails {
       'subject_id': subjectId,
       'subject_name': subjectName,
     };
-  }
-
-  static List<TeachingDetails> listFromJson(List<dynamic>? jsonList) {
-    if (jsonList == null) return <TeachingDetails>[];
-    return jsonList
-        .where((e) => e != null)
-        .map((e) => TeachingDetails.fromJson(Map<String, dynamic>.from(e)))
-        .toList();
   }
 }

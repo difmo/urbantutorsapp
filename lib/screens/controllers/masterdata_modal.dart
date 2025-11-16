@@ -87,7 +87,7 @@ class MasterData {
   });
 
   factory MasterData.fromJson(Map<String, dynamic> json) {
-    T _safeParseList<T>(
+    T safeParseList<T>(
         dynamic src, T Function(Map<String, dynamic>) converter) {
       final out = <T>[];
       if (src is List) {

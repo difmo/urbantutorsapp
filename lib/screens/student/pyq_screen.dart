@@ -129,7 +129,7 @@ class _PyqScreenState extends State<PyqScreen> {
                     // Board
                     Obx(() {
                       final boards =
-                          _md.masterData.value?.data?.boardLead ?? [];
+                          _md.masterData.value?.data.boardLead ?? [];
                       return _dropdownDec(
                         DropdownButtonFormField<int>(
                           isExpanded: true,
@@ -142,7 +142,7 @@ class _PyqScreenState extends State<PyqScreen> {
                                     value: (b.boardId is int)
                                         ? b.boardId
                                         : int.tryParse('${b.boardId}'),
-                                    child: Text(b.boardLabel?.toString() ?? '',
+                                    child: Text(b.boardLabel.toString() ?? '',
                                         overflow: TextOverflow.ellipsis),
                                   ))
                               .toList(),

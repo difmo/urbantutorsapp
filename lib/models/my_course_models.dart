@@ -59,7 +59,7 @@ class MyCoursePayload {
         // Many APIs wrap actual course inside a 'paycourse' object
         if (e is Map) {
           // try 'paycourse' key first
-          final dynamic pc = (e as Map).containsKey('paycourse') ? e['paycourse'] : e;
+          final dynamic pc = (e).containsKey('paycourse') ? e['paycourse'] : e;
           if (pc is Map<String, dynamic>) {
             items.add(MyCourseItem.fromJson(pc));
           } else if (pc is Map) {

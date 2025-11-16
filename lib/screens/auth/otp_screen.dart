@@ -123,7 +123,7 @@ class _OTPScreenState extends State<OTPScreen> {
   Future<void> _resendCode() async {
     setState(() => isResending = true);
     final prefs = await SharedPreferences.getInstance();
-    final name = await prefs.getString('reg_name');
+    final name = prefs.getString('reg_name');
     print(widget.roleId);
     print(widget.role);
     try {

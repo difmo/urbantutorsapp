@@ -85,13 +85,13 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
 
 // Also log when master data flips loading:
     ever(_masterDataController.masterData, (val) {
-      final boards = val?.data?.boardLead ?? [];
+      final boards = val?.data.boardLead ?? [];
       AppLog.i('[UI] Board list: ${boards.map((b) => b.boardLabel).toList()}');
     });
 
 // Optional: log when master data object itself updates
     ever(_masterDataController.masterData, (val) {
-      final n = val?.data?.boardLead?.length ?? 0;
+      final n = val?.data.boardLead.length ?? 0;
       AppLog.i('[UI] masterData updated, boards=$n');
     });
     _masterDataController.fetchMasterData();
@@ -203,7 +203,7 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
   @override
   Widget build(BuildContext context) {
     final boards =
-        _masterDataController.masterData.value?.data?.boardLead ?? [];
+        _masterDataController.masterData.value?.data.boardLead ?? [];
 
     return Scaffold(
       appBar: AppBar(
@@ -388,7 +388,7 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
                       : const SizedBox.shrink()),
                   Obx(() {
                     final boards = _masterDataController
-                            .masterData.value?.data?.boardLead ??
+                            .masterData.value?.data.boardLead ??
                         [];
                     dev.log('[UI] Boards count: ${boards.length}',
                         name: 'StudentProfile');
@@ -412,7 +412,7 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
                       items: boards
                           .map((b) => DropdownMenuItem<int>(
                                 value: b.boardId,
-                                child: Text(b.boardLabel?.toString() ?? ''),
+                                child: Text(b.boardLabel.toString() ?? ''),
                               ))
                           .toList(),
                       onChanged: (val) {

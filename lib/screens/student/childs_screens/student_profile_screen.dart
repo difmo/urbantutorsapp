@@ -608,7 +608,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                       // Board
                       Obx(() {
                         final boards =
-                            _master.masterData.value?.data?.boardLead ?? [];
+                            _master.masterData.value?.data.boardLead ?? [];
                         return DropdownButtonFormField<int>(
                           value: _boardId,
                           isExpanded: true,
@@ -679,8 +679,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                         return Autocomplete<String>(
                           optionsBuilder: (TextEditingValue tev) {
                             final q = tev.text.trim();
-                            if (q.isEmpty)
+                            if (q.isEmpty) {
                               return const Iterable<String>.empty();
+                            }
                             return opts;
                           },
                           onSelected: (val) {

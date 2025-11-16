@@ -5,6 +5,8 @@ import 'package:urbantutorsapp/screens/student/childs_screens/ChatScreen.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 
 class ChatUserListScreen extends StatefulWidget {
+  const ChatUserListScreen({super.key});
+
   @override
   State<ChatUserListScreen> createState() => _ChatUserListScreenState();
 }
@@ -19,8 +21,7 @@ class _ChatUserListScreenState extends State<ChatUserListScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
-        if (_master.masterData.value == null ||
-            _master.masterData.value!.data == null) {
+        if (_master.masterData.value == null) {
           await _master.fetchMasterData();
         }
       } catch (e, st) {
@@ -42,7 +43,7 @@ class _ChatUserListScreenState extends State<ChatUserListScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final teachers = _master.masterData.value?.data?.teachers ?? [];
+          final teachers = _master.masterData.value?.data.teachers ?? [];
 
           if (teachers.isEmpty) {
             return const Center(child: Text("No teachers available"));

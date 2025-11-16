@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <script>
+      async function getLocation() {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(success, error);
+        } else {
+          sendMessage("ERROR: Geolocation not supported.");
+        }
+      }
+
+      function success(position) {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+
+        // Send result to Flutter
+        sendMessage(JSON.stringify({ lat: lat, lng: lng }));
+      }
+
+      function error(err) {
+        sendMessage("ERROR:" + err.message);
+      }
+
+      function sendMessage(msg) {
+        // send to Flutter
+        if (window.flutter_inappwebview) {
+          window.flutter_inappwebview.callHandler("locationHandler", msg);
+        }
+      }
+
+      // auto load
+      getLocation();
+    </script>
+  </body>
+</html>

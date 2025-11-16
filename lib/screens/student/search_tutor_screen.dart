@@ -444,7 +444,7 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                       // Board
                       Obx(() {
                         final boards =
-                            _md.masterData.value?.data?.boardLead ?? [];
+                            _md.masterData.value?.data.boardLead ?? [];
                         return _dropdownDec(
                           DropdownButtonFormField<int>(
                             isExpanded: true,
@@ -458,7 +458,7 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                                           ? b.boardId
                                           : int.tryParse('${b.boardId}'),
                                       child: Text(
-                                          b.boardLabel?.toString() ?? '',
+                                          b.boardLabel.toString() ?? '',
                                           overflow: TextOverflow.ellipsis),
                                     ))
                                 .toList(),

@@ -245,11 +245,11 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
     setState(() {}); // reflect the simple fields immediately
 
     // ---- Resolve Board → Class → Subject by NAME, then set their ids ----
-    final boards = _md.masterData.value?.data?.boardLead ?? [];
+    final boards = _md.masterData.value?.data.boardLead ?? [];
     String norm(String? s) => (s ?? '').trim().toLowerCase();
 
     final boardMatch = boards.firstWhereOrNull(
-      (b) => norm(b.boardLabel?.toString()) == norm(l.boardName),
+      (b) => norm(b.boardLabel.toString()) == norm(l.boardName),
     );
 
     if (boardMatch != null) {
@@ -575,7 +575,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
 
                 // BOARD
                 Obx(() {
-                  final boards = _md.masterData.value?.data?.boardLead ?? [];
+                  final boards = _md.masterData.value?.data.boardLead ?? [];
                   return DropdownButtonFormField<int>(
                     isExpanded: true,
                     value: boardId,
@@ -583,7 +583,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                     items: boards
                         .map((b) => DropdownMenuItem<int>(
                               value: b.boardId,
-                              child: Text(b.boardLabel?.toString() ?? ''),
+                              child: Text(b.boardLabel.toString() ?? ''),
                             ))
                         .toList(),
                     onChanged: (val) async {

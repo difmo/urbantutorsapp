@@ -9,9 +9,7 @@ import 'package:urbantutorsapp/screens/admin/admin_dashboard.dart';
 import 'package:urbantutorsapp/screens/admin/admin_pending_screen.dart';
 import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
-import 'package:urbantutorsapp/screens/tutor/teacher_pending_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
-import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
 import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/app_log.dart';
@@ -63,11 +61,13 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
     profileUpdateController.fetchProfileForAdmin();
     _masterDataController.fetchMasterData();
     _wTutorData = ever(profileUpdateController.adminProfileData, (student) {
-      AppLog.i('[UI] AdminProfileData changed');
+      AppLog.i('[UI] AdminProfileData changed ');
+
       if (!mounted || student == null) return;
       nameController.text = _capitalizeEach(student.fullName ?? '');
-      phoneController.text =
-          _digitsOnly(student.tutorburoMobile?.toString() ?? '');
+      phoneController.text = _digitsOnly(student.tutorburoMobile?.toString() ??
+          student.email?.toString() ??
+          '');
       localityController.text = _capitalizeEach(student.location ?? '');
       selectedState = student.state;
       setState(() {});
@@ -203,7 +203,7 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
   @override
   Widget build(BuildContext context) {
     final boards =
-        _masterDataController.masterData.value?.data?.boardLead ?? [];
+        _masterDataController.masterData.value?.data.boardLead ?? [];
     final primary = AppColors.primaryColor;
     final accent = AppColors.accentColor;
     return Scaffold(

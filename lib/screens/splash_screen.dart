@@ -6,7 +6,6 @@ import 'package:urbantutorsapp/screens/admin/admin_pending_screen.dart';
 import 'package:urbantutorsapp/screens/admin/admin_profile_form.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
 import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
-import 'package:urbantutorsapp/screens/student/student_profile_form.dart';
 import 'package:urbantutorsapp/screens/tutor/student_peding_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/teacher_pending_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_profile_form.dart';

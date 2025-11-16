@@ -79,8 +79,8 @@ class PayCourseController extends GetxController {
       }
 
       // success
-      final successMessage = (res.message?.isNotEmpty ?? false)
-          ? res.message!
+      final successMessage = (res.message.isNotEmpty ?? false)
+          ? res.message
           : 'Course purchased successfully';
       Get.snackbar('Success', successMessage,
           snackPosition: SnackPosition.BOTTOM);
@@ -107,7 +107,7 @@ class PayCourseController extends GetxController {
       return PurchaseResult(false, msg);
     } catch (e, st) {
       // last-resort fallback
-      final msg = e?.toString() ?? 'An unknown error occurred';
+      final msg = e.toString() ?? 'An unknown error occurred';
       print('buy() unknown error: $e\n$st');
       Get.snackbar('Error', msg, snackPosition: SnackPosition.BOTTOM);
       return PurchaseResult(false, msg);

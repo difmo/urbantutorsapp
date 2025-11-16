@@ -151,8 +151,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     label: "Full Name",
                     icon: Icons.person,
                     validator: (val) {
-                      if (val == null || val.isEmpty)
+                      if (val == null || val.isEmpty) {
                         return "Please enter your full name";
+                      }
                       return null;
                     },
                     capitalizeEach: _capitalizeEach,

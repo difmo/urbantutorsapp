@@ -24,10 +24,10 @@ class AdminProfileScreen extends StatefulWidget {
   const AdminProfileScreen({super.key});
 
   @override
-  State<AdminProfileScreen> createState() => _AdminProfileSecreenState();
+  State<AdminProfileScreen> createState() => _AdminProfileScreenState();
 }
 
-class _AdminProfileSecreenState extends State<AdminProfileScreen> {
+class _AdminProfileScreenState extends State<AdminProfileScreen> {
   // Controllers
   final ProfileUpdateController _p = Get.isRegistered<ProfileUpdateController>()
       ? Get.find<ProfileUpdateController>()
@@ -61,10 +61,9 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
   final _instaLinkCtrl = TextEditingController();
   final _teleLinkCtrl = TextEditingController();
   final _localityCtrl = TextEditingController();
-  final _expCtrl = TextEditingController();
   final _accountHolderNameCtrl = TextEditingController();
   final _bankNameCtrl = TextEditingController();
-  final _accountNumbereCtrl = TextEditingController();
+  final _accountNumberCtrl = TextEditingController(); // renamed
   final _ifscCodeCtrl = TextEditingController();
 
   int? _boardId;
@@ -117,14 +116,14 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
       if (_master.masterData.value == null) {
         await _master.fetchMasterData();
       }
-      if (_p.studentprofileData.value == null && !_p.isLoading.value) {
-        await _p.fetchProfileForStudent();
+      if (_p.adminProfileData.value == null && !_p.isLoading.value) {
+        await _p.fetchProfileForAdmin();
       }
       await _hydrate();
     });
 
     // Re-hydrate whenever profile changes
-    ever(_p.studentprofileData, (_) async => await _hydrate());
+    ever(_p.adminProfileData, (_) async => await _hydrate());
   }
 
   @override
@@ -134,7 +133,10 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
     _phoneCtrl.dispose();
     _emailCtrl.dispose();
     _localityCtrl.dispose();
-    _expCtrl.dispose();
+    _accountHolderNameCtrl.dispose();
+    _bankNameCtrl.dispose();
+    _accountNumberCtrl.dispose();
+    _ifscCodeCtrl.dispose();
     super.dispose();
   }
 
@@ -143,47 +145,36 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
   String? _resolveImageUrl(String? path) {
     if (path == null || path.isEmpty) return null;
     if (path.startsWith('http')) return path;
-    const base = 'https://your.api.host/'; // TODO: replace with your API host
+    const base = 'https://urbantutors.pro/'; // TODO: replace with your API host
     return '$base$path';
   }
 
   Future<void> _hydrate() async {
-    final p = _p.studentprofileData.value;
+    final p = _p.adminProfileData.value;
     if (p == null) return;
-
-    // Text fields
-    // _nameCtrl.text = (p.studentName ?? p.name ?? '').trim();
-    // _agencyNameCtrl.text = (p.agencyName ?? p.agency ?? '').toString().trim();
-    // _phoneCtrl.text = (p.mobile ?? p.phone ?? '').toString().trim();
-    // _emailCtrl.text = (p.email ?? '').toString().trim();
-    _localityCtrl.text = (p.location ?? '').toString().trim();
-    _expCtrl.text = (p.remark?.toString() ?? '').trim(); // if used as years
-
-    // Images from server (adapt keys as per your API model)
-    // _profileImageUrl = _resolveImageUrl(p.profile_picture ?? p.profilePicture);
-    // _agencyLogoUrl = _resolveImageUrl(p.agency_logo ?? p.agencyLogo);
-
-    // Legacy IDs
-    final nextBoardId =
-        (p.boardId is int) ? p.boardId : int.tryParse(p.boardId ?? '');
-    final nextClassId =
-        (p.courseId is int) ? p.courseId : int.tryParse(p.courseId ?? '');
-
-    if (nextBoardId != null) {
-      await _leadMeta.loadClasses(nextBoardId);
-    }
-
+    print("all Admin Profile Data $p");
+    // Populate text controllers if server returned values
     setState(() {
-      _boardId = nextBoardId;
-      _classId = nextClassId;
+      _fullNameCtrl.text = (p.fullName ?? '').toString().trim();
+      _agencyNameCtrl.text = (p.agencyName ?? '').toString().trim();
+      _phoneCtrl.text = (p.phone ?? '').toString().trim();
+      _emailCtrl.text = (p.email ?? '').toString().trim();
+      _localityCtrl.text = (p.location ?? '').toString().trim();
+      _bussinessInYearCtrl.text = (p.yearInBussiness?.toString() ?? '').trim();
+      _fbPageLinkCtrl.text = (p.fbLink ?? '').toString();
+      _instaLinkCtrl.text = (p.instaLink ?? '').toString();
+      _teleLinkCtrl.text = (p.telLink ?? '').toString();
 
-      _selBoardIds
-        ..clear()
-        ..addAll(nextBoardId != null ? [nextBoardId] : const []);
-      _selClassIds
-        ..clear()
-        ..addAll(nextClassId != null ? [nextClassId] : const []);
-      _selSubjectIds.clear();
+      _accountHolderNameCtrl.text =
+          (p.accountHolderName ?? '').toString().trim();
+      _bankNameCtrl.text = (p.bankName ?? '').toString().trim();
+      _accountNumberCtrl.text = (p.accountNumber ?? '').toString().trim();
+      _ifscCodeCtrl.text = (p.ifscCode ?? '').toString().trim();
+
+      _profileImageUrl = _resolveImageUrl(p.profilePicture);
+      _agencyLogoUrl = _resolveImageUrl(p.agencyLogo);
+
+      stateVal = (p.state ?? stateVal)?.toString();
     });
   }
 
@@ -214,6 +205,7 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
         }
       });
     }
+    // close bottom sheet if present
     if (mounted) Navigator.pop(context);
   }
 
@@ -279,13 +271,59 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
   void _showProfilePickerOptions() => _showPickerOptions(isAgency: false);
   void _showAgencyPickerOptions() => _showPickerOptions(isAgency: true);
 
+  // -------------------- Payload builder --------------------
+
+  /// Build update payload exactly like the server expects.
+  /// Attaches base64 images only if user picked new ones.
+  Future<Map<String, dynamic>> _buildUpdatePayload(int userId) async {
+    
+    final profileBase64 = await _fileToBase64(_profileImage);
+    final agencyBase64 = await _fileToBase64(_agencyLogo);
+
+    // get tutorburo_profile_id from controller model if present
+    int? profileId;
+    final stored = _p.adminProfileData.value;
+    if (stored != null) {
+      try {
+        profileId = stored.tutorburoProfileId;
+      } catch (_) {
+        profileId = null;
+      }
+    }
+
+    final Map<String, dynamic> payload = {
+      "user_id": userId,
+      if (profileId != null) "tutorburo_profile_id": profileId,
+      "full_name": _fullNameCtrl.text.trim(),
+      "phone": _phoneCtrl.text.trim(),
+      "email": _emailCtrl.text.trim(),
+      "agency_name": _agencyNameCtrl.text.trim(),
+      "year_in_bussiness": _bussinessInYearCtrl.text.trim(),
+      "fb_link": _fbPageLinkCtrl.text.trim(),
+      "insta_link": _instaLinkCtrl.text.trim(),
+      "tel_link": _teleLinkCtrl.text.trim(),
+      "location": _localityCtrl.text.trim(),
+      "place_id": "my place id",
+      "latitude": "28.663",
+      "longitude": "97.2255",
+      "state": stateVal ?? '',
+      "account_holder_name": _accountHolderNameCtrl.text.trim(),
+      "bank_name": _bankNameCtrl.text.trim(),
+      "account_number": _accountNumberCtrl.text.trim(),
+      "ifsc_code": _ifscCodeCtrl.text.trim(),
+    };
+
+    // Attach images only if user picked new ones (safer than sending empty strings)
+    if (profileBase64 != null) payload['profile_picture'] = profileBase64;
+    if (agencyBase64 != null) payload['agency_logo'] = agencyBase64;
+
+    return payload;
+  }
+
   // -------------------- Save --------------------
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-
-    // If you require multi-selects:
-    // if (_selBoardIds.isEmpty || _selClassIds.isEmpty || _selSubjectIds.isEmpty) { ... }
 
     setState(() => _saving = true);
     try {
@@ -299,40 +337,11 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
         return;
       }
 
-      final profileBase64 = await _fileToBase64(_profileImage);
-      final agencyBase64 = await _fileToBase64(_agencyLogo);
+      final bruaeProfileRequest = await _buildUpdatePayload(userId);
 
-      final bruaeProfileRequest = {
-        "user_id": userId,
-        "profile_picture": profileBase64 ?? '',
-        "agency_logo": agencyBase64 ?? '',
-        "full_name": _fullNameCtrl.text.trim(),
-        "phone": _phoneCtrl.text.trim(),
-        "email": _emailCtrl.text.trim(),
-        "agency_name": _agencyNameCtrl.text.trim(),
-        "year_in_bussiness": _bussinessInYearCtrl.text.trim(),
-        "fb_link": _fbPageLinkCtrl.text.trim(),
-        "insta_link": _instaLinkCtrl.text.trim(),
-        "tel_link": _teleLinkCtrl.text.trim(),
-        "location": _localityCtrl.text.trim(),
-        "state": stateVal ?? '',
-        'account_holder_name': _accountHolderNameCtrl.text.toString(),
-        'bank_name': _bankNameCtrl.text.toString(),
-        'account_number': _accountNumbereCtrl.text.toString(),
-        'ifsc_code': _ifscCodeCtrl.text.toString(),
-        "place_id": "my place id",
-        "latitude": "28.663",
-        "longitude": "97.2255",
-      };
-
-      final ok = await _p.updateTutorProfile(bruaeProfileRequest);
-      if (ok) {
-        Get.snackbar('Success', 'Profile Updated Successfully',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.green,
-            colorText: Colors.white);
-
-        await _p.fetchProfileForStudent();
+      final ok = await _p.updateAdminProfile(bruaeProfileRequest);
+      if (ok == true) {
+        await _p.fetchProfileForAdmin();
         await _hydrate();
         setState(() {
           _profileImage = null;
@@ -402,6 +411,7 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
+    TextCapitalization textCapitalization = TextCapitalization.none,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -411,8 +421,7 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
         inputFormatters: [
           if (inputFormatters != null) ...inputFormatters,
         ],
-        textCapitalization:
-            TextCapitalization.characters, // ensures caps on typing
+        textCapitalization: textCapitalization,
         decoration: _dec(label, icon: icon, hint: hint),
         validator: validator ??
             (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
@@ -660,7 +669,9 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
                   title: 'Basic:',
                   children: [
                     _textField('Full Name', _fullNameCtrl,
-                        icon: Icons.person, hint: 'Your name'),
+                        icon: Icons.person,
+                        hint: 'Your name',
+                        textCapitalization: TextCapitalization.words),
                     _textField(
                       'Phone Number',
                       _phoneCtrl,
@@ -700,6 +711,7 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
                       _agencyNameCtrl,
                       icon: Icons.apartment_rounded,
                       hint: 'Agency / Institute name',
+                      textCapitalization: TextCapitalization.words,
                     ),
                     _textField('Years in Bussiness', _bussinessInYearCtrl,
                         icon: Icons.work_history_rounded,
@@ -791,25 +803,6 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
                   ],
                 ),
 
-                // ======= State =======
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  child: _dropdownDec(
-                    DropdownButtonFormField<String>(
-                      isExpanded: true,
-                      value: stateVal,
-                      icon: const Icon(Icons.expand_more_rounded,
-                          color: Color(0xFF9CA3AF)),
-                      decoration: _fieldDec('Select State'),
-                      items: _states
-                          .map(
-                              (s) => DropdownMenuItem(value: s, child: Text(s)))
-                          .toList(),
-                      onChanged: (v) => setState(() => stateVal = v),
-                      validator: (v) => v == null ? 'Required' : null,
-                    ),
-                  ),
-                ),
                 const SizedBox(height: 10),
 
                 // ======= Professional (example extra field) =======
@@ -821,14 +814,16 @@ class _AdminProfileSecreenState extends State<AdminProfileScreen> {
                       _accountHolderNameCtrl,
                       icon: Icons.apartment_rounded,
                       hint: 'Account Holder Name',
+                      textCapitalization: TextCapitalization.words,
                     ),
                     _textField(
                       'Bank Name',
                       _bankNameCtrl,
                       icon: Icons.apartment_rounded,
                       hint: 'Bank Name',
+                      textCapitalization: TextCapitalization.words,
                     ),
-                    _textField('Account Number', _accountNumbereCtrl,
+                    _textField('Account Number', _accountNumberCtrl,
                         icon: Icons.work_history_rounded,
                         hint: 'Account Number',
                         keyboardType: TextInputType.number,

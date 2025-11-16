@@ -30,8 +30,8 @@ android {
 
     defaultConfig {
         applicationId "pro.urbantutors.app"
-        minSdk flutter.minSdkVersion
-        targetSdk flutter.targetSdkVersion
+        minSdk 24
+        targetSdk 35
         versionCode 22
         versionName "1.2.3"
     }

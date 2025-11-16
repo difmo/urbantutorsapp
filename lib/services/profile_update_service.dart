@@ -143,23 +143,50 @@ class ProfileUpdateService {
     }
   }
 
-  Future<TutorProfileResponse> updateAdminProfile(updateData) async {
+// in ProfileUpdateService (or whatever service class you use)
+// ProfileUpdateService (or wherever you call ApiService.post)
+  Future<String?> updateAdminProfile(Map<String, dynamic> updateData) async {
     print("update profile called for tutor");
     try {
-      final response = await ApiService.post(
-        "/tutorburo_profile_update",
-        updateData,
-      );
-      if (response.data) {
-        print("✅ Response from updateAdminProfile: ${response.data}");
-        return TutorProfileResponse.fromJson(response.data);
-      } else {
-        print("✅ Response from updateAdminProfile: ${response.data}");
-        return TutorProfileResponse.fromJson(response.data);
+      final response =
+          await ApiService.post("/tutorburo_profile_update", updateData);
+
+      // Normalize response object:
+      // - If ApiService.post returns a Map already, use it.
+      // - If it returns a Response-like object (e.g., Dio), try .data
+      dynamic raw = response;
+      if (raw == null) {
+        print("⚠️ updateAdminProfile: empty response");
+        return null;
       }
-    } catch (e) {
-      print("❌ Error in updateProfile (from ProfileUpdateService):");
-      print(e.toString());
+      if (raw is! Map<String, dynamic>) {
+        // try .data
+        if (raw is Map) {
+          raw = Map<String, dynamic>.from(raw);
+        } else if ((raw).data != null) {
+          raw = raw.data;
+        }
+      }
+
+      if (raw is! Map<String, dynamic>) {
+        print(
+            "updateAdminProfile: unexpected response type: ${raw.runtimeType}");
+        return null;
+      }
+
+      // Expected shape: { "success": true, "data": 1, "message": "Tutor Buro Profile Updated Successfully." }
+      final bool success = raw['success'] == true ||
+          raw['success'] == 200 ||
+          raw['success'] == 'true';
+      final String? message = raw['message']?.toString();
+
+      print("updateAdminProfile: success=$success message=$message");
+
+      // Return message regardless of success (controller can decide). Return null if no message present.
+      return message ?? (success ? 'Updated successfully' : 'Update failed');
+    } catch (e, st) {
+      print(
+          "❌ Error in updateAdminProfile (from ProfileUpdateService): $e\n$st");
       rethrow;
     }
   }

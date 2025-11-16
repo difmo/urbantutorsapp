@@ -56,7 +56,7 @@ class PayCourse {
 
   factory PayCourse.fromJson(Map<String, dynamic> json) {
     // helper parsers
-    int _parseInt(dynamic v) {
+    int parseInt(dynamic v) {
       if (v == null) return 0;
       if (v is int) return v;
       if (v is double) return v.toInt();
@@ -64,7 +64,7 @@ class PayCourse {
       return int.tryParse(s) ?? double.tryParse(s)?.toInt() ?? 0;
     }
 
-    double _parseDouble(dynamic v) {
+    double parseDouble(dynamic v) {
       if (v == null) return 0.0;
       if (v is double) return v;
       if (v is int) return v.toDouble();
@@ -72,28 +72,28 @@ class PayCourse {
       return double.tryParse(s) ?? 0.0;
     }
 
-    String? _parseNullableString(dynamic v) {
+    String? parseNullableString(dynamic v) {
       if (v == null) return null;
       final s = v.toString().trim();
       return s.isEmpty ? null : s;
     }
 
     // pick course name from possible keys
-    String _courseNameFromJson(Map<String, dynamic> j) {
+    String courseNameFromJson(Map<String, dynamic> j) {
       final n = (j['course_name'] ?? j['name'] ?? '').toString().trim();
       return n.isEmpty ? 'Unknown Course' : n;
     }
 
     return PayCourse(
-      id: _parseInt(json['id']),
-      courseName: _courseNameFromJson(json),
+      id: parseInt(json['id']),
+      courseName: courseNameFromJson(json),
       description: (json['description'] ?? '').toString(),
-      coins: _parseInt(json['coins']),
-      rating: _parseDouble(json['rating']),
-      pdf: _parseNullableString(json['pdf']),
-      thumbnail: _parseNullableString(json['thumbnail'] ?? json['image']),
-      status: json.containsKey('status') ? _parseInt(json['status']) : null,
-      number: json.containsKey('number') ? _parseInt(json['number']) : null,
+      coins: parseInt(json['coins']),
+      rating: parseDouble(json['rating']),
+      pdf: parseNullableString(json['pdf']),
+      thumbnail: parseNullableString(json['thumbnail'] ?? json['image']),
+      status: json.containsKey('status') ? parseInt(json['status']) : null,
+      number: json.containsKey('number') ? parseInt(json['number']) : null,
     );
   }
 
