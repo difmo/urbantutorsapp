@@ -17,7 +17,6 @@ import 'package:urbantutorsapp/screens/tutor/teacher_pending_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_profile_form.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
 import 'package:urbantutorsapp/shared/default_dashboard.dart';
-import 'package:urbantutorsapp/utils/storage_helper.dart';
 import '../../theme/theme_constants.dart';
 
 class OTPScreen extends StatefulWidget {
@@ -42,9 +41,16 @@ class OTPScreen extends StatefulWidget {
 class _OTPScreenState extends State<OTPScreen> {
   String otp = '';
   bool isResending = false;
+  final TextEditingController _otpController = TextEditingController();
   final ProfileUpdateController _profileUpdateController =
       Get.put(ProfileUpdateController());
   final AuthController auth = Get.find<AuthController>();
+  
+  @override
+  void dispose() {
+    _otpController.dispose();
+    super.dispose();
+  }
   Future<bool> isProfiledataEmpty() async {
     await _profileUpdateController.fetchProfileForStudent();
     if (_profileUpdateController.studentprofileData.value!.boardName!.isEmpty) {
@@ -58,65 +64,99 @@ class _OTPScreenState extends State<OTPScreen> {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('reg_name') ?? 'User';
     final firebaseToken = 'dummy_token';
-    print("otp screen");
+    print("verifyotpfunction from verifyotp 2");
     try {
       final auth = Get.find<AuthController>();
       LoginResponse loginResponse = await auth.verifyOtp(
           widget.phone, otp, name, widget.roleId.toString(), firebaseToken);
-      prefs.setString("userData", jsonEncode(loginResponse.data.toJson()));
-      final roleId = loginResponse.data.userData!.roles[0].roleId;
-      final profileStatus = loginResponse.data.userData!.profileStatus ?? 0;
-      print("Role id from otp screen $roleId");
-      print("Profile status from otp screen $profileStatus");
-      Widget dashboard;
-      print("Role id from otp screen $roleId");
-      print("Profile status from otp screen $profileStatus");
-      switch (roleId) {
-        case 3:
-          if (profileStatus == 0) {
-            dashboard = StudentProfileFormScreen();
-          } else if (profileStatus == 1) {
-            dashboard = StudentPendingScreen();
-          } else if (profileStatus == 2) {
-            dashboard = StudentDashboardScreen();
-          } else {
+      
+      print(loginResponse.message);
+      
+      // Check if the response is successful and data is not null
+      if (loginResponse.success && loginResponse.data != null) {
+        prefs.setString("userData", jsonEncode(loginResponse.data!.toJson()));
+        final roleId = loginResponse.data!.userData!.roles[0].roleId;
+        final profileStatus = loginResponse.data!.userData!.profileStatus ?? 0;
+        print("Role id from otp screen $roleId");
+        print("Profile status from otp screen $profileStatus");
+        
+        Widget dashboard;
+        
+        switch (roleId) {
+          case 3:
+            if (profileStatus == 0) {
+              dashboard = StudentProfileFormScreen();
+            } else if (profileStatus == 1) {
+              dashboard = StudentPendingScreen();
+            } else if (profileStatus == 2) {
+              dashboard = StudentDashboardScreen();
+            } else {
+              dashboard = const DefaultDashboardScreen();
+            }
+            break;
+          case 2:
+            if (profileStatus == 0) {
+              dashboard = TutorProfileFormScreen();
+            } else if (profileStatus == 1) {
+              dashboard = TeacherPendingScreen();
+            } else if (profileStatus == 2) {
+              dashboard = TutorDashboard();
+            } else {
+              dashboard = const DefaultDashboardScreen();
+            }
+            break;
+          case 5:
+            if (profileStatus == 0) {
+              dashboard = AdminProfileForm();
+            } else if (profileStatus == 1) {
+              dashboard = AdminPendingScreen();
+            } else if (profileStatus == 2) {
+              dashboard = AdminDashboard();
+            } else {
+              dashboard = const DefaultDashboardScreen();
+            }
+            break;
+          default:
             dashboard = const DefaultDashboardScreen();
-          }
-          break;
-        case 2:
-          if (profileStatus == 0) {
-            dashboard = TutorProfileFormScreen();
-          } else if (profileStatus == 1) {
-            dashboard = TeacherPendingScreen();
-          } else if (profileStatus == 2) {
-            dashboard = TutorDashboard();
-          } else {
-            dashboard = const DefaultDashboardScreen();
-          }
-          break;
-        case 5:
-          if (profileStatus == 0) {
-            dashboard = AdminProfileForm();
-          } else if (profileStatus == 1) {
-            dashboard = AdminPendingScreen();
-          } else if (profileStatus == 2) {
-            dashboard = AdminDashboard();
-          } else {
-            dashboard = const DefaultDashboardScreen();
-          }
-          break;
-        default:
-          dashboard = const DefaultDashboardScreen();
+        }
+        
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => dashboard),
+          (route) => false,
+        );
+      } else {
+        // Handle error cases (expired OTP, invalid OTP, etc.)
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(loginResponse.message),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        
+        // Clear the OTP field
+        _otpController.clear();
+        setState(() {
+          otp = '';
+        });
       }
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => dashboard),
-        (route) => false,
-      );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("OTP verification failed: $e")),
+        SnackBar(
+          content: Text("${e.toString()}"),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
       );
+      
+      // Clear the OTP field
+      _otpController.clear();
+      setState(() {
+        otp = '';
+      });
     }
   }
 
@@ -188,6 +228,7 @@ class _OTPScreenState extends State<OTPScreen> {
               /// OTP Input
               PinCodeTextField(
                 appContext: context,
+                controller: _otpController,
                 length: 6,
                 keyboardType: TextInputType.number,
                 animationType: AnimationType.fade,

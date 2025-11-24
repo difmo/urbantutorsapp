@@ -1,19 +1,42 @@
 class LoginResponse {
   final bool success;
   final String message;
-  final LoginData data;
+  final LoginData? data;
 
   LoginResponse({
     required this.success,
     required this.message,
-    required this.data,
+    this.data,
   });
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
+    // Try to parse LoginData, but it might fail if data contains error info
+    LoginData? loginData;
+    String message = json['message'] ?? 'Unknown error';
+    
+    try {
+      if (json['data'] != null) {
+        final dataMap = json['data'] as Map<String, dynamic>;
+        
+        // Check if data contains error message (e.g., block_status)
+        if (dataMap.containsKey('message')) {
+          message = dataMap['message'] as String;
+        }
+        
+        // Only parse as LoginData if it has the expected structure
+        if (dataMap.containsKey('token') || dataMap.containsKey('user_data')) {
+          loginData = LoginData.fromJson(dataMap);
+        }
+      }
+    } catch (e) {
+      // If parsing fails, loginData remains null
+      loginData = null;
+    }
+    
     return LoginResponse(
-      success: json['success'],
-      message: json['message'],
-      data: LoginData.fromJson(json['data']),
+      success: json['success'] ?? false,
+      message: message,
+      data: loginData,
     );
   }
 
@@ -21,7 +44,7 @@ class LoginResponse {
     return {
       'success': success,
       'message': message,
-      'data': data.toJson(),
+      'data': data?.toJson(),
     };
   }
 

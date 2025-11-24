@@ -30,6 +30,21 @@ class LeadMetaController extends GetxController {
     }
   }
 
+  Future<void> loadSubjects1({required List<int> selClassIds,required List<int> selBoardIds}) async {
+    try {
+      error.value = '';
+      isFetchingSubjects.value = true;
+      subjects.clear();
+      subjects.assignAll(await _service.getSubjectsByClassAndBoard1(
+          selBoardIds: selClassIds, selClassIds: selClassIds));
+      print('Fetched subjects: ${subjects.toList()}');
+    } catch (e) {
+      error.value = e.toString();
+    } finally {
+      isFetchingSubjects.value = false;
+    }
+  }
+
   Future<void> loadSubjects(
       {required int classId, required int boardId}) async {
     try {

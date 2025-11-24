@@ -152,6 +152,7 @@ class ProfileUpdateController extends GetxController {
   }
 
   Future<bool> updateTutorProfile(updateData) async {
+    print(updateData);
     isLoading.value = true;
     try {
       final response =

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:urbantutorsapp/models/notes_models.dart.dart';
+
 class LeadClass {
   final int classId;
   final String className;
@@ -23,10 +24,8 @@ class LeadClass {
         ? parseInt(json['class_id'])
         : parseInt(json['classId']);
 
-    final name = json['ClassName'] ??
-        json['class_name'] ??
-        json['className'] ??
-        '';
+    final name =
+        json['ClassName'] ?? json['class_name'] ?? json['className'] ?? '';
 
     return LeadClass(
       classId: id,
@@ -60,7 +59,8 @@ class LeadSubject {
     final rawId = j['subject_id'] ?? j['id'];
     final rawName = j['subjectname'] ?? j['subject_name'] ?? j['name'];
     return LeadSubject(
-        subjectId: int.tryParse('$rawId') ?? 0, subjectName: (rawName ?? '').toString());
+        subjectId: int.tryParse('$rawId') ?? 0,
+        subjectName: (rawName ?? '').toString());
   }
 }
 
@@ -73,9 +73,11 @@ class LeadChapter {
     final rawId = j['chapter_id'] ?? j['ChapterName'];
     final rawName = j['ChapterName'] ?? j['ChapterName'];
     return LeadChapter(
-        chapterId: int.tryParse('$rawId') ?? 0, chapterName: (rawName ?? '').toString());
+        chapterId: int.tryParse('$rawId') ?? 0,
+        chapterName: (rawName ?? '').toString());
   }
 }
+
 class ChapterDetailsResponse {
   final bool success;
   final ChapterDetailsData data;
@@ -174,9 +176,6 @@ class ChapterDetail {
   }
 }
 
-
-
-
 class LeadMetaService {
   static const _base = 'https://urbantutors.pro/api';
   Future<List<LeadClass>> getClassesByBoard(int boardId) async {
@@ -198,6 +197,36 @@ class LeadMetaService {
           .toList();
     }
     throw Exception('Failed to load classes (${res.statusCode})');
+  }
+
+  Future<List<LeadSubject>> getSubjectsByClassAndBoard1(
+      {required List<int> selBoardIds, required List<int> selClassIds}) async {
+    final requestBody = {
+      'board_id': 99,
+      'class_id': selClassIds,
+    };
+    final uri = Uri.parse('$_base/leadgetsubjects');
+    print('Request Body: ${jsonEncode(requestBody)}');
+    print('URI: $uri');
+    
+    final res = await http.post(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(requestBody),
+    );
+    print("[API] Response: ${res.body}");
+    
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      final body = jsonDecode(res.body);
+      final list = body['data'] ?? [];
+      return List.from(list)
+          .map((e) => LeadSubject.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+    throw Exception('Failed to load subjects (${res.statusCode})');
   }
 
   Future<List<LeadSubject>> getSubjectsByClassAndBoard(
@@ -222,10 +251,8 @@ class LeadMetaService {
     throw Exception('Failed to load subjects (${res.statusCode})');
   }
 
-  Future<List<LeadChapter>> getChaptersBySubject({
-    required int subjectId,
-    required String type
-  }) async {
+  Future<List<LeadChapter>> getChaptersBySubject(
+      {required int subjectId, required String type}) async {
     final uri = Uri.parse('$_base/leadgetchapters');
     final res = await http.post(
       uri,
@@ -272,6 +299,5 @@ class LeadMetaService {
       return ChapterDetails.fromJson(Map<String, dynamic>.from(data));
     }
     throw Exception('Failed to load chapter details (${res.statusCode})');
-  } 
-
+  }
 }

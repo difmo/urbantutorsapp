@@ -1,6 +1,5 @@
 // models/my_course.dart
 
-import 'package:dio/dio.dart';
 
 /// Small helpers for robust parsing
 int _parseInt(dynamic v) {

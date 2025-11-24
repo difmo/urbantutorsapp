@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
@@ -35,6 +37,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
   final TextEditingController remarkController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
   final TextEditingController experienceController = TextEditingController();
+  final TextEditingController zipcodeController = TextEditingController();
 
   // Controllers (single, consistent set)
   final ProfileUpdateController _p = Get.isRegistered<ProfileUpdateController>()
@@ -65,6 +68,11 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
   String? selectedIdType;
   String? selectedIdMode;
   String? selectedIdExperienceInYears;
+
+  // Location data
+  String? _latitude;
+  String? _longitude;
+  String? _placeId;
 
   int? selectedFeeMin; // 100..1000
   int? selectedFeeMax; // 300..3000
@@ -98,22 +106,24 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
   @override
   void initState() {
     super.initState();
-
+    _getCurrentLocation();
     // initial fetches
     _p.fetchProfileForTutor();
     _p.fetchProfileForStudent();
     _master.fetchMasterData();
 
     // react to tutor profile changes
-    _wTutorData = ever(_p.tutorprofileData, (student) async {
+    _wTutorData = ever(_p.tutorprofileData, (teacher) async {
       AppLog.i('[UI] tutorprofileData changed');
-      if (!mounted || student == null) return;
-      nameController.text = student.teacherName ?? '';
-      // priceController.text = student.price?.toString() ?? '';
-      localityController.text = student.location ?? '';
-      selectedState = student.state;
-      selectedIdType = student.idType;
-      remarkController.text = student.remark ?? '';
+      if (!mounted || teacher == null) return;
+      nameController.text = teacher.teacherName ?? '';
+      priceController.text = teacher.minAmount?.toString() ?? '';
+      selectedFeeMin = teacher.minAmount?.toInt() ?? 0;
+      selectedFeeMax = teacher.maxAmount?.toInt() ?? 0;
+      localityController.text = teacher.location ?? '';
+      selectedState = teacher.state;
+      selectedIdType = teacher.idType;
+      remarkController.text = teacher.remark ?? '';
       setState(() {});
     });
 
@@ -209,6 +219,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
     remarkController.dispose();
     priceController.dispose();
     experienceController.dispose();
+    zipcodeController.dispose();
     super.dispose();
   }
 
@@ -283,6 +294,69 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
     return re.hasMatch(email);
   }
 
+  // Get current location
+  Future<void> _getCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        Get.snackbar('Error', 'Location services are disabled');
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          Get.snackbar('Error', 'Location permission denied');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        Get.snackbar('Error', 'Location permissions are permanently denied');
+        return;
+      }
+
+      // Show loading indicator
+      if (mounted) setState(() => _overlayLoading = true);
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      // Get address from coordinates
+      String? postalCode;
+      try {
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
+        if (placemarks.isNotEmpty) {
+          postalCode = placemarks.first.postalCode;
+        }
+      } catch (e) {
+        AppLog.e('Failed to get postal code: $e');
+      }
+
+      if (mounted) {
+        setState(() {
+          _latitude = position.latitude.toString();
+          _longitude = position.longitude.toString();
+          if (postalCode != null && postalCode.isNotEmpty) {
+            zipcodeController.text = postalCode;
+          }
+          _overlayLoading = false;
+        });
+        Get.snackbar('Success', 'Location retrieved successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green.shade100);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _overlayLoading = false);
+      Get.snackbar('Error', 'Failed to get location: $e');
+    }
+  }
+
   Future<void> onSavePressed() async {
     // Reset image/multi-select error flags before validating
     setState(() {
@@ -319,7 +393,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
     final profileImageOk = _profileImage != null;
     final frontOk = _frontIdImage != null;
     final backOk = _backIdImage != null;
-    if (profileImageOk) _profileImageError = true;
+    if (!profileImageOk) _profileImageError = true;
     if (!frontOk) _frontIdError = true;
     if (!backOk) _backIdError = true;
 
@@ -356,18 +430,22 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
         "user_id": int.parse(userIdStr),
         "email": emailController.text.trim(),
         "location": localityController.text.trim(),
-        "state": selectedState ?? "Uttar Pradesh",
+        // "state": selectedState ?? "Uttar Pradesh",
+        "state": zipcodeController.text.toString(),
         "idType": selectedIdType ?? "",
-        "remark": remarkController.text.trim(),
+        "qualification": remarkController.text.trim().isNotEmpty
+            ? remarkController.text.trim()
+            : "Not specified",
         "profile_picture": profileBase64,
-        "fee_min": selectedFeeMin ?? 0,
-        "fee_max": selectedFeeMax ?? 0,
+        "min_amount": selectedFeeMin ?? 0,
+        "max_amount": selectedFeeMax ?? 0,
         "price": (selectedFeeMax ?? 0).toDouble(),
         "mode": selectedIdMode,
         "experience_years": _expToInt(selectedIdExperienceInYears),
-        "place_id": "ghjghjghjhgj",
-        "latitude": "28.663",
-        "longitude": "97.2255",
+        "place_id": _placeId ?? "",
+        "latitude": _latitude ?? "",
+        "longitude": _longitude ?? "",
+        "zipcode": zipcodeController.text.trim(),
         "board_id": boardIds,
         "class_id": classIds,
         "subject_id": subjectIds,
@@ -627,6 +705,38 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                     }),
                     const SizedBox(height: 16),
 
+                    // Zipcode & Location Button
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: zipcodeController,
+                            keyboardType: TextInputType.number,
+                            decoration:
+                                const InputDecoration(labelText: "Zipcode"),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) {
+                                return 'Zipcode is required';
+                              }
+                              if (v.trim().length < 6) {
+                                return 'Invalid Zipcode';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        IconButton(
+                          onPressed: _getCurrentLocation,
+                          icon:
+                              const Icon(Icons.my_location, color: Colors.blue),
+                          tooltip: 'Get Current Location',
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
                     // State
                     DropdownButtonFormField<String>(
                       decoration: const InputDecoration(labelText: "State"),
@@ -676,7 +786,9 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                     const SizedBox(height: 16),
                     // Boards (multi)
                     SizedBox(
-                     width: 700, child: Column( crossAxisAlignment: CrossAxisAlignment.start,
+                      width: 700,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _MultiSelectTile(
                             label: 'Boards you Teach:',
@@ -792,9 +904,9 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
                                 if (_selBoardIds.isNotEmpty &&
                                     _selClassIds.isNotEmpty) {
-                                  await _leadMeta.loadSubjects(
-                                    classId: _selClassIds.first,
-                                    boardId: _selBoardIds.first,
+                                  await _leadMeta.loadSubjects1(
+                                    selBoardIds: _selBoardIds,
+                                    selClassIds: _selClassIds,
                                   );
                                 }
                               }
@@ -841,9 +953,9 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                                 return;
                               }
                               if (_leadMeta.subjects.isEmpty) {
-                                await _leadMeta.loadSubjects(
-                                  classId: _selClassIds.first,
-                                  boardId: _selBoardIds.first,
+                                await _leadMeta.loadSubjects1(
+                                  selBoardIds: _selBoardIds,
+                                  selClassIds: _selClassIds,
                                 );
                               }
 
@@ -1245,43 +1357,74 @@ Future<List<int>?> _showMultiSelect(
       minChildSize: 0.4,
       maxChildSize: 0.9,
       builder: (_, controller) {
-        return Column(
-          children: [
-            const SizedBox(height: 10),
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.black12,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Text(title,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w700)),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx, initial),
-                    child: const Text('CANCEL'),
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            // Check if all items are selected
+            final allSelected = options.isNotEmpty &&
+                options.every((o) => chosen.contains(o.id));
+
+            return Column(
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.black12,
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                  const SizedBox(width: 4),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(ctx, chosen.toList()),
-                    child: const Text('APPLY'),
+                ),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Text(title,
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700)),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, initial),
+                        child: const Text('CANCEL'),
+                      ),
+                      const SizedBox(width: 4),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(ctx, chosen.toList()),
+                        child: const Text('APPLY'),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: StatefulBuilder(
-                builder: (context, setSheetState) {
-                  return ListView.builder(
+                ),
+                const Divider(height: 1),
+
+                // Select All checkbox
+                CheckboxListTile(
+                  dense: true,
+                  title: const Text(
+                    'Select All',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blue,
+                    ),
+                  ),
+                  value: allSelected,
+                  onChanged: (v) {
+                    setSheetState(() {
+                      if (v == true) {
+                        // Select all
+                        chosen.clear();
+                        chosen.addAll(options.map((o) => o.id));
+                      } else {
+                        // Deselect all
+                        chosen.clear();
+                      }
+                    });
+                  },
+                ),
+                const Divider(height: 1),
+
+                Expanded(
+                  child: ListView.builder(
                     controller: controller,
                     itemCount: options.length,
                     itemBuilder: (_, i) {
@@ -1302,11 +1445,11 @@ Future<List<int>?> _showMultiSelect(
                         },
                       );
                     },
-                  );
-                },
-              ),
-            ),
-          ],
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     ),

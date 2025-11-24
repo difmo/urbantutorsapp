@@ -11,6 +11,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/models/profile_modals/tutor_response_modal.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
@@ -63,7 +65,11 @@ class _TutorProfileState extends State<TutorProfile> {
   final _fbPageLinkCtrl = TextEditingController();
   final _instaLinkCtrl = TextEditingController();
   final _teleLinkCtrl = TextEditingController();
+  final List<int> minOptions = [for (int v = 100; v <= 1000; v += 100) v];
+  final List<int> maxOptionsBase = [for (int v = 300; v <= 3000; v += 100) v];
 
+  int? selectedFeeMin; // 100..1000
+  int? selectedFeeMax; // 300..3000
   // Multi-select state
   final List<int> _selBoardIds = [];
   final List<int> _selClassIds = [];
@@ -87,12 +93,22 @@ class _TutorProfileState extends State<TutorProfile> {
   XFile? _profileImage;
   String? _profileImageUrl; // from server
 
+  // ID Details
+  final _zipcodeCtrl = TextEditingController();
+
+  // Location
+  String? _latitude;
+  String? _longitude;
+  String? _placeId;
+  bool _locLoading = false;
+
   // Misc
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
     super.initState();
+
     _c = Get.isRegistered<CoinsController>()
         ? Get.find<CoinsController>()
         : Get.put(CoinsController());
@@ -168,12 +184,15 @@ class _TutorProfileState extends State<TutorProfile> {
             final c = item['class_id'];
             final s = item['subject_id'];
 
-            if (b != null)
+            if (b != null) {
               boards.add(b is int ? b : int.tryParse(b.toString()));
-            if (c != null)
+            }
+            if (c != null) {
               classes.add(c is int ? c : int.tryParse(c.toString()));
-            if (s != null)
+            }
+            if (s != null) {
               subjects.add(s is int ? s : int.tryParse(s.toString()));
+            }
             continue;
           }
 
@@ -186,7 +205,7 @@ class _TutorProfileState extends State<TutorProfile> {
       }
     }
 
-    List<int> _uniqueInts(Iterable<int?> items) {
+    List<int> uniqueInts(Iterable<int?> items) {
       final s = <int>{};
       for (final i in items) {
         if (i != null && i > 0) s.add(i);
@@ -195,9 +214,9 @@ class _TutorProfileState extends State<TutorProfile> {
     }
 
     return {
-      'board_id': _uniqueInts(boards),
-      'class_id': _uniqueInts(classes),
-      'subject_id': _uniqueInts(subjects),
+      'board_id': uniqueInts(boards),
+      'class_id': uniqueInts(classes),
+      'subject_id': uniqueInts(subjects),
     };
   }
 
@@ -231,15 +250,16 @@ class _TutorProfileState extends State<TutorProfile> {
     // If we have a selected class and board, ensure subjects loaded
     if (_selBoardIds.isNotEmpty && _selClassIds.isNotEmpty) {
       try {
-        await _leadMeta.loadSubjects(
-            classId: _selClassIds.first, boardId: _selBoardIds.first);
+        await _leadMeta.loadSubjects1(
+            selClassIds: _selClassIds, selBoardIds: _selBoardIds);
       } catch (_) {}
     }
 
     // Now update UI on next frame (so controllers & lists are ready for label lookups)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-
+      selectedFeeMin = p.minAmount!.toInt() ?? 0;
+      selectedFeeMax = p.maxAmount!.toInt() ?? 0;
       // basic fields
       _nameCtrl.text = (p.teacherName ?? '').toString().trim();
       _emailCtrl.text = (p.email ?? '').toString().trim();
@@ -250,34 +270,39 @@ class _TutorProfileState extends State<TutorProfile> {
       _instaLinkCtrl.text = (p.instaLink ?? '').toString();
       _teleLinkCtrl.text = (p.whLink ?? '').toString();
       stateVal = (p.state ?? '').toString();
-    // Normalize `mode` coming from server to match dropdown items
-    String? rawMode = (p.mode ?? '').toString().trim();
-    String? normalizedMode;
-    if (rawMode.isNotEmpty) {
-      final low = rawMode.toLowerCase();
-      if (low == 'online') normalizedMode = 'Online';
-      else if (low == 'offline') normalizedMode = 'Offline';
-      else if (low == 'any') normalizedMode = 'Any';
-      else {
-        // server sent something unexpected — keep raw but capitalise first letter
-        normalizedMode = rawMode[0].toUpperCase() + rawMode.substring(1);
+      _zipcodeCtrl.text = stateVal!;
+      // Normalize `mode` coming from server to match dropdown items
+      String? rawMode = (p.mode ?? '').toString().trim();
+      String? normalizedMode;
+      if (rawMode.isNotEmpty) {
+        final low = rawMode.toLowerCase();
+        if (low == 'online') {
+          normalizedMode = 'Online';
+        } else if (low == 'offline')
+          normalizedMode = 'Offline';
+        else if (low == 'any')
+          normalizedMode = 'Any';
+        else {
+          // server sent something unexpected — keep raw but capitalise first letter
+          normalizedMode = rawMode[0].toUpperCase() + rawMode.substring(1);
+        }
+      } else {
+        normalizedMode = "Online";
       }
-    } else {
-      normalizedMode = "Online";
-    }
-
 
       // image url
       _profileImageUrl = _resolveImageUrl(p.profilePicture);
 
       // Final UI update once
-    setState(() {
-      modeVal = normalizedMode;
-    });
+      setState(() {
+        modeVal = normalizedMode;
+      });
 
-    // Helpful debug logs — remove in production
-    debugPrint('hydrate: server mode="$rawMode" normalized="$normalizedMode"');
-    debugPrint('hydrate: modeVal="$modeVal" boardIds=$_selBoardIds classIds=$_selClassIds subjectIds=$_selSubjectIds');
+      // Helpful debug logs — remove in production
+      debugPrint(
+          'hydrate: server mode="$rawMode" normalized="$normalizedMode"');
+      debugPrint(
+          'hydrate: modeVal="$modeVal" boardIds=$_selBoardIds classIds=$_selClassIds subjectIds=$_selSubjectIds');
     });
   }
 
@@ -337,9 +362,72 @@ class _TutorProfileState extends State<TutorProfile> {
 
   ImageProvider? _avatarProvider() {
     if (_profileImage != null) return FileImage(File(_profileImage!.path));
-    if (_profileImageUrl != null && _profileImageUrl!.isNotEmpty)
+    if (_profileImageUrl != null && _profileImageUrl!.isNotEmpty) {
       return NetworkImage(_profileImageUrl!);
+    }
     return null;
+  }
+
+  // -------------------- Location Logic --------------------
+  Future<void> _getCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        Get.snackbar('Error', 'Location services are disabled');
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          Get.snackbar('Error', 'Location permission denied');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        Get.snackbar('Error', 'Location permissions are permanently denied');
+        return;
+      }
+
+      if (mounted) setState(() => _locLoading = true);
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      // Reverse Geocoding
+      String? postalCode;
+      try {
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
+        if (placemarks.isNotEmpty) {
+          postalCode = placemarks.first.postalCode;
+        }
+      } catch (e) {
+        debugPrint('Failed to get postal code: $e');
+      }
+
+      if (mounted) {
+        setState(() {
+          _latitude = position.latitude.toString();
+          _longitude = position.longitude.toString();
+          if (postalCode != null && postalCode.isNotEmpty) {
+            _zipcodeCtrl.text = postalCode;
+          }
+          _locLoading = false;
+        });
+        Get.snackbar('Success', 'Location retrieved successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green.shade100);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _locLoading = false);
+      Get.snackbar('Error', 'Failed to get location: $e');
+    }
   }
 
   // -------------------- Save / Update --------------------
@@ -362,7 +450,7 @@ class _TutorProfileState extends State<TutorProfile> {
       // Only convert images to base64 if user picked new ones
       final profileBase64 = await _fileToBase64(_profileImage);
 
-      // Ensure unique id lists
+      //Ensure unique id lists
       final boardIds = _uniqueInts(_selBoardIds);
       final classIds = _uniqueInts(_selClassIds);
       final subjectIds = _uniqueInts(_selSubjectIds);
@@ -370,37 +458,30 @@ class _TutorProfileState extends State<TutorProfile> {
       final experienceYears = int.tryParse(_expCtrl.text.trim()) ?? 0;
 
       // Build payload matching example you provided
-      final payload = <String, dynamic>{
+      final payload = {
         "user_id": userId,
         "email": _emailCtrl.text.trim(),
         "location": _localityCtrl.text.trim(),
         "state": stateVal ?? '',
-        "idType": 'Aadhar', // or expose a controller for this
-        "remark": _qualificationCtrl.text.trim(),
-        "min_amount": null, // populate if you add controllers for these
-        "max_amount": null,
+        "zipcode": _zipcodeCtrl.text.trim(),
+        "qualification": _qualificationCtrl.text.trim(),
+        "min_amount": selectedFeeMin ?? 0,
+        "max_amount": selectedFeeMax ?? 0,
         "mode": modeVal ?? '',
         "experience_years": experienceYears,
-        "place_id": _loc.placeId.value ?? '',
-        "latitude": (_loc.latitude.value ?? '').toString(),
-        "longitude": (_loc.longitude.value ?? '').toString(),
+        "place_id": _placeId ?? '',
+        "latitude": _latitude ?? '',
+        "longitude": _longitude ?? '',
         "board_id": boardIds,
         "class_id": classIds,
-        // include subject_id only when non-empty (server example had fewer subjects)
         if (subjectIds.isNotEmpty) "subject_id": subjectIds,
         "fb_link": _fbPageLinkCtrl.text.trim(),
         "insta_link": _instaLinkCtrl.text.trim(),
         "wh_link": _teleLinkCtrl.text.trim(),
       };
-
-      // Add base64 fields only if the user picked them
+      //Add base64 fields only if the user picked them
       if (profileBase64 != null) payload["profile_picture"] = profileBase64;
-      // If you have front/back id files, include them too:
-      // if (frontBase64 != null) payload["frontid"] = frontBase64;
-      // if (backBase64 != null) payload["backid"] = backBase64;
-
       debugPrint('Update payload: ${jsonEncode(payload)}');
-
       final ok = await _p.updateTutorProfile(payload);
       if (ok == true) {
         Get.snackbar('Success', 'Profile Updated Successfully',
@@ -699,6 +780,43 @@ class _TutorProfileState extends State<TutorProfile> {
                       icon: Icons.email,
                       hint: 'Email',
                       keyboardType: TextInputType.emailAddress),
+                  const SizedBox(height: 8),
+
+                  // Zipcode & Location
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _textField('Zipcode', _zipcodeCtrl,
+                            icon: Icons.pin_drop,
+                            hint: 'Zipcode',
+                            keyboardType: TextInputType.number, validator: (v) {
+                          if (v == null || v.trim().isEmpty) return 'Required';
+                          if (v.trim().length < 6) return 'Invalid Zipcode';
+                          return null;
+                        }),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        margin: const EdgeInsets.only(top: 6),
+                        height: 56,
+                        width: 56,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: _locLoading
+                            ? const Center(child: CircularProgressIndicator())
+                            : IconButton(
+                                onPressed: _getCurrentLocation,
+                                icon: const Icon(Icons.my_location,
+                                    color: Colors.blue),
+                                tooltip: 'Get Current Location',
+                              ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
                 ],
               ),
 
@@ -726,8 +844,9 @@ class _TutorProfileState extends State<TutorProfile> {
                             _selClassIds.clear();
                             _selSubjectIds.clear();
                           });
-                          if (_selBoardIds.isNotEmpty)
+                          if (_selBoardIds.isNotEmpty) {
                             await _leadMeta.loadClasses(_selBoardIds.first);
+                          }
                         }
                       },
                     ),
@@ -749,8 +868,9 @@ class _TutorProfileState extends State<TutorProfile> {
                                 snackPosition: SnackPosition.BOTTOM);
                             return;
                           }
-                          if (_leadMeta.classes.isEmpty)
+                          if (_leadMeta.classes.isEmpty) {
                             await _leadMeta.loadClasses(_selBoardIds.first);
+                          }
                           final options = _classOptions();
                           final picked = await _showMultiSelect(context,
                               title: 'Select Classes',
@@ -764,10 +884,11 @@ class _TutorProfileState extends State<TutorProfile> {
                               _selSubjectIds.clear();
                             });
                             if (_selBoardIds.isNotEmpty &&
-                                _selClassIds.isNotEmpty)
-                              await _leadMeta.loadSubjects(
-                                  classId: _selClassIds.first,
-                                  boardId: _selBoardIds.first);
+                                _selClassIds.isNotEmpty) {
+                              await _leadMeta.loadSubjects1(
+                                  selClassIds: _selClassIds,
+                                  selBoardIds: _selBoardIds);
+                            }
                           }
                         },
                       ),
@@ -790,10 +911,11 @@ class _TutorProfileState extends State<TutorProfile> {
                                 snackPosition: SnackPosition.BOTTOM);
                             return;
                           }
-                          if (_leadMeta.subjects.isEmpty)
+                          if (_leadMeta.subjects.isEmpty) {
                             await _leadMeta.loadSubjects(
                                 classId: _selClassIds.first,
                                 boardId: _selBoardIds.first);
+                          }
                           final options = _subjectOptions();
                           final picked = await _showMultiSelect(context,
                               title: 'Select Subjects',
@@ -809,6 +931,75 @@ class _TutorProfileState extends State<TutorProfile> {
                         },
                       ),
                     ),
+                  ),
+                  SizedBox(
+                    height: 16,
+                  ),
+                  // Fee range
+                  Row(
+                    children: [
+                      // MIN
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          decoration: const InputDecoration(
+                              labelText: "Select Fee Range (min)"),
+                          value: selectedFeeMin,
+                          isExpanded: true,
+                          items: minOptions
+                              .map((v) => DropdownMenuItem(
+                                  value: v, child: Text('₹$v/Hr')))
+                              .toList(),
+                          onChanged: (val) {
+                            setState(() {
+                              selectedFeeMin = val;
+                              // clamp max >= min & >= 300
+                              final clampMinForMax =
+                                  (val == null) ? 300 : (val < 300 ? 300 : val);
+                              if (selectedFeeMax != null &&
+                                  selectedFeeMax! < clampMinForMax) {
+                                selectedFeeMax = clampMinForMax;
+                              }
+                            });
+                          },
+                          validator: (v) => v == null ? 'Required' : null,
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      // MAX
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          decoration: const InputDecoration(
+                              labelText: "Select Fee Range (max)"),
+                          value: selectedFeeMax,
+                          isExpanded: true,
+                          items: maxOptionsBase
+                              .where((v) =>
+                                  v >=
+                                  ((selectedFeeMin == null)
+                                      ? 300
+                                      : (selectedFeeMin! < 300
+                                          ? 300
+                                          : selectedFeeMin!)))
+                              .map((v) => DropdownMenuItem(
+                                  value: v, child: Text('₹$v/Hr')))
+                              .toList(),
+                          onChanged: (val) =>
+                              setState(() => selectedFeeMax = val),
+                          validator: (v) {
+                            if (v == null) return 'Required';
+                            final minAllowed = (selectedFeeMin == null)
+                                ? 300
+                                : (selectedFeeMin! < 300
+                                    ? 300
+                                    : selectedFeeMin!);
+                            if (v < minAllowed) {
+                              return 'Must be ≥ ₹$minAllowed';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
                   ),
 
                   const SizedBox(height: 16),
@@ -1118,54 +1309,88 @@ Future<List<int>?> _showMultiSelect(BuildContext context,
           minChildSize: 0.4,
           maxChildSize: 0.9,
           builder: (_, controller) {
-            return Column(children: [
-              const SizedBox(height: 10),
-              Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                      color: Colors.black12,
-                      borderRadius: BorderRadius.circular(4))),
-              const SizedBox(height: 10),
-              Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(children: [
-                    Text(title,
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w700)),
-                    const Spacer(),
-                    TextButton(
-                        onPressed: () => Navigator.pop(ctx, initial),
-                        child: const Text('CANCEL')),
-                    const SizedBox(width: 4),
-                    FilledButton(
-                        onPressed: () => Navigator.pop(ctx, chosen.toList()),
-                        child: const Text('APPLY')),
-                  ])),
-              const Divider(height: 1),
-              Expanded(
-                  child: StatefulBuilder(builder: (context, setSheetState) {
-                return ListView.builder(
-                    controller: controller,
-                    itemCount: options.length,
-                    itemBuilder: (_, i) {
-                      final o = options[i];
-                      final checked = chosen.contains(o.id);
-                      return CheckboxListTile(
-                          dense: true,
-                          title: Text(o.label, overflow: TextOverflow.ellipsis),
-                          value: checked,
-                          onChanged: (v) {
-                            setSheetState(() {
-                              if (v == true)
-                                chosen.add(o.id);
-                              else
-                                chosen.remove(o.id);
-                            });
-                          });
+            return StatefulBuilder(builder: (context, setSheetState) {
+              // Check if all items are selected
+              final allSelected = options.isNotEmpty &&
+                  options.every((o) => chosen.contains(o.id));
+
+              return Column(children: [
+                const SizedBox(height: 10),
+                Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: Colors.black12,
+                        borderRadius: BorderRadius.circular(4))),
+                const SizedBox(height: 10),
+                Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(children: [
+                      Text(title,
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700)),
+                      const Spacer(),
+                      TextButton(
+                          onPressed: () => Navigator.pop(ctx, initial),
+                          child: const Text('CANCEL')),
+                      const SizedBox(width: 4),
+                      FilledButton(
+                          onPressed: () => Navigator.pop(ctx, chosen.toList()),
+                          child: const Text('APPLY')),
+                    ])),
+                const Divider(height: 1),
+
+                // Select All checkbox
+                CheckboxListTile(
+                  dense: true,
+                  title: const Text(
+                    'Select All',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blue,
+                    ),
+                  ),
+                  value: allSelected,
+                  onChanged: (v) {
+                    setSheetState(() {
+                      if (v == true) {
+                        // Select all
+                        chosen.clear();
+                        chosen.addAll(options.map((o) => o.id));
+                      } else {
+                        // Deselect all
+                        chosen.clear();
+                      }
                     });
-              })),
-            ]);
+                  },
+                ),
+                const Divider(height: 1),
+
+                Expanded(
+                  child: ListView.builder(
+                      controller: controller,
+                      itemCount: options.length,
+                      itemBuilder: (_, i) {
+                        final o = options[i];
+                        final checked = chosen.contains(o.id);
+                        return CheckboxListTile(
+                            dense: true,
+                            title:
+                                Text(o.label, overflow: TextOverflow.ellipsis),
+                            value: checked,
+                            onChanged: (v) {
+                              setSheetState(() {
+                                if (v == true) {
+                                  chosen.add(o.id);
+                                } else {
+                                  chosen.remove(o.id);
+                                }
+                              });
+                            });
+                      }),
+                ),
+              ]);
+            });
           }));
 }
 
