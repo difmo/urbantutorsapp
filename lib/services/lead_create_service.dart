@@ -12,12 +12,15 @@ class LeadCreateService {
     required String boardId,
     required String classId,
     required String location,
-    required String state,
     required String mode,
     required String fee,
     required String leadId,
     required String subjectId,
     required String userId,
+     required String place_id,
+      required String pincode, 
+      required String latitude,
+       required String longitude,
   }) async {
     try {
       final token = await StorageService.getToken();
@@ -30,12 +33,15 @@ class LeadCreateService {
         'board_id': boardId,
         'class_id': classId, // ✅ make sure it's a string
         'location': location,
-        'state': state,
         'mode': mode,
         'fee': fee,
         'lead_id': leadId, // Uncomment if needed
         'subject_id': subjectId,
         'user_id': userId,
+        'place_id':place_id,
+        'latitude':latitude,
+        'longitude':longitude,
+        'pincode':pincode
       });
       final res = await ApiService.post(ApiConstants.LEAD_CREATE_URL, formData,
           token: token);
@@ -51,5 +57,8 @@ class LeadCreateService {
         throw Exception('Network error: ${e.message}');
       }
     }
+
+    
   }
+  
 }

@@ -52,6 +52,15 @@ class StudentProfileDataNew {
   final String? status;
   final String? createdAt;
   final String? updatedAt;
+  
+  // Additional fields for proper data storage
+  final int? boardId;
+  final int? courseId;
+  final int? subjectId;
+  final int? pincode;
+  final String? latitude;
+  final String? longitude;
+  final String? placeId;
 
   StudentProfileDataNew({
     required this.id,
@@ -78,9 +87,23 @@ class StudentProfileDataNew {
     this.status,
     this.createdAt,
     this.updatedAt,
+    this.boardId,
+    this.courseId,
+    this.subjectId,
+    this.pincode,
+    this.latitude,
+    this.longitude,
+    this.placeId,
   });
 
   factory StudentProfileDataNew.fromJson(Map<String, dynamic> json) {
+    // Helper to parse int from dynamic
+    int? parseInt(dynamic v) {
+      if (v == null) return null;
+      if (v is int) return v;
+      return int.tryParse(v.toString());
+    }
+
     return StudentProfileDataNew(
       id: json['id'] ?? 0,
       profile_status: json['profile_status'] ?? json['tutorburo_profile_status']??0,
@@ -107,16 +130,17 @@ class StudentProfileDataNew {
       status: json['status'],
       createdAt: json['created_at'],
       updatedAt: json['updated_at'],
+      boardId: parseInt(json['board_id']),
+      courseId: parseInt(json['course_id']),
+      subjectId: parseInt(json['subject_id']),
+      pincode: parseInt(json['pincode']),
+      latitude: json['latitude']?.toString(),
+      longitude: json['longitude']?.toString(),
+      placeId: json['place_id']?.toString(),
     );
   }
 
-  Null get total_Available_coins => null;
 
-  Null get boardId => null;
-
-  Null get courseId => null;
-
-  Null get subjectId => null;
 
   Map<String, dynamic> toJson() {
     return {
@@ -143,6 +167,13 @@ class StudentProfileDataNew {
       "status": status,
       "created_at": createdAt,
       "updated_at": updatedAt,
+      "board_id": boardId,
+      "course_id": courseId,
+      "subject_id": subjectId,
+      "pincode": pincode,
+      "latitude": latitude,
+      "longitude": longitude,
+      "place_id": placeId,
     };
   }
 }

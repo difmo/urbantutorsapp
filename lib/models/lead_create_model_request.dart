@@ -4,7 +4,6 @@ class LeadCreateRequest {
   final String boardId;
   final String classId;
   final String location;
-  final String state;
   final String mode;
   final String fee;
   final String leadId;
@@ -13,6 +12,11 @@ class LeadCreateRequest {
   final String tutorGender;
   final String maxHits;
   final String supportAgent;
+  final String pincode;
+    final String latitude;
+      final String longitude;
+        final String place_id;
+
 
   LeadCreateRequest({
     required this.name,
@@ -20,7 +24,6 @@ class LeadCreateRequest {
     required this.boardId,
     required this.classId,
     required this.location,
-    required this.state,
     required this.mode,
     required this.fee,
     required this.leadId,
@@ -29,6 +32,11 @@ class LeadCreateRequest {
     required this.tutorGender,
     required this.maxHits,
     required this.supportAgent,
+    required this.pincode,
+  
+    required this.place_id,
+    required this.latitude,
+    required this.longitude,
   });
 
   /// ✅ Corrected method name and added all fields
@@ -39,7 +47,6 @@ class LeadCreateRequest {
       'board_id': boardId,
       'class_id': classId,
       'location': location,
-      'state': state,
       'mode': mode,
       'fee': fee,
       'lead_id': leadId,
@@ -48,6 +55,9 @@ class LeadCreateRequest {
       'tutor_gender': tutorGender,
       'max_hits': maxHits,
       'support_agent': supportAgent,
+      'place_id':place_id,
+      'latitude':latitude,
+      'longitude':longitude
     };
   }
 }

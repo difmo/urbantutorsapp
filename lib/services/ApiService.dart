@@ -56,16 +56,16 @@ static Future<Response> postt(
   String? token,
   bool isJson = false,
 }) async {
-  final authToken = token ?? await StorageService.getToken();
+   // Resolve Bearer token (explicit arg wins)
+    final authToken = token ?? await StorageService.getToken();
 
-  final headers = <String, String>{};
-  if (authToken != null && authToken.isNotEmpty) {
-    headers['Authorization'] = 'Bearer $authToken';
-  }
-
-  final options = isJson
-      ? Options(headers: headers, contentType: Headers.jsonContentType) // 👈 JSON
-      : Options(headers: headers);
+    // Build headers safely
+    final headers = <String, String>{};
+    if (authToken != null && authToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $authToken';
+    }
+    if (isJson) headers['Content-Type'] = 'application/json';
+ 
 
   final payload = isJson
       ? data // 👈 pass Map directly; Dio will JSON-encode
@@ -74,7 +74,7 @@ static Future<Response> postt(
           : FormData.fromMap(((data as Map?)?.cast<String, dynamic>()) ?? const {}));
 
   try {
-    final res = await _dio.post(path, data: payload, options: options);
+    final res = await _dio.post(path, data: payload, options: Options(headers: headers));
     return res;
   } on DioException catch (e) {
     final server = e.response?.data;

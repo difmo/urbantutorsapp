@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
@@ -41,14 +43,17 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
   final nameCtrl = TextEditingController();
   final mobileCtrl = TextEditingController();
   final localityCtrl = TextEditingController();
+  final _zipcodeCtrl = TextEditingController();
 
   // Selections
   int? boardId;
   int? classId;
   int? subjectId;
-  String? stateVal;
   String? modeVal;
 
+  String? _latitude;
+  String? _longitude;
+  String? _placeId;
   double _fee = 700;
   bool _submitting = false;
 
@@ -58,17 +63,8 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
   final LocationController _loc = Get.find<LocationController>();
   late final CoinsController _c;
   late final ProfileUpdateController _p;
-  final PayCourseController _payCourseController =
-      Get.find<PayCourseController>();
 
-  static const _states = <String>[
-    'Delhi',
-    'Uttar Pradesh',
-    'Haryana',
-    'Maharashtra',
-    'Karnataka',
-    'Tamil Nadu'
-  ];
+
   static const _modes = <String>['Online', 'Offline', 'Any'];
   static const Color blue = Color(0xFF4A90E2);
 
@@ -131,8 +127,69 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
         : Get.put(ProfileUpdateController());
     _p.fetchProfileForStudent();
 
-    _loadUserMeta(); // ✅ proper async load of lead status & user info
+    _loadUserMeta();
+    _getCurrentLocation();
   }
+
+  // -------------------- Location Logic --------------------
+  Future<void> _getCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        Get.snackbar('Error', 'Location services are disabled');
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          Get.snackbar('Error', 'Location permission denied');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        Get.snackbar('Error', 'Location permissions are permanently denied');
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      String? postalCode;
+      try {
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
+        if (placemarks.isNotEmpty) {
+          postalCode = placemarks.first.postalCode;
+          
+        }
+      } catch (e) {
+        debugPrint('Failed to get postal code: $e');
+      }
+
+      if (mounted) {
+        setState(() {
+          _latitude = position.latitude.toString();
+          _longitude = position.longitude.toString();
+          if (postalCode != null && postalCode.isNotEmpty) {
+            _zipcodeCtrl.text = postalCode;
+          }
+        });
+        Get.snackbar('Success', 'Location retrieved successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green.shade100);
+      }
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to get location: $e');
+    }
+  }
+
+  // -------------------- Save / Update --------------------
 
   @override
   void dispose() {
@@ -207,26 +264,27 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
     if (locText.isEmpty) return _toast('Please enter your Locality');
 
     if (modeVal == null) return _toast('Please select Teaching Mode');
-    if (stateVal == null) return _toast('Please select State');
 
     final userId = await StorageService.getUserId();
     if (userId == null) return _toast('User not found. Please login again.');
     final req = LeadCreateRequest(
-      name: userName ?? "",
-      mobile: userPhone ?? "",
-      boardId: boardId!.toString(),
-      classId: classId!.toString(),
-      subjectId: subjectId!.toString(),
-      location: locText,
-      state: stateVal ?? '',
-      mode: modeVal ?? '',
-      fee: _fee.round().toString(),
-      userId: userId,
-      tutorGender: 'Any',
-      maxHits: "",
-      supportAgent: '',
-      leadId: '',
-    );
+        name: userName ?? "",
+        mobile: userPhone ?? "",
+        boardId: boardId!.toString(),
+        classId: classId!.toString(),
+        subjectId: subjectId!.toString(),
+        location: locText,
+        mode: modeVal ?? '',
+        fee: _fee.round().toString(),
+        userId: userId,
+        tutorGender: 'Any',
+        maxHits: "",
+        supportAgent: '',
+        leadId: '',
+        pincode: _zipcodeCtrl.text.toString(),
+        latitude: _latitude ?? '',
+        longitude: _longitude ?? '',
+        place_id: _placeId ?? '');
 
     if (_submitting) return;
     setState(() => _submitting = true);
@@ -249,6 +307,52 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+  // -------------------- UI Components --------------------
+
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    IconData? icon,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    String? Function(String?)? validator,
+    FocusNode? focusNode,
+    Widget? suffix,
+    Function(String)? onSubmitted,
+  }) {
+    return TextFormField(
+      controller: controller,
+      focusNode: focusNode,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      validator: validator,
+      onFieldSubmitted: onSubmitted,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon:
+            icon != null ? Icon(icon, color: Colors.grey.shade600) : null,
+        suffixIcon: suffix != null
+            ? Padding(padding: const EdgeInsets.all(12), child: suffix)
+            : null,
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.primaryColor, width: 2),
+        ),
+      ),
+    );
   }
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -455,10 +559,9 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                             items: boards
                                 .map((b) => DropdownMenuItem<int>(
                                       value: (b.boardId is int)
-                                          ? b.boardId
+                                          ? b.boardId as int
                                           : int.tryParse('${b.boardId}'),
-                                      child: Text(
-                                          b.boardLabel.toString() ?? '',
+                                      child: Text(b.boardLabel.toString(),
                                           overflow: TextOverflow.ellipsis),
                                     ))
                                 .toList(),
@@ -534,8 +637,8 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                         final List<SubjectOption> subjectOptions =
                             _lead.subjects
                                 .map<SubjectOption>((s) => SubjectOption(
-                                      id: (s.subjectId ?? 0),
-                                      name: (s.subjectName ?? '').toString(),
+                                      id: s.subjectId ?? 0,
+                                      name: s.subjectName ?? '',
                                     ))
                                 .where((o) => o.id != 0 && o.name.isNotEmpty)
                                 .toList();
@@ -707,23 +810,15 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                         );
                       }),
                       const SizedBox(height: 10),
-
-                      // State
-                      _dropdownDec(
-                        DropdownButtonFormField<String>(
-                          isExpanded: true,
-                          value: stateVal,
-                          icon: const Icon(Icons.expand_more_rounded,
-                              color: Color(0xFF9CA3AF)),
-                          decoration: _fieldDec('Select State'),
-                          items: _states
-                              .map((s) =>
-                                  DropdownMenuItem(value: s, child: Text(s)))
-                              .toList(),
-                          onChanged: (v) => setState(() => stateVal = v),
-                          validator: (v) => v == null ? 'Required' : null,
-                        ),
+                      _buildTextField(
+                        label: 'Zipcode',
+                        controller: _zipcodeCtrl,
+                        icon: Icons.pin_drop_outlined,
+                        keyboardType: TextInputType.number,
+                        validator: (v) =>
+                            (v?.length ?? 0) < 6 ? 'Invalid' : null,
                       ),
+                   
                       const SizedBox(height: 10),
 
                       // Mode

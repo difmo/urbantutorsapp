@@ -52,6 +52,8 @@ class TutorProfileData {
   final double? minAmount;
   final double? maxAmount;
   final String? location;
+  final String ? pincode;
+
   final String? placeId;
   final double? latitude;
   final double? longitude;
@@ -100,6 +102,7 @@ class TutorProfileData {
     this.updatedAt,
     this.teachingDetails = const [],
     this.mode,
+    this.pincode
   });
 
   // --- helpers to parse robustly ---
@@ -167,6 +170,7 @@ class TutorProfileData {
       teachingDetails:
           _parseTeachingDetails(json['teaching_details'] ?? json['teachingDetails']),
              mode: json['mode']?.toString(),
+            pincode:json['pincode']?.toString()
     );
   }
 
@@ -205,6 +209,7 @@ class TutorProfileData {
       'updated_at': updatedAt,
       'teaching_details': teachingDetails.map((e) => e.toJson()).toList(),
        'mode': mode,
+       'pincode':pincode
     };
   }
 }

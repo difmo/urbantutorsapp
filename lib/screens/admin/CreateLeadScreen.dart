@@ -1,6 +1,8 @@
 // lib/screens/tutor/create_lead_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
@@ -34,12 +36,16 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
   bool get _isEditing => widget.lead != null && widget.edit!;
   bool get _isRepost => widget.lead != null && widget.repost!;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
+  final _zipcodeCtrl = TextEditingController();
   // --- lead/user meta ---
   String? leadStatus; // "1" → active/requested, anything else → no request yet
   String? userName;
   String? userPhone;
   bool get hasActiveLead => leadStatus == "1";
+  String? _latitude;
+  String? _longitude;
+  String? _placeId;
+  bool _locLoading = false;
   Future<void> _loadUserMeta() async {
     try {
       final s = await StorageService.getUserLeadStatus(); // returns "0"/"1"?
@@ -91,6 +97,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
       }
       await _hydrateFromLeadIfEditing();
     });
+    _getCurrentLocation();
   }
 
   String _initial(String? name) {
@@ -147,41 +154,8 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
   static const _modes = <String>['Online', 'Offline', 'Hybrid'];
   static const _genders = <String>['Male', 'Female', 'Other'];
   static const _maxHitsList = <String>['1', '2', '3'];
-  static const _states = <String>[
-    "Andhra Pradesh",
-    "Arunachal Pradesh",
-    "Assam",
-    "Bihar",
-    "Chhattisgarh",
-    "Goa",
-    "Gujarat",
-    "Haryana",
-    "Himachal Pradesh",
-    "Jharkhand",
-    "Karnataka",
-    "Kerala",
-    "Madhya Pradesh",
-    "Maharashtra",
-    "Manipur",
-    "Meghalaya",
-    "Mizoram",
-    "Nagaland",
-    "Odisha",
-    "Punjab",
-    "Rajasthan",
-    "Sikkim",
-    "Tamil Nadu",
-    "Telangana",
-    "Tripura",
-    "Uttar Pradesh",
-    "Uttarakhand",
-    "West Bengal",
-    "Delhi"
-  ];
-  final List<Map<String, String>> _supportAgents = const [
-    {'name': 'Raj', 'number': '+91 9123456780'},
-    {'name': 'Neha', 'number': '+91 95826 99555'},
-  ];
+
+
 
   @override
   void dispose() {
@@ -195,6 +169,69 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
     super.dispose();
   }
 
+
+  // -------------------- Location Logic --------------------
+  Future<void> _getCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        Get.snackbar('Error', 'Location services are disabled');
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          Get.snackbar('Error', 'Location permission denied');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        Get.snackbar('Error', 'Location permissions are permanently denied');
+        return;
+      }
+
+      if (mounted) setState(() => _locLoading = true);
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      String? postalCode;
+      try {
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
+        if (placemarks.isNotEmpty) {
+          postalCode = placemarks.first.postalCode;
+        }
+      } catch (e) {
+        debugPrint('Failed to get postal code: $e');
+      }
+
+      if (mounted) {
+        setState(() {
+          _latitude = position.latitude.toString();
+          _longitude = position.longitude.toString();
+          if (postalCode != null && postalCode.isNotEmpty) {
+            _zipcodeCtrl.text = postalCode;
+          }
+          _locLoading = false;
+        });
+        Get.snackbar('Success', 'Location retrieved successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green.shade100);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _locLoading = false);
+      Get.snackbar('Error', 'Failed to get location: $e');
+    }
+  }
+
+  // -------------------- Save / Update --------------------
   // ---------- Helpers for prefill ----------
   String _norm(String? s) => (s ?? '').trim().toLowerCase();
 
@@ -318,21 +355,23 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
     if (userId == null) return _toast('User not found. Please login again.');
 
     final req = LeadCreateRequest(
-      name: nameCtrl.text.trim()??"Test",
-      mobile: phoneCtrl.text.trim(),
-      boardId: boardId!.toString(),
-      classId: classId!.toString(),
-      subjectId: subjectId!.toString(),
-      location: locText,
-      state: selectedState ?? '',
-      mode: teachingMode ?? '',
-      fee: feeCtrl.text.trim(),
-      userId: userId,
-      tutorGender: tutorGender ?? 'Any',
-      maxHits: maxHits!,
-      supportAgent: selectedSupportAgent ?? '',
-      leadId: _isEditing ? (widget.lead!.id.toString() ?? '') : '',
-    );
+        name: nameCtrl.text.trim() ?? "Test",
+        mobile: phoneCtrl.text.trim(),
+        boardId: boardId!.toString(),
+        classId: classId!.toString(),
+        subjectId: subjectId!.toString(),
+        location: locText,
+        mode: teachingMode ?? '',
+        fee: feeCtrl.text.trim(),
+        userId: userId,
+        tutorGender: tutorGender ?? 'Any',
+        maxHits: maxHits!,
+        supportAgent: selectedSupportAgent ?? '',
+        leadId: _isEditing ? (widget.lead!.id.toString() ?? '') : '',
+        pincode: _zipcodeCtrl.text.toString(),
+        latitude: _latitude!,
+        longitude: _latitude!,
+        place_id: _placeId!);
 
     if (_submitting) return;
     setState(() => _submitting = true);
@@ -690,16 +729,15 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                DropdownButtonFormField<String>(
-                  isExpanded: true,
-                  value: selectedState,
-                  decoration: _dec('State'),
-                  items: _states
-                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                      .toList(),
-                  onChanged: (v) => setState(() => selectedState = v),
-                  validator: (v) => v == null ? 'Required' : null,
-                ),
+             Expanded(
+              child: _buildTextField(
+                label: 'Zipcode',
+                controller: _zipcodeCtrl,
+                icon: Icons.pin_drop_outlined,
+                keyboardType: TextInputType.number,
+                validator: (v) => (v?.length ?? 0) < 6 ? 'Invalid' : null,
+              ),
+            ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   isExpanded: true,
@@ -811,6 +849,54 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
           ],
         ),
       );
+      
+
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    IconData? icon,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    String? Function(String?)? validator,
+    FocusNode? focusNode,
+    Widget? suffix,
+    Function(String)? onSubmitted,
+  }) {
+    return TextFormField(
+      controller: controller,
+      focusNode: focusNode,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      validator: validator,
+      onFieldSubmitted: onSubmitted,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon:
+            icon != null ? Icon(icon, color: Colors.grey.shade600) : null,
+        suffixIcon: suffix != null
+            ? Padding(padding: const EdgeInsets.all(12), child: suffix)
+            : null,
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.primaryColor, width: 2),
+        ),
+      ),
+    );
+  }
+
+ 
 }
 
 class _Header extends StatelessWidget {
@@ -873,6 +959,8 @@ class _Header extends StatelessWidget {
       ],
     );
   }
+
+  
 }
 
 class RangeIntFormatter extends TextInputFormatter {

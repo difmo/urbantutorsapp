@@ -146,7 +146,7 @@ class _OTPScreenState extends State<OTPScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("${e.toString()}"),
+          content: Text(e.toString()),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 3),
         ),

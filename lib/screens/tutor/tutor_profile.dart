@@ -1,4 +1,3 @@
-// tutor_profile_screen.dart
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
@@ -65,11 +64,15 @@ class _TutorProfileState extends State<TutorProfile> {
   final _fbPageLinkCtrl = TextEditingController();
   final _instaLinkCtrl = TextEditingController();
   final _teleLinkCtrl = TextEditingController();
+  final _zipcodeCtrl = TextEditingController();
+
+  // Fee Options
   final List<int> minOptions = [for (int v = 100; v <= 1000; v += 100) v];
   final List<int> maxOptionsBase = [for (int v = 300; v <= 3000; v += 100) v];
 
   int? selectedFeeMin; // 100..1000
   int? selectedFeeMax; // 300..3000
+
   // Multi-select state
   final List<int> _selBoardIds = [];
   final List<int> _selClassIds = [];
@@ -78,23 +81,11 @@ class _TutorProfileState extends State<TutorProfile> {
   // Mode & State
   static const _modes = <String>['Online', 'Offline', 'Any'];
   String? modeVal;
-  String? stateVal;
-  static const _states = <String>[
-    'Delhi',
-    'Uttar Pradesh',
-    'Haryana',
-    'Maharashtra',
-    'Karnataka',
-    'Tamil Nadu'
-  ];
 
   // Image picker
   final ImagePicker _picker = ImagePicker();
   XFile? _profileImage;
   String? _profileImageUrl; // from server
-
-  // ID Details
-  final _zipcodeCtrl = TextEditingController();
 
   // Location
   String? _latitude;
@@ -141,6 +132,7 @@ class _TutorProfileState extends State<TutorProfile> {
     _fbPageLinkCtrl.dispose();
     _instaLinkCtrl.dispose();
     _teleLinkCtrl.dispose();
+    _zipcodeCtrl.dispose();
     super.dispose();
   }
 
@@ -160,8 +152,6 @@ class _TutorProfileState extends State<TutorProfile> {
     return s.toList();
   }
 
-  /// Convert `teachingDetails` (which may be List<Map> or List<TeachingDetails>)
-  /// into unique lists for board/class/subject ids.
   Map<String, List<int>> _listFromTeachingDetails(dynamic teachingDetails) {
     final List<int?> boards = [];
     final List<int?> classes = [];
@@ -170,7 +160,6 @@ class _TutorProfileState extends State<TutorProfile> {
     if (teachingDetails is Iterable) {
       for (final item in teachingDetails) {
         try {
-          // Case 1: item is already a model instance with fields `boardId`, `classId`, `subjectId`
           if (item is TeachingDetails) {
             if (item.boardId != null) boards.add(item.boardId);
             if (item.classId != null) classes.add(item.classId);
@@ -178,7 +167,6 @@ class _TutorProfileState extends State<TutorProfile> {
             continue;
           }
 
-          // Case 2: item is Map<String, dynamic>
           if (item is Map<String, dynamic>) {
             final b = item['board_id'];
             final c = item['class_id'];
@@ -195,28 +183,14 @@ class _TutorProfileState extends State<TutorProfile> {
             }
             continue;
           }
-
-          // Case 3: other jagged structures (try reflection-ish)
-          final bm = item?.toString();
-          // ignore — item unrecognized
-        } catch (_) {
-          // ignore malformed entries
-        }
+        } catch (_) {}
       }
-    }
-
-    List<int> uniqueInts(Iterable<int?> items) {
-      final s = <int>{};
-      for (final i in items) {
-        if (i != null && i > 0) s.add(i);
-      }
-      return s.toList();
     }
 
     return {
-      'board_id': uniqueInts(boards),
-      'class_id': uniqueInts(classes),
-      'subject_id': uniqueInts(subjects),
+      'board_id': _uniqueInts(boards),
+      'class_id': _uniqueInts(classes),
+      'subject_id': _uniqueInts(subjects),
     };
   }
 
@@ -224,10 +198,8 @@ class _TutorProfileState extends State<TutorProfile> {
     final p = _p.tutorprofileData.value;
     if (p == null) return;
 
-    // extract teaching ids immediately (no UI mutation yet)
     final lists = _listFromTeachingDetails(p.teachingDetails);
 
-    // populate the selections first
     _selBoardIds
       ..clear()
       ..addAll(lists['board_id'] ?? []);
@@ -238,16 +210,12 @@ class _TutorProfileState extends State<TutorProfile> {
       ..clear()
       ..addAll(lists['subject_id'] ?? []);
 
-    // If we have a selected board, ensure LeadMeta has classes loaded for it
     if (_selBoardIds.isNotEmpty) {
       try {
         await _leadMeta.loadClasses(_selBoardIds.first);
-      } catch (_) {
-        // ignore load error — UI will still show selections but labels may be missing
-      }
+      } catch (_) {}
     }
 
-    // If we have a selected class and board, ensure subjects loaded
     if (_selBoardIds.isNotEmpty && _selClassIds.isNotEmpty) {
       try {
         await _leadMeta.loadSubjects1(
@@ -255,12 +223,11 @@ class _TutorProfileState extends State<TutorProfile> {
       } catch (_) {}
     }
 
-    // Now update UI on next frame (so controllers & lists are ready for label lookups)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      selectedFeeMin = p.minAmount!.toInt() ?? 0;
-      selectedFeeMax = p.maxAmount!.toInt() ?? 0;
-      // basic fields
+      selectedFeeMin = p.minAmount?.toInt() ?? 0;
+      selectedFeeMax = p.maxAmount?.toInt() ?? 0;
+
       _nameCtrl.text = (p.teacherName ?? '').toString().trim();
       _emailCtrl.text = (p.email ?? '').toString().trim();
       _localityCtrl.text = (p.location ?? '').toString().trim();
@@ -269,40 +236,33 @@ class _TutorProfileState extends State<TutorProfile> {
       _fbPageLinkCtrl.text = (p.fbLink ?? '').toString();
       _instaLinkCtrl.text = (p.instaLink ?? '').toString();
       _teleLinkCtrl.text = (p.whLink ?? '').toString();
-      stateVal = (p.state ?? '').toString();
-      _zipcodeCtrl.text = stateVal!;
-      // Normalize `mode` coming from server to match dropdown items
+      _zipcodeCtrl.text = (p.pincode ?? '').toString();
+
       String? rawMode = (p.mode ?? '').toString().trim();
       String? normalizedMode;
       if (rawMode.isNotEmpty) {
         final low = rawMode.toLowerCase();
         if (low == 'online') {
           normalizedMode = 'Online';
-        } else if (low == 'offline')
+        } else if (low == 'offline') {
           normalizedMode = 'Offline';
-        else if (low == 'any')
+        } else if (low == 'any') {
           normalizedMode = 'Any';
-        else {
-          // server sent something unexpected — keep raw but capitalise first letter
-          normalizedMode = rawMode[0].toUpperCase() + rawMode.substring(1);
+        } else {
+          // Try to match case-insensitive
+          final match = _modes.firstWhere((m) => m.toLowerCase() == low,
+              orElse: () => 'Online');
+          normalizedMode = match;
         }
       } else {
         normalizedMode = "Online";
       }
 
-      // image url
       _profileImageUrl = _resolveImageUrl(p.profilePicture);
 
-      // Final UI update once
       setState(() {
         modeVal = normalizedMode;
       });
-
-      // Helpful debug logs — remove in production
-      debugPrint(
-          'hydrate: server mode="$rawMode" normalized="$normalizedMode"');
-      debugPrint(
-          'hydrate: modeVal="$modeVal" boardIds=$_selBoardIds classIds=$_selClassIds subjectIds=$_selSubjectIds');
     });
   }
 
@@ -397,7 +357,6 @@ class _TutorProfileState extends State<TutorProfile> {
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      // Reverse Geocoding
       String? postalCode;
       try {
         List<Placemark> placemarks = await placemarkFromCoordinates(
@@ -433,7 +392,13 @@ class _TutorProfileState extends State<TutorProfile> {
   // -------------------- Save / Update --------------------
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      Get.snackbar('Error', 'Please fill all required fields',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.redAccent,
+          colorText: Colors.white);
+      return;
+    }
 
     setState(() => _saving = true);
     try {
@@ -447,23 +412,19 @@ class _TutorProfileState extends State<TutorProfile> {
         return;
       }
 
-      // Only convert images to base64 if user picked new ones
       final profileBase64 = await _fileToBase64(_profileImage);
 
-      //Ensure unique id lists
       final boardIds = _uniqueInts(_selBoardIds);
       final classIds = _uniqueInts(_selClassIds);
       final subjectIds = _uniqueInts(_selSubjectIds);
 
       final experienceYears = int.tryParse(_expCtrl.text.trim()) ?? 0;
 
-      // Build payload matching example you provided
       final payload = {
         "user_id": userId,
         "email": _emailCtrl.text.trim(),
         "location": _localityCtrl.text.trim(),
-        "state": stateVal ?? '',
-        "zipcode": _zipcodeCtrl.text.trim(),
+        "pincode": _zipcodeCtrl.text.trim(),
         "qualification": _qualificationCtrl.text.trim(),
         "min_amount": selectedFeeMin ?? 0,
         "max_amount": selectedFeeMax ?? 0,
@@ -479,9 +440,8 @@ class _TutorProfileState extends State<TutorProfile> {
         "insta_link": _instaLinkCtrl.text.trim(),
         "wh_link": _teleLinkCtrl.text.trim(),
       };
-      //Add base64 fields only if the user picked them
       if (profileBase64 != null) payload["profile_picture"] = profileBase64;
-      debugPrint('Update payload: ${jsonEncode(payload)}');
+
       final ok = await _p.updateTutorProfile(payload);
       if (ok == true) {
         Get.snackbar('Success', 'Profile Updated Successfully',
@@ -492,15 +452,13 @@ class _TutorProfileState extends State<TutorProfile> {
         await _hydrate();
         setState(() => _profileImage = null);
       } else {
-        // _p.updateTutorProfile should itself show snackbar on error; but show fallback
         Get.snackbar('Error', 'Failed to update profile',
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.redAccent,
             colorText: Colors.white);
       }
-    } catch (e, st) {
-      debugPrint('Failed save: $e\n$st');
-      Get.snackbar('Error', 'Failed to update profile',
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to update profile: $e',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.redAccent,
           colorText: Colors.white);
@@ -509,59 +467,712 @@ class _TutorProfileState extends State<TutorProfile> {
     }
   }
 
-  // -------------------- UI helpers (unchanged) --------------------
-  InputDecoration _dec(String label,
-      {IconData? icon, Widget? suffixIcon, String? hint}) {
-    return InputDecoration(
-      labelText: label,
-      hintText: hint,
-      prefixIcon:
-          icon != null ? Icon(icon, color: AppColors.primaryColor) : null,
-      suffixIcon: suffixIcon,
-      filled: true,
-      fillColor: Colors.grey.shade100,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300)),
-      enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300)),
-      focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.primaryColor)),
+  // -------------------- UI Building --------------------
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = AppColors.primaryColor;
+    final accent = AppColors.accentColor;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA),
+      key: _scaffoldKey,
+      endDrawer: StudentDrawer(onMenuTap: (label) async {
+        if (label == 'Logout') {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isLoggedIn', false);
+          await prefs.remove('user_name');
+          await prefs.remove('user_phone');
+          await prefs.remove('user_role');
+          await StorageService.clearTokenAndRole();
+          await StorageService.clear();
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Logged out successfully')));
+          Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const SplashScreen()),
+              (route) => false);
+        }
+      }),
+      body: Obx(() {
+        final loading = _p.isLoading.value && _p.tutorprofileData.value == null;
+        if (loading) return const Center(child: CircularProgressIndicator());
+
+        return CustomScrollView(
+          slivers: [
+            _buildSliverAppBar(primary, accent),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      _buildProfileImage(),
+                      const SizedBox(height: 24),
+                      _buildBasicInfoSection(),
+                      const SizedBox(height: 16),
+                      _buildProfessionalInfoSection(),
+                      const SizedBox(height: 16),
+                      _buildLocationSection(),
+                      const SizedBox(height: 16),
+                      _buildSocialLinksSection(),
+                      const SizedBox(height: 32),
+                      _buildSaveButton(),
+                      const SizedBox(height: 16),
+                      _buildShareButton(),
+                      const SizedBox(height: 40),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      }),
     );
   }
 
-  Widget _sectionCard({required String title, required List<Widget> children}) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        ...children,
-      ]),
+  Widget _buildSliverAppBar(Color primary, Color accent) {
+    return SliverAppBar(
+      expandedHeight: 60.0,
+      floating: false,
+      pinned: true,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      flexibleSpace: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [primary, accent],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: FlexibleSpaceBar(
+          titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
+          title: Obx(() {
+            final wallet = _c.myCoins.value;
+            final balanceNum = _toNum(wallet?.available);
+            final balanceText = balanceNum.toStringAsFixed(0);
+
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(width: 32),
+                const Text(
+                  "Edit Profile",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                InkWell(
+                  onTap: () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const CoinsStudentScreen()));
+                  },
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withOpacity(0.5)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.monetization_on,
+                            color: Colors.amber, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          "$balanceText Coins",
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 10),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              ],
+            );
+          }),
+        ),
+      ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.menu, color: Colors.white),
+          onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
+        ),
+      ],
     );
   }
 
-  Widget _textField(String label, TextEditingController c,
-      {required IconData icon,
-      String? hint,
-      TextInputType? keyboardType,
-      List<TextInputFormatter>? inputFormatters,
-      String? Function(String?)? validator}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: TextFormField(
-          controller: c,
-          keyboardType: keyboardType,
-          inputFormatters: inputFormatters,
-          decoration: _dec(label, icon: icon, hint: hint),
-          validator: validator ??
-              (v) => (v == null || v.trim().isEmpty) ? 'Required' : null),
+  Widget _buildProfileImage() {
+    final prof = _p.tutorprofileData.value;
+    return Center(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.primaryColor, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: CircleAvatar(
+              radius: 50,
+              backgroundImage: _avatarProvider(),
+              backgroundColor: Colors.grey.shade200,
+              child: _avatarProvider() == null
+                  ? Text(
+                      (prof?.teacherName ?? '').trim().isEmpty
+                          ? 'T'
+                          : (prof?.teacherName ?? 'T')
+                              .trim()
+                              .characters
+                              .first
+                              .toUpperCase(),
+                      style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryColor),
+                    )
+                  : null,
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: InkWell(
+              onTap: _showPickerOptions,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child:
+                    const Icon(Icons.camera_alt, size: 18, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
+
+  Widget _buildSectionCard(
+      {required String title, required List<Widget> children}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF333333),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBasicInfoSection() {
+    return _buildSectionCard(
+      title: 'Basic Information',
+      children: [
+        _buildTextField(
+          label: 'Full Name',
+          controller: _nameCtrl,
+          icon: Icons.person_outline,
+          validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+        ),
+        const SizedBox(height: 12),
+        _buildTextField(
+          label: 'Email',
+          controller: _emailCtrl,
+          icon: Icons.email_outlined,
+          keyboardType: TextInputType.emailAddress,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfessionalInfoSection() {
+    return _buildSectionCard(
+      title: 'Professional Details',
+      children: [
+        _buildMultiSelectTile(
+          label: 'Boards',
+          selectedIds: _selBoardIds,
+          options: _boardOptions(),
+          onTap: () async {
+            final picked = await _showMultiSelect(
+              context,
+              title: 'Select Boards',
+              options: _boardOptions(),
+              initial: _selBoardIds,
+            );
+            if (picked != null) {
+              setState(() {
+                _selBoardIds
+                  ..clear()
+                  ..addAll(picked);
+                _selClassIds.clear();
+                _selSubjectIds.clear();
+              });
+              if (_selBoardIds.isNotEmpty) {
+                await _leadMeta.loadClasses(_selBoardIds.first);
+              }
+            }
+          },
+        ),
+        const SizedBox(height: 12),
+        _buildMultiSelectTile(
+          label: 'Classes',
+          selectedIds: _selClassIds,
+          options: _classOptions(),
+          onTap: () async {
+            if (_selBoardIds.isEmpty) {
+              Get.snackbar('Notice', 'Please select a Board first');
+              return;
+            }
+            if (_leadMeta.classes.isEmpty) {
+              await _leadMeta.loadClasses(_selBoardIds.first);
+            }
+            final picked = await _showMultiSelect(
+              context,
+              title: 'Select Classes',
+              options: _classOptions(),
+              initial: _selClassIds,
+            );
+            if (picked != null) {
+              setState(() {
+                _selClassIds
+                  ..clear()
+                  ..addAll(picked);
+                _selSubjectIds.clear();
+              });
+              if (_selBoardIds.isNotEmpty && _selClassIds.isNotEmpty) {
+                await _leadMeta.loadSubjects1(
+                    selClassIds: _selClassIds, selBoardIds: _selBoardIds);
+              }
+            }
+          },
+        ),
+        const SizedBox(height: 12),
+        _buildMultiSelectTile(
+          label: 'Subjects',
+          selectedIds: _selSubjectIds,
+          options: _subjectOptions(),
+          onTap: () async {
+            if (_selClassIds.isEmpty) {
+              Get.snackbar('Notice', 'Please select Classes first');
+              return;
+            }
+            final picked = await _showMultiSelect(
+              context,
+              title: 'Select Subjects',
+              options: _subjectOptions(),
+              initial: _selSubjectIds,
+            );
+            if (picked != null) {
+              setState(() {
+                _selSubjectIds
+                  ..clear()
+                  ..addAll(picked);
+              });
+            }
+          },
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildDropdown<int>(
+                label: 'Min Fee',
+                value: selectedFeeMin,
+                items: minOptions
+                    .map((v) =>
+                        DropdownMenuItem(value: v, child: Text('₹$v/Hr')))
+                    .toList(),
+                onChanged: (val) {
+                  setState(() {
+                    selectedFeeMin = val;
+                    final clampMinForMax =
+                        (val == null) ? 300 : (val < 300 ? 300 : val);
+                    if (selectedFeeMax != null &&
+                        selectedFeeMax! < clampMinForMax) {
+                      selectedFeeMax = clampMinForMax;
+                    }
+                  });
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildDropdown<int>(
+                label: 'Max Fee',
+                value: selectedFeeMax,
+                items: maxOptionsBase
+                    .where((v) =>
+                        v >=
+                        ((selectedFeeMin == null)
+                            ? 300
+                            : (selectedFeeMin! < 300 ? 300 : selectedFeeMin!)))
+                    .map((v) =>
+                        DropdownMenuItem(value: v, child: Text('₹$v/Hr')))
+                    .toList(),
+                onChanged: (val) => setState(() => selectedFeeMax = val),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _buildTextField(
+          label: 'Qualification',
+          controller: _qualificationCtrl,
+          icon: Icons.school_outlined,
+        ),
+        const SizedBox(height: 12),
+        _buildTextField(
+          label: 'Experience (Years)',
+          controller: _expCtrl,
+          icon: Icons.work_history_outlined,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        ),
+        const SizedBox(height: 12),
+        _buildDropdown<String>(
+          label: 'Teaching Mode',
+          value: modeVal,
+          items: _modes
+              .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+              .toList(),
+          onChanged: (v) => setState(() => modeVal = v),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLocationSection() {
+    return _buildSectionCard(
+      title: 'Location Details',
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildTextField(
+                label: 'Zipcode',
+                controller: _zipcodeCtrl,
+                icon: Icons.pin_drop_outlined,
+                keyboardType: TextInputType.number,
+                validator: (v) => (v?.length ?? 0) < 6 ? 'Invalid' : null,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              height: 56,
+              width: 56,
+              decoration: BoxDecoration(
+                color: AppColors.primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: _locLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : IconButton(
+                      onPressed: _getCurrentLocation,
+                      icon: Icon(Icons.my_location,
+                          color: AppColors.primaryColor),
+                    ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Obx(() {
+          final searching = _loc.isSearching.value;
+          final opts = _loc.suggestions;
+          return Autocomplete<String>(
+            optionsBuilder: (TextEditingValue tev) {
+              final q = tev.text.trim();
+              if (q.isEmpty) return const Iterable<String>.empty();
+              return opts;
+            },
+            onSelected: (val) {
+              _localityCtrl.text = val;
+              _loc.onQueryChanged('');
+            },
+            fieldViewBuilder: (context, textCtrl, focusNode, onFieldSubmitted) {
+              if (textCtrl.text != _localityCtrl.text) {
+                textCtrl.text = _localityCtrl.text;
+                textCtrl.selection = TextSelection.fromPosition(
+                    TextPosition(offset: textCtrl.text.length));
+              }
+              textCtrl.addListener(() {
+                final q = textCtrl.text;
+                if (_localityCtrl.text != q) {
+                  _localityCtrl.text = q;
+                  _loc.onQueryChanged(q);
+                }
+              });
+              return _buildTextField(
+                label: 'Locality',
+                controller: textCtrl,
+                focusNode: focusNode,
+                icon: Icons.location_on_outlined,
+                suffix: searching
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : null,
+                onSubmitted: (_) => onFieldSubmitted(),
+              );
+            },
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildSocialLinksSection() {
+    return _buildSectionCard(
+      title: 'Social Links',
+      children: [
+        _buildTextField(
+          label: 'Facebook',
+          controller: _fbPageLinkCtrl,
+          icon: Icons.facebook,
+        ),
+        const SizedBox(height: 12),
+        _buildTextField(
+          label: 'Instagram',
+          controller: _instaLinkCtrl,
+          icon: Icons.camera_alt_outlined,
+        ),
+        const SizedBox(height: 12),
+        _buildTextField(
+          label: 'WhatsApp/Telegram',
+          controller: _teleLinkCtrl,
+          icon: Icons.message_outlined,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSaveButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: FilledButton(
+        onPressed: _saving ? null : _save,
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primaryColor,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: _saving
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                    color: Colors.white, strokeWidth: 2))
+            : const Text(
+                'Save Changes',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildShareButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: OutlinedButton.icon(
+        onPressed: _shareProfile,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primaryColor,
+          side: BorderSide(color: AppColors.primaryColor),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        icon: const Icon(Icons.share),
+        label: const Text('Share Profile'),
+      ),
+    );
+  }
+
+  // -------------------- UI Components --------------------
+
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    IconData? icon,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    String? Function(String?)? validator,
+    FocusNode? focusNode,
+    Widget? suffix,
+    Function(String)? onSubmitted,
+  }) {
+    return TextFormField(
+      controller: controller,
+      focusNode: focusNode,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      validator: validator,
+      onFieldSubmitted: onSubmitted,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon:
+            icon != null ? Icon(icon, color: Colors.grey.shade600) : null,
+        suffixIcon: suffix != null
+            ? Padding(padding: const EdgeInsets.all(12), child: suffix)
+            : null,
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.primaryColor, width: 2),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDropdown<T>({
+    required String label,
+    required T? value,
+    required List<DropdownMenuItem<T>> items,
+    required Function(T?) onChanged,
+  }) {
+    return DropdownButtonFormField<T>(
+      value: value,
+      items: items,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: label,
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.primaryColor, width: 2),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMultiSelectTile({
+    required String label,
+    required List<int> selectedIds,
+    required List<OptionInt> options,
+    required VoidCallback onTap,
+  }) {
+    final selectedNames = _labelsFor(selectedIds, options);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label,
+                style: TextStyle(color: Colors.grey.shade700, fontSize: 12)),
+            const SizedBox(height: 8),
+            if (selectedNames.isEmpty)
+              Text('Tap to select',
+                  style: TextStyle(color: Colors.grey.shade500, fontSize: 16))
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: selectedNames
+                    .map((n) => Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color: AppColors.primaryColor.withOpacity(0.3)),
+                          ),
+                          child: Text(
+                            n,
+                            style: TextStyle(
+                              color: AppColors.primaryColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ))
+                    .toList(),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // -------------------- Data Helpers --------------------
 
   List<OptionInt> _boardOptions() =>
       (_master.masterData.value?.data.boardLead ?? [])
@@ -582,715 +1193,29 @@ class _TutorProfileState extends State<TutorProfile> {
     return selectedIds.map((id) => map[id] ?? '#$id').toList();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final primary = AppColors.primaryColor;
-    final accent = AppColors.accentColor;
+  // -------------------- Share Logic --------------------
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      key: _scaffoldKey,
-      extendBodyBehindAppBar: true,
-      endDrawer: StudentDrawer(onMenuTap: (label) async {
-        if (label == 'Logout') {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isLoggedIn', false);
-          await prefs.remove('user_name');
-          await prefs.remove('user_phone');
-          await prefs.remove('user_role');
-          await StorageService.clearTokenAndRole();
-          await StorageService.clear();
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Logged out successfully')));
-          Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => const SplashScreen()),
-              (route) => false);
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('Navigating to $label')));
-        }
-      }),
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        toolbarHeight: 76,
-        titleSpacing: 0,
-        systemOverlayStyle: const SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: Brightness.light,
-            statusBarBrightness: Brightness.dark),
-        flexibleSpace: Container(
-            decoration: BoxDecoration(
-                gradient: LinearGradient(
-                    colors: [primary, accent],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight))),
-        title: Obx(() {
-          final loadingCoins = _c.loadingCoins.value || _c.loadingMyCoins.value;
-          final wallet = _c.myCoins.value;
-          final balanceNum = _toNum(wallet?.available);
-          final balanceText = balanceNum.toStringAsFixed(0);
-
-          final prof = _p.tutorprofileData.value;
-          final name = (prof?.teacherName ?? '').trim();
-          final displayName =
-              name.isEmpty ? 'Tutor' : name.split(RegExp(r'\s+')).first;
-
-          if (loadingCoins && wallet == null && prof == null) {
-            return const SizedBox(
-                height: 24,
-                child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: CircularProgressIndicator(color: Colors.white)));
-          }
-          return _Header(
-              primary: primary,
-              accent: accent,
-              initial:
-                  (displayName.isEmpty ? 'T' : displayName[0].toUpperCase()),
-              greeting: "Edit Profile",
-              name: displayName,
-              balance: balanceText,
-              onCoinTap: () {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const CoinsStudentScreen()));
-              });
-        }),
-        actions: [
-          Builder(
-            builder: (ctx) => IconButton(
-                icon: const Icon(Icons.menu, color: Colors.white, size: 45),
-                onPressed: () => Scaffold.maybeOf(ctx)?.openEndDrawer()),
-          ),
-        ],
-      ),
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          SizedBox(
-            height: 48,
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: _saving ? null : _save,
-              style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12))),
-              icon: _saving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.check),
-              label: const Text('Save Changes'),
-            ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 48,
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _shareProfile,
-              style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primaryColor,
-                  side: BorderSide(color: AppColors.primaryColor, width: 1.6),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12))),
-              icon: const Icon(Icons.ios_share_rounded),
-              label: const Text('Share Your Profile'),
-            ),
-          ),
-        ]),
-      ),
-      body: Obx(() {
-        final loading = _p.isLoading.value && _p.tutorprofileData.value == null;
-        if (loading) return const Center(child: CircularProgressIndicator());
-
-        final prof = _p.tutorprofileData.value;
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-          child: Form(
-            key: _formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const SizedBox(height: 100),
-              Center(
-                child: SizedBox(
-                  width: 120,
-                  height: 120,
-                  child: Stack(clipBehavior: Clip.none, children: [
-                    Positioned.fill(
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                            border: Border.all(
-                                color: AppColors.primaryColor, width: 1),
-                            shape: BoxShape.circle),
-                        child: CircleAvatar(
-                          backgroundImage: _avatarProvider(),
-                          backgroundColor: Colors.grey.shade300,
-                          child: _avatarProvider() == null
-                              ? Text(
-                                  ((prof?.teacherName ?? 'T').trim().isEmpty
-                                      ? 'T'
-                                      : prof!.teacherName!
-                                          .trim()
-                                          .characters
-                                          .first
-                                          .toUpperCase()),
-                                  style: const TextStyle(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white))
-                              : null,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                        bottom: -6,
-                        right: -6,
-                        child: InkWell(
-                            onTap: _showPickerOptions,
-                            child: CircleAvatar(
-                                radius: 18,
-                                backgroundColor: AppColors.primaryColor,
-                                child: const Icon(Icons.camera_alt,
-                                    size: 16, color: Colors.white)))),
-                  ]),
-                ),
-              ),
-
-              // Basic
-              _sectionCard(
-                title: 'Basic:',
-                children: [
-                  _textField('Full Name', _nameCtrl,
-                      icon: Icons.person, hint: 'Your name'),
-                  const SizedBox(height: 8),
-                  _textField('Email', _emailCtrl,
-                      icon: Icons.email,
-                      hint: 'Email',
-                      keyboardType: TextInputType.emailAddress),
-                  const SizedBox(height: 8),
-
-                  // Zipcode & Location
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _textField('Zipcode', _zipcodeCtrl,
-                            icon: Icons.pin_drop,
-                            hint: 'Zipcode',
-                            keyboardType: TextInputType.number, validator: (v) {
-                          if (v == null || v.trim().isEmpty) return 'Required';
-                          if (v.trim().length < 6) return 'Invalid Zipcode';
-                          return null;
-                        }),
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        margin: const EdgeInsets.only(top: 6),
-                        height: 56,
-                        width: 56,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: _locLoading
-                            ? const Center(child: CircularProgressIndicator())
-                            : IconButton(
-                                onPressed: _getCurrentLocation,
-                                icon: const Icon(Icons.my_location,
-                                    color: Colors.blue),
-                                tooltip: 'Get Current Location',
-                              ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ),
-
-              // Professional (multi-selects + experience)
-              _sectionCard(
-                title: 'Professional:',
-                children: [
-                  // Boards
-                  SizedBox(
-                    width: double.infinity,
-                    child: _MultiSelectTile(
-                      label: 'Boards you Teach : ',
-                      selectedNames: _labelsFor(_selBoardIds, _boardOptions()),
-                      onTap: () async {
-                        final options = _boardOptions();
-                        final picked = await _showMultiSelect(context,
-                            title: 'Select Boards : ',
-                            options: options,
-                            initial: _selBoardIds);
-                        if (picked != null) {
-                          setState(() {
-                            _selBoardIds
-                              ..clear()
-                              ..addAll(picked);
-                            _selClassIds.clear();
-                            _selSubjectIds.clear();
-                          });
-                          if (_selBoardIds.isNotEmpty) {
-                            await _leadMeta.loadClasses(_selBoardIds.first);
-                          }
-                        }
-                      },
-                    ),
-                  ),
-
-                  // Classes
-                  Container(
-                    margin: const EdgeInsets.only(top: 16),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: _MultiSelectTile(
-                        label: 'Classes you Teach : ',
-                        selectedNames:
-                            _labelsFor(_selClassIds, _classOptions()),
-                        onTap: () async {
-                          if (_selBoardIds.isEmpty) {
-                            Get.snackbar('Select Board',
-                                'Please select at least one Board first',
-                                snackPosition: SnackPosition.BOTTOM);
-                            return;
-                          }
-                          if (_leadMeta.classes.isEmpty) {
-                            await _leadMeta.loadClasses(_selBoardIds.first);
-                          }
-                          final options = _classOptions();
-                          final picked = await _showMultiSelect(context,
-                              title: 'Select Classes',
-                              options: options,
-                              initial: _selClassIds);
-                          if (picked != null) {
-                            setState(() {
-                              _selClassIds
-                                ..clear()
-                                ..addAll(picked);
-                              _selSubjectIds.clear();
-                            });
-                            if (_selBoardIds.isNotEmpty &&
-                                _selClassIds.isNotEmpty) {
-                              await _leadMeta.loadSubjects1(
-                                  selClassIds: _selClassIds,
-                                  selBoardIds: _selBoardIds);
-                            }
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-
-                  // Subjects
-                  Container(
-                    margin: const EdgeInsets.only(top: 16),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: _MultiSelectTile(
-                        label: 'Subjects you Teach : ',
-                        selectedNames:
-                            _labelsFor(_selSubjectIds, _subjectOptions()),
-                        onTap: () async {
-                          if (_selBoardIds.isEmpty || _selClassIds.isEmpty) {
-                            Get.snackbar('Select Class',
-                                'Please select Boards and Classes first',
-                                snackPosition: SnackPosition.BOTTOM);
-                            return;
-                          }
-                          if (_leadMeta.subjects.isEmpty) {
-                            await _leadMeta.loadSubjects(
-                                classId: _selClassIds.first,
-                                boardId: _selBoardIds.first);
-                          }
-                          final options = _subjectOptions();
-                          final picked = await _showMultiSelect(context,
-                              title: 'Select Subjects',
-                              options: options,
-                              initial: _selSubjectIds);
-                          if (picked != null) {
-                            setState(() {
-                              _selSubjectIds
-                                ..clear()
-                                ..addAll(picked);
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    height: 16,
-                  ),
-                  // Fee range
-                  Row(
-                    children: [
-                      // MIN
-                      Expanded(
-                        child: DropdownButtonFormField<int>(
-                          decoration: const InputDecoration(
-                              labelText: "Select Fee Range (min)"),
-                          value: selectedFeeMin,
-                          isExpanded: true,
-                          items: minOptions
-                              .map((v) => DropdownMenuItem(
-                                  value: v, child: Text('₹$v/Hr')))
-                              .toList(),
-                          onChanged: (val) {
-                            setState(() {
-                              selectedFeeMin = val;
-                              // clamp max >= min & >= 300
-                              final clampMinForMax =
-                                  (val == null) ? 300 : (val < 300 ? 300 : val);
-                              if (selectedFeeMax != null &&
-                                  selectedFeeMax! < clampMinForMax) {
-                                selectedFeeMax = clampMinForMax;
-                              }
-                            });
-                          },
-                          validator: (v) => v == null ? 'Required' : null,
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      // MAX
-                      Expanded(
-                        child: DropdownButtonFormField<int>(
-                          decoration: const InputDecoration(
-                              labelText: "Select Fee Range (max)"),
-                          value: selectedFeeMax,
-                          isExpanded: true,
-                          items: maxOptionsBase
-                              .where((v) =>
-                                  v >=
-                                  ((selectedFeeMin == null)
-                                      ? 300
-                                      : (selectedFeeMin! < 300
-                                          ? 300
-                                          : selectedFeeMin!)))
-                              .map((v) => DropdownMenuItem(
-                                  value: v, child: Text('₹$v/Hr')))
-                              .toList(),
-                          onChanged: (val) =>
-                              setState(() => selectedFeeMax = val),
-                          validator: (v) {
-                            if (v == null) return 'Required';
-                            final minAllowed = (selectedFeeMin == null)
-                                ? 300
-                                : (selectedFeeMin! < 300
-                                    ? 300
-                                    : selectedFeeMin!);
-                            if (v < minAllowed) {
-                              return 'Must be ≥ ₹$minAllowed';
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-                  _textField('Qualification : ', _qualificationCtrl,
-                      icon: Icons.book, hint: 'Qualification : '),
-                  const SizedBox(height: 16),
-                  _textField('Experience (years) : ', _expCtrl,
-                      icon: Icons.work_outline,
-                      hint: 'e.g. 3',
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly
-                      ]),
-                ],
-              ),
-
-              // Mode
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
-                child: DropdownButtonFormField<String>(
-                  isExpanded: true,
-                  value: modeVal,
-                  decoration: _dec('Select Mode', icon: Icons.swap_calls),
-                  items: _modes
-                      .map((m) => DropdownMenuItem(value: m, child: Text(m)))
-                      .toList(),
-                  onChanged: (v) => setState(() => modeVal = v),
-                  validator: (v) => v == null ? 'Required' : null,
-                ),
-              ),
-
-              // Location
-              _sectionCard(
-                title: 'Location:',
-                children: [
-                  Obx(() {
-                    final searching = _loc.isSearching.value;
-                    final opts = _loc.suggestions;
-                    return Autocomplete<String>(
-                      optionsBuilder: (TextEditingValue tev) {
-                        final q = tev.text.trim();
-                        if (q.isEmpty) return const Iterable<String>.empty();
-                        return opts;
-                      },
-                      onSelected: (val) {
-                        _localityCtrl.text = val;
-                        _loc.onQueryChanged('');
-                      },
-                      fieldViewBuilder:
-                          (context, textCtrl, focusNode, onFieldSubmitted) {
-                        if (textCtrl.text != _localityCtrl.text) {
-                          textCtrl.text = _localityCtrl.text;
-                          textCtrl.selection = TextSelection.fromPosition(
-                              TextPosition(offset: textCtrl.text.length));
-                        }
-                        textCtrl.addListener(() {
-                          final q = textCtrl.text;
-                          if (_localityCtrl.text != q) {
-                            _localityCtrl.text = q;
-                            _loc.onQueryChanged(q);
-                          }
-                        });
-
-                        return TextFormField(
-                          controller: textCtrl,
-                          focusNode: focusNode,
-                          decoration: _dec('Locality',
-                              icon: Icons.location_on_outlined,
-                              suffixIcon: searching
-                                  ? const Padding(
-                                      padding: EdgeInsets.all(10),
-                                      child: SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(
-                                              strokeWidth: 2)))
-                                  : null),
-                          validator: (v) => (v == null || v.trim().isEmpty)
-                              ? 'Please enter locality'
-                              : null,
-                          onFieldSubmitted: (_) => onFieldSubmitted(),
-                        );
-                      },
-                    );
-                  }),
-                ],
-              ),
-
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Column(children: [
-                  _textField('Facebook Page Link', _fbPageLinkCtrl,
-                      icon: Icons.facebook, hint: 'Facebook Page Link'),
-                  _textField('Instagram Page Link', _instaLinkCtrl,
-                      icon: Icons.face, hint: 'Insta Link'),
-                  _textField('Whatsapp Community / Group Link', _teleLinkCtrl,
-                      icon: Icons.telegram, hint: 'Whatsapp Link'),
-                ]),
-              ),
-            ]),
-          ),
-        );
-      }),
-    );
-  }
-
-  // share / other helpers (kept same behavior as your original)
   Future<String> _publicProfileUrl() async {
     final uid = await StorageService.getUserId();
     return 'https://urbantutors.pro/profile/$uid';
   }
 
-  Future<String> _buildShareMessage() async {
+  Future<void> _shareProfile() async {
     final url = await _publicProfileUrl();
     final name =
         _nameCtrl.text.trim().isEmpty ? 'Tutor' : _nameCtrl.text.trim();
-    final boards = _labelsFor(_selBoardIds, _boardOptions());
-    final classes = _labelsFor(_selClassIds, _classOptions());
-    final subjects = _labelsFor(_selSubjectIds, _subjectOptions());
-    final qual = _qualificationCtrl.text.trim();
-    final exp = _expCtrl.text.trim();
-    final loc = _localityCtrl.text.trim();
+    final text = 'Check out $name\'s profile on Urban Tutors: $url';
 
-    final lines = <String>[
-      'Tutor’s @ www.urbantutors.pro',
-      'Name : $name',
-      'Boards: ${boards.isEmpty ? "-" : boards.join(", ")}',
-      'Classes: ${classes.isEmpty ? "-" : classes.join(", ")}',
-      'Subjects: ${subjects.isEmpty ? "-" : subjects.join(", ")}',
-      'Qualification: ${qual.isNotEmpty ? qual : "Test"}',
-      'Experience: ${exp.isNotEmpty ? "$exp years" : "test"}',
-      if (loc.isNotEmpty || (stateVal ?? '').isNotEmpty)
-        'Location: $loc${stateVal != null && stateVal!.isNotEmpty ? ', $stateVal' : ''}',
-      if (modeVal != null && modeVal!.isNotEmpty) 'Mode: $modeVal',
-      if (_fbPageLinkCtrl.text.trim().isNotEmpty)
-        'Facebook: ${_fbPageLinkCtrl.text.trim()}',
-      if (_instaLinkCtrl.text.trim().isNotEmpty)
-        'Instagram: ${_instaLinkCtrl.text.trim()}',
-      if (_teleLinkCtrl.text.trim().isNotEmpty)
-        'WhatsApp/Telegram: ${_teleLinkCtrl.text.trim()}',
-      '',
-      'Kindly, View My Profile @ $url',
-    ];
-
-    return lines.join('\n');
+    await Share.share(text, subject: 'Tutor Profile');
   }
-
-  Future<void> _shareGeneric() async {
-    final text = await _buildShareMessage();
-    if (_profileImage != null) {
-      await Share.shareXFiles([XFile(_profileImage!.path)],
-          text: text, subject: 'My Tutor Profile');
-    } else {
-      await Share.share(text, subject: 'My Tutor Profile');
-    }
-  }
-
-  Future<void> _shareToWhatsApp() async {
-    final url = await _publicProfileUrl();
-    final text = Uri.encodeComponent('Check out my tutor profile:\n$url');
-    final uri = Uri.parse('whatsapp://send?text=$text');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
-      await _shareGeneric();
-    }
-  }
-
-  Future<void> _copyLink() async {
-    final url = await _publicProfileUrl();
-    await Clipboard.setData(ClipboardData(text: url));
-    Get.snackbar('Copied', 'Profile link copied to clipboard',
-        snackPosition: SnackPosition.BOTTOM);
-  }
-
-  Future<void> _shareProfile() async {
-    showModalBottomSheet(
-        context: context,
-        shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(12))),
-        builder: (_) => SafeArea(
-                child: Wrap(children: [
-              ListTile(
-                  leading: const Icon(Icons.facebook),
-                  title: const Text('Share to Facebook'),
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await _shareGeneric();
-                  }),
-              ListTile(
-                  leading: const Icon(Icons.insert_page_break_rounded),
-                  title: const Text('Share to Instagram'),
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await _shareGeneric();
-                  }),
-              ListTile(
-                  leading: const Icon(Icons.share),
-                  title: const Text('Share to WhatsApp'),
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await _shareToWhatsApp();
-                  }),
-              ListTile(
-                  leading: const Icon(Icons.link),
-                  title: const Text('Copy profile link'),
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await _copyLink();
-                  }),
-            ])));
-  }
-
-  InputDecoration _fieldDec(String hint) {
-    return InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
-        isDense: true,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
-        enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
-        focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: Colors.blue, width: 1.2)));
-  }
-
-  Widget _dropdownDec(Widget child) => Theme(
-      data: Theme.of(context).copyWith(
-          canvasColor: Colors.white,
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent),
-      child: child);
 }
 
-// Helper classes (unchanged)
+// -------------------- Helper Classes --------------------
+
 class OptionInt {
   final int id;
   final String label;
   const OptionInt(this.id, this.label);
-}
-
-class _MultiSelectTile extends StatelessWidget {
-  const _MultiSelectTile(
-      {required this.label, required this.selectedNames, required this.onTap});
-  final String label;
-  final List<String> selectedNames;
-  final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade300)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label,
-              style:
-                  const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          if (selectedNames.isEmpty)
-            Text('Tap to select', style: TextStyle(color: Colors.grey.shade600))
-          else
-            Wrap(
-                spacing: 6,
-                runSpacing: -6,
-                children: selectedNames
-                    .map((n) => Container(
-                        margin: const EdgeInsets.all(4),
-                        child: Chip(
-                            label: Text(n),
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                            visualDensity: const VisualDensity(
-                                vertical: -4, horizontal: -4))))
-                    .toList()),
-        ]),
-      ),
-    );
-  }
 }
 
 Future<List<int>?> _showMultiSelect(BuildContext context,
@@ -1301,71 +1226,65 @@ Future<List<int>?> _showMultiSelect(BuildContext context,
   return showModalBottomSheet<List<int>>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => DraggableScrollableSheet(
           expand: false,
-          initialChildSize: 0.6,
-          minChildSize: 0.4,
-          maxChildSize: 0.9,
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
           builder: (_, controller) {
             return StatefulBuilder(builder: (context, setSheetState) {
-              // Check if all items are selected
               final allSelected = options.isNotEmpty &&
                   options.every((o) => chosen.contains(o.id));
 
               return Column(children: [
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Container(
-                    width: 36,
-                    height: 4,
+                    width: 40,
+                    height: 5,
                     decoration: BoxDecoration(
-                        color: Colors.black12,
-                        borderRadius: BorderRadius.circular(4))),
-                const SizedBox(height: 10),
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(10))),
+                const SizedBox(height: 16),
                 Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Row(children: [
                       Text(title,
                           style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w700)),
+                              fontSize: 18, fontWeight: FontWeight.bold)),
                       const Spacer(),
                       TextButton(
                           onPressed: () => Navigator.pop(ctx, initial),
-                          child: const Text('CANCEL')),
-                      const SizedBox(width: 4),
+                          child: const Text('Cancel')),
                       FilledButton(
                           onPressed: () => Navigator.pop(ctx, chosen.toList()),
-                          child: const Text('APPLY')),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.primaryColor,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: const Text('Apply')),
                     ])),
-                const Divider(height: 1),
-
-                // Select All checkbox
+                const Divider(),
                 CheckboxListTile(
-                  dense: true,
-                  title: const Text(
-                    'Select All',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.blue,
-                    ),
-                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+                  title: const Text('Select All',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
                   value: allSelected,
+                  activeColor: AppColors.primaryColor,
                   onChanged: (v) {
                     setSheetState(() {
                       if (v == true) {
-                        // Select all
                         chosen.clear();
                         chosen.addAll(options.map((o) => o.id));
                       } else {
-                        // Deselect all
                         chosen.clear();
                       }
                     });
                   },
                 ),
-                const Divider(height: 1),
-
                 Expanded(
                   child: ListView.builder(
                       controller: controller,
@@ -1374,10 +1293,11 @@ Future<List<int>?> _showMultiSelect(BuildContext context,
                         final o = options[i];
                         final checked = chosen.contains(o.id);
                         return CheckboxListTile(
-                            dense: true,
-                            title:
-                                Text(o.label, overflow: TextOverflow.ellipsis),
+                            contentPadding:
+                                const EdgeInsets.symmetric(horizontal: 20),
+                            title: Text(o.label),
                             value: checked,
+                            activeColor: AppColors.primaryColor,
                             onChanged: (v) {
                               setSheetState(() {
                                 if (v == true) {
@@ -1392,64 +1312,4 @@ Future<List<int>?> _showMultiSelect(BuildContext context,
               ]);
             });
           }));
-}
-
-// Header widget kept same as your original
-class _Header extends StatelessWidget {
-  const _Header(
-      {required this.primary,
-      required this.accent,
-      required this.onCoinTap,
-      required this.balance,
-      required this.initial,
-      required this.greeting,
-      required this.name});
-  final Color primary;
-  final Color accent;
-  final VoidCallback onCoinTap;
-  final String balance;
-  final String initial;
-  final String greeting;
-  final String name;
-  @override
-  Widget build(BuildContext context) {
-    return Row(children: [
-      const SizedBox(width: 8),
-      Expanded(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(greeting,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-                fontSize: 18)),
-      ])),
-      InkWell(
-          borderRadius: BorderRadius.circular(22),
-          onTap: onCoinTap,
-          child: ClipRRect(
-              borderRadius: BorderRadius.circular(22),
-              child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                  child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(.18),
-                          borderRadius: BorderRadius.circular(22),
-                          border: Border.all(
-                              width: 1, color: AppColors.primaryColor)),
-                      child: Row(children: [
-                        const SizedBox(width: 6),
-                        Text(balance == "0" ? "Upgrade" : "$balance coins",
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12))
-                      ]))))),
-      SizedBox(width: 8),
-    ]);
-  }
 }

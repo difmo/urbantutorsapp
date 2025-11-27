@@ -5,6 +5,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geocoding/geocoding.dart' show Placemark, placemarkFromCoordinates;
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,7 +24,7 @@ import 'package:urbantutorsapp/widgets/StudentDrawer.dart';
 
 class StudentProfileScreen extends StatefulWidget {
   const StudentProfileScreen({super.key});
-
+  
   @override
   State<StudentProfileScreen> createState() => _StudentProfileScreenState();
 }
@@ -45,11 +47,18 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   // Form state
   final _formKey = GlobalKey<FormState>();
   bool _saving = false;
+  bool _overlayLoading = false;
 
   // Text controllers
   final _nameCtrl = TextEditingController();
   final _mobileCtrl = TextEditingController();
   final _localityCtrl = TextEditingController();
+  final pinCodeController = TextEditingController();
+
+  // Location data
+  String? _latitude;
+  String? _longitude;
+  String? _placeId;
 
   // selects
   int? _boardId;
@@ -68,14 +77,14 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     if (path == null || path.isEmpty) return null;
     if (path.startsWith('http')) return path;
     // TODO: replace with your API base:
-    const base = 'https://urbantutors.pro/'; // <-- update this
+    const base = 'https://urbantutors.pro/'; 
     return '$base$path';
   }
 
   @override
   void initState() {
     super.initState();
-
+_getCurrentLocation();
     // CoinsController
     _c = Get.isRegistered<CoinsController>()
         ? Get.find<CoinsController>()
@@ -121,7 +130,11 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
         _nameCtrl.text = '';
         _mobileCtrl.text = '';
         _localityCtrl.text = '';
+        pinCodeController.text = '';
         _profileImageUrl = null;
+        _latitude = null;
+        _longitude = null;
+        _placeId = null;
         setState(() {
           _boardId = null;
           _classId = null;
@@ -134,20 +147,27 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     _nameCtrl.text = (p.studentName ?? '').trim();
     _mobileCtrl.text = (p.mobile ?? '').trim();
     _localityCtrl.text = p.location ?? '';
+    
+    // Load pincode
+    if (p.pincode != null && p.pincode! > 0) {
+      pinCodeController.text = p.pincode.toString();
+    }
+    
+    // Load location data
+    _latitude = p.latitude;
+    _longitude = p.longitude;
+    _placeId = p.placeId;
+    
     // Image from server
     _profileImageUrl = _resolveImageUrl(p.profile_picture);
-
-    // Safe parsing of dynamic IDs (could be string or int)
-    int? parseInt(dynamic v) {
-      if (v == null) return null;
-      if (v is int) return v;
-      return int.tryParse(v.toString());
-    }
 
     selectedBoardName = p.boardName;
     selectedClassName = p.courseName;
 
-    // Load classes for the board first, then set class i
+    // Load classes for the board first, then set IDs
+    if (p.boardId != null && p.boardId! > 0) {
+      await _leadMeta.loadClasses(p.boardId!);
+    }
 
     if (!mounted) return;
     setState(() {
@@ -164,6 +184,91 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     super.dispose();
   }
 
+  // Get current location
+  Future<void> _getCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        Get.snackbar('Error', 'Location services are disabled');
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          Get.snackbar('Error', 'Location permission denied');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        Get.snackbar('Error', 'Location permissions are permanently denied');
+        return;
+      }
+
+      // Show loading indicator
+      if (mounted) setState(() => _overlayLoading = true);
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      // Get address from coordinates
+      String? postalCode;
+      String? locality;
+      try {
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
+        if (placemarks.isNotEmpty) {
+          final place = placemarks.first;
+          postalCode = place.postalCode;
+          // Build locality from available address components
+          locality = [
+            place.subLocality,
+            place.locality,
+            place.subAdministrativeArea,
+            place.administrativeArea,
+          ].where((s) => s != null && s.isNotEmpty).join(', ');
+        }
+      } catch (e) {
+        debugPrint('Failed to get address details: $e');
+      }
+
+      if (mounted) {
+        setState(() {
+          _latitude = position.latitude.toString();
+          _longitude = position.longitude.toString();
+          // Use locality as place_id if available, otherwise use coordinates
+          _placeId = locality?.isNotEmpty == true 
+              ? locality 
+              : '${position.latitude},${position.longitude}';
+          
+          if (postalCode != null && postalCode.isNotEmpty) {
+            pinCodeController.text = postalCode;
+          }
+          
+          // Update locality field if we got address info
+          if (locality != null && locality.isNotEmpty) {
+            _localityCtrl.text = locality;
+          }
+          
+          _overlayLoading = false;
+        });
+        Get.snackbar('Success', 'Location retrieved successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green.shade100);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _overlayLoading = false);
+      Get.snackbar('Error', 'Failed to get location: $e');
+    }
+  }
+
+  
+  
   Future<void> _pickImage(ImageSource source) async {
     try {
       final picked = await _picker.pickImage(source: source, imageQuality: 80);
@@ -282,28 +387,16 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
         return;
       }
 
-      // Get location if possible
-      String placeId = 'unknown';
-      String latitude = '0';
-      String longitude = '0';
-      try {
-        await _loc.getCurrentLocation();
-        if (_loc.latitude.value != 0.0 || _loc.longitude.value != 0.0) {
-          latitude = _loc.latitude.value.toString();
-          longitude = _loc.longitude.value.toString();
-        }
-        if (_loc.placeId.value.isNotEmpty) {
-          placeId = _loc.placeId.value;
-        } else if (_localityCtrl.text.trim().isNotEmpty) {
-          placeId = _localityCtrl.text.trim();
-        }
-      } catch (e) {
-        debugPrint('getCurrentLocation failed: $e');
-        if (_localityCtrl.text.trim().isNotEmpty) {
-          placeId = _localityCtrl.text.trim();
-        }
-      }
+      // Get pincode from controller
+      final pincodeText = pinCodeController.text.trim();
+      final pincode = int.tryParse(pincodeText) ?? 0;
 
+      // Use GPS location data if available, otherwise try LocationController
+      String placeId = _placeId ?? '';
+      String latitude = _latitude ?? '';
+      String longitude = _longitude ?? '';
+      
+    
       final profileBase64 = await _fileToBase64(_profileImage);
 
       final req = {
@@ -313,14 +406,15 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
         'course_id': _classId,
         'price': 800,
         'location': _localityCtrl.text.trim(),
-        'state': 'Delhi', // TODO: derive from reverse geocode if required
-        'remark': '',
+        'pincode': pincode,
+        'remark': '', // Can be used for additional notes
         'profile_picture': profileBase64 ?? '',
         'place_id': placeId,
         'latitude': latitude,
         'longitude': longitude,
       };
 
+    print( req);
       final ok = await _p.updateStudentProfile(req);
       if (ok == true) {
         if (mounted) {
@@ -732,6 +826,68 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                       }),
                     ],
                   ),
+
+
+                    // Zipcode & Location Button
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: TextFormField(
+                            controller: pinCodeController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: "Zipcode",
+                              prefixIcon: const Icon(Icons.pin_drop_outlined),
+                              filled: true,
+                              fillColor: Colors.grey.shade50,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide:
+                                    BorderSide(color: Colors.grey.shade200),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide:
+                                    BorderSide(color: primary, width: 2),
+                              ),
+                            ),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) {
+                                return 'Zipcode is required';
+                              }
+                              if (v.trim().length < 6) {
+                                return 'Invalid Zipcode';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton.icon(
+                            onPressed: _getCurrentLocation,
+                            icon: const Icon(Icons.my_location, size: 18),
+                            label: const Text('Use GPS'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                   
                 ],
               ),
             ),

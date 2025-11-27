@@ -21,7 +21,6 @@ class ProfileUpdateController extends GetxController {
   var masterData = Rxn<MasterData>();
   var tutorprofileData = Rxn<TutorProfileData>();
 
-
   Future<void> fetchProfileForAdmin() async {
     isLoading.value = true;
     try {
@@ -159,15 +158,26 @@ class ProfileUpdateController extends GetxController {
           await _profileUpdateService.updateTutorProfile(updateData);
       tutorprofileData.value = response.data;
       debugPrint("✅ Profile updated successfully");
-      Get.snackbar(
-        'Success',
-        response.message,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
-      isLoading.value = false;
-      return true;
+      if (response.success) {
+        Get.snackbar(
+          'Success',
+          response.message,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+        isLoading.value = false;
+        return true;
+      } else {
+          Get.snackbar(
+          'Failed',
+          response.message,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return false;
+      }
     } catch (e) {
       debugPrint("❌ Error in updateProfile: $e");
       Get.snackbar(
@@ -278,50 +288,49 @@ class ProfileUpdateController extends GetxController {
   }
 
   // in your ProfileUpdateController (or appropriate controller)
- // In ProfileUpdateController
-Future<bool> updateAdminProfile(Map<String, dynamic> updateData) async {
-  isLoading.value = true;
-  try {
-    final msg = await _profileUpdateService.updateAdminProfile(updateData);
+  // In ProfileUpdateController
+  Future<bool> updateAdminProfile(Map<String, dynamic> updateData) async {
+    isLoading.value = true;
+    try {
+      final msg = await _profileUpdateService.updateAdminProfile(updateData);
 
-    // If service returned null, treat as failure
-    if (msg == null) {
+      // If service returned null, treat as failure
+      if (msg == null) {
+        Get.snackbar(
+          'Error',
+          'No response from server',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.redAccent,
+          colorText: Colors.white,
+        );
+        return false;
+      }
+      Get.snackbar(
+        'Success',
+        msg,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+
+      // Optionally update local profile data by re-fetching
+      await fetchProfileForAdmin();
+
+      return true;
+    } catch (e, st) {
+      debugPrint("❌ Error in updateAdminProfile controller: $e\n$st");
       Get.snackbar(
         'Error',
-        'No response from server',
+        e.toString(),
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
       );
       return false;
+    } finally {
+      isLoading.value = false;
     }
-    Get.snackbar(
-      'Success',
-      msg,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-    );
-
-    // Optionally update local profile data by re-fetching
-    await fetchProfileForAdmin();
-
-    return true;
-  } catch (e, st) {
-    debugPrint("❌ Error in updateAdminProfile controller: $e\n$st");
-    Get.snackbar(
-      'Error',
-      e.toString(),
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.redAccent,
-      colorText: Colors.white,
-    );
-    return false;
-  } finally {
-    isLoading.value = false;
   }
-}
-
 
   Future<bool> updateAdminProfileVerify(Map<String, dynamic> updateData) async {
     isLoading.value = true;

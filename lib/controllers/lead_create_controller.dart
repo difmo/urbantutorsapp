@@ -16,7 +16,6 @@ class LeadCreateController extends GetxController {
     print('classId: ${request.classId}');
     print('subjectId: ${request.subjectId}');
     print('location: ${request.location}');
-    print('state: ${request.state}');
     print('mode: ${request.mode}');
     print('fee: ${request.fee}');
     print('userId: ${request.userId}');
@@ -30,12 +29,15 @@ class LeadCreateController extends GetxController {
         boardId: request.boardId,
         classId: request.classId,
         location: request.location,
-        state: request.state,
         mode: request.mode,
         fee: request.fee,
         leadId: request.leadId,
         subjectId: request.subjectId,
         userId: request.userId,
+        place_id:request.place_id,
+        pincode:request.pincode,
+        latitude:request.latitude,
+        longitude:request.longitude
       );
       print(response);
       if (response.statusCode == 200 && response.data['success'] == true) {
