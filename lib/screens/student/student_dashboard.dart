@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -166,6 +167,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             initial: initial,
             greeting: "Welcome",
             name: displayName,
+            profileImage: prof?.profile_picture,
             balance: balanceText,
             onCoinTap: () {
               Navigator.push(
@@ -376,7 +378,9 @@ class _Header extends StatelessWidget {
     required this.balance,
     required this.initial,
     required this.greeting,
+
     required this.name,
+    this.profileImage,
   });
 
   final Color primary;
@@ -387,6 +391,7 @@ class _Header extends StatelessWidget {
   final String initial;
   final String greeting;
   final String name;
+  final String? profileImage;
   String _capFirst(String s) {
     final t = s.trim();
     if (t.isEmpty) return '';
@@ -410,17 +415,31 @@ class _Header extends StatelessWidget {
               ),
               border: Border.all(width: 1, color: AppColors.primaryColor)),
           padding: const EdgeInsets.all(2),
-          child: CircleAvatar(
-            radius: 22,
-            backgroundColor: Colors.white,
-            child: Text(
-              initial,
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                color: Colors.black87,
-              ),
-            ),
-          ),
+            child: (profileImage != null && profileImage!.isNotEmpty)
+                ? CircleAvatar(
+                    radius: 22,
+                    backgroundImage: () {
+                      final img = profileImage!;
+                      if (img.startsWith('http')) {
+                        return NetworkImage(img);
+                      } else if (img.startsWith('data:')) {
+                        return MemoryImage(base64Decode(img.split(',').last));
+                      } else {
+                        return NetworkImage('https://urbantutors.pro/$img');
+                      }
+                    }() as ImageProvider,
+                  )
+                : CircleAvatar(
+                    radius: 22,
+                    backgroundColor: Colors.white,
+                    child: Text(
+                      initial,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
         ),
         const SizedBox(width: 12),
         Expanded(

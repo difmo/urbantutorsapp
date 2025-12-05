@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
@@ -204,18 +205,32 @@ class _StudentDrawerState extends State<StudentDrawer> {
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                     width: 2, color: AppColors.primaryColor)),
-                            child: CircleAvatar(
-                              radius: 30,
-                              backgroundColor: primaryColor.withOpacity(0.12),
-                              child: Text(
-                                _initialFrom(name),
-                                style: const TextStyle(
-                                  fontSize: 22,
-                                  color: Colors.black87,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
+                            child: (p?.profile_picture != null && p!.profile_picture!.isNotEmpty)
+                                ? CircleAvatar(
+                                    radius: 30,
+                                    backgroundImage: () {
+                                      final img = p.profile_picture!;
+                                      if (img.startsWith('http')) {
+                                        return NetworkImage(img);
+                                      } else if (img.startsWith('data:')) {
+                                        return MemoryImage(base64Decode(img.split(',').last));
+                                      } else {
+                                        return NetworkImage('https://urbantutors.pro/$img');
+                                      }
+                                    }() as ImageProvider,
+                                  )
+                                : CircleAvatar(
+                                    radius: 30,
+                                    backgroundColor: primaryColor.withOpacity(0.12),
+                                    child: Text(
+                                      _initialFrom(name),
+                                      style: const TextStyle(
+                                        fontSize: 22,
+                                        color: Colors.black87,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
                           ),
                         ],
                       ),

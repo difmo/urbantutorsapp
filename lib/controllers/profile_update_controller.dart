@@ -232,6 +232,38 @@ class ProfileUpdateController extends GetxController {
     isLoading.value = true;
     try {
       final response = await _profileUpdateService.updateStudentProfile(data);
+      
+      if (response.success) {
+        // Optimistically update local state if we have the data map
+        if (studentprofileData.value != null && data is Map) {
+          final map = data as Map;
+          // Extract values safely
+          final String? newName = map['student_name']?.toString();
+          final String? newMobile = map['mobile']?.toString();
+          final String? newPic = map['profile_picture']?.toString();
+          final String? newLoc = map['location']?.toString();
+          final int? newBoardId = int.tryParse(map['board_id']?.toString() ?? '');
+          final int? newCourseId = int.tryParse(map['course_id']?.toString() ?? '');
+          final int? newPincode = int.tryParse(map['pincode']?.toString() ?? '');
+          
+          final updated = studentprofileData.value!.copyWith(
+            studentName: newName,
+            mobile: newMobile,
+            // If profile_picture is empty string (no change/no image), don't wipe it unless intended.
+            // But usually base64 is sent if changed. If empty, maybe it means no change?
+            // In StudentProfileScreen, it sends '' if profileBase64 is null.
+            // If it sends '', does it mean delete? Or ignore?
+            // Assuming if it's a base64 string, we update it.
+            profile_picture: (newPic != null && newPic.isNotEmpty) ? newPic : studentprofileData.value!.profile_picture,
+            location: newLoc,
+            boardId: newBoardId,
+            courseId: newCourseId,
+            pincode: newPincode,
+          );
+          studentprofileData.value = updated;
+        }
+      }
+
       Get.snackbar(
         'Success',
         response.message,
