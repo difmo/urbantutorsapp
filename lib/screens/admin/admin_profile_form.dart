@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/admin/admin_dashboard.dart';
@@ -30,6 +32,7 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
   final TextEditingController remarkController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
   final TextEditingController experienceController = TextEditingController();
+  final TextEditingController pinCodeController = TextEditingController();
 
   // External controllers
   final LocationController _locationController = Get.find<LocationController>();
@@ -46,18 +49,21 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
   XFile? _frontIdImage;
   XFile? _backIdImage;
 
+  // Location data
+  String? _latitude;
+  String? _longitude;
+  String? _placeId;
+
   bool _overlayLoading = false;
 
   // ===== GetX workers we must dispose=====
   late final Worker _wTutorData;
   late final Worker _wRouteOnce;
-  late final Worker _wMasterData;
-  late final Worker _wIsFetchingClasses;
-  late final Worker _wIsFetchingSubjects;
 
   @override
   void initState() {
     super.initState();
+    _getCurrentLocation();
     profileUpdateController.fetchProfileForAdmin();
     _masterDataController.fetchMasterData();
     _wTutorData = ever(profileUpdateController.adminProfileData, (student) {
@@ -90,9 +96,6 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
   void dispose() {
     _wTutorData.dispose();
     _wRouteOnce.dispose();
-    _wMasterData.dispose();
-    _wIsFetchingClasses.dispose();
-    _wIsFetchingSubjects.dispose();
 
     nameController.dispose();
     emailController.dispose();
@@ -100,6 +103,7 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
     remarkController.dispose();
     priceController.dispose();
     phoneController.dispose();
+    pinCodeController.dispose();
     super.dispose();
   }
 
@@ -151,6 +155,69 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
     return s.replaceAll(RegExp(r'[^0-9]'), '');
   }
 
+  // Get current location
+  Future<void> _getCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        Get.snackbar('Error', 'Location services are disabled');
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          Get.snackbar('Error', 'Location permission denied');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        Get.snackbar('Error', 'Location permissions are permanently denied');
+        return;
+      }
+
+      // Show loading indicator
+      if (mounted) setState(() => _overlayLoading = true);
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      // Get address from coordinates
+      String? postalCode;
+      try {
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
+        if (placemarks.isNotEmpty) {
+          postalCode = placemarks.first.postalCode;
+        }
+      } catch (e) {
+        AppLog.e('Failed to get postal code: $e');
+      }
+
+      if (mounted) {
+        setState(() {
+          _latitude = position.latitude.toString();
+          _longitude = position.longitude.toString();
+          if (postalCode != null && postalCode.isNotEmpty) {
+            pinCodeController.text = postalCode;
+          }
+          _overlayLoading = false;
+        });
+        Get.snackbar('Success', 'Location retrieved successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green.shade100);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _overlayLoading = false);
+      Get.snackbar('Error', 'Failed to get location: $e');
+    }
+  }
+
   Future<void> onSavePressed() async {
     final userIdStr = await StorageService.getUserId();
     if (userIdStr == null) {
@@ -184,9 +251,10 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
         "profile_picture": profileBase64,
         "frontid": frontBase64,
         "backid": backBase64,
-        "place_id": "125479359",
-        "latitude": "28.663",
-        "longitude": "97.2255",
+        "place_id": _placeId ?? "",
+        "latitude": _latitude ?? "",
+        "longitude": _longitude ?? "",
+        "pincode": pinCodeController.text.trim(),
       };
 
       await profileUpdateController.updateAdminProfileVerify(req);
@@ -226,20 +294,29 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
               ),
             ),
           ),
-          title: _Header(
-            primary: primary,
-            accent: accent,
-            initial: "initial",
-            greeting: "Wallet",
-            name: " displayName",
-            balance: "balanceText",
-            onCoinTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const TutorCoinsScreen()),
-              );
-            },
-          )),
+          title: Obx(() {
+            final prof = profileUpdateController.adminProfileData.value;
+            final name = prof?.tutorburoName?.trim() ?? '';
+            final displayName = name.isEmpty ? 'Tutor Bureau' : name;
+            final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'T';
+            final profilePic = prof?.profilePicture;
+
+            return _Header(
+              primary: primary,
+              accent: accent,
+              initial: initial,
+              greeting: "Welcome",
+              name: displayName,
+              balance: "", // Balance might not be relevant here or needs to be fetched
+              profileImage: profilePic,
+              onCoinTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TutorCoinsScreen()),
+                );
+              },
+            );
+          })),
       body: Stack(
         children: [
           SafeArea(
@@ -419,6 +496,13 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
                     );
                   }),
                   const SizedBox(height: 16),
+                  TextField(
+                    controller: pinCodeController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(labelText: "Pincode"),
+                  ),
+                  const SizedBox(height: 16),
 
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(labelText: "State"),
@@ -543,9 +627,10 @@ class _Header extends StatelessWidget {
     required this.accent,
     required this.onCoinTap,
     required this.balance,
-    required this.initial, // ⬅️ NEW
-    required this.greeting, // ⬅️ NEW
-    required this.name, // ⬅️ NEW
+    required this.initial,
+    required this.greeting,
+    required this.name,
+    this.profileImage,
   });
 
   final Color primary;
@@ -556,6 +641,7 @@ class _Header extends StatelessWidget {
   final String initial;
   final String greeting;
   final String name;
+  final String? profileImage;
   String _capFirst(String s) {
     final t = s.trim();
     if (t.isEmpty) return '';
@@ -569,8 +655,42 @@ class _Header extends StatelessWidget {
         SizedBox(
           width: 8,
         ),
-        // Avatar with gradient ring
-
+        Container(
+          decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [primary, accent],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(width: 1, color: AppColors.primaryColor)),
+          padding: const EdgeInsets.all(2),
+          child: (profileImage != null && profileImage!.isNotEmpty)
+              ? CircleAvatar(
+                  radius: 22,
+                  backgroundImage: () {
+                    final img = profileImage!;
+                    if (img.startsWith('http')) {
+                      return NetworkImage(img);
+                    } else if (img.startsWith('data:')) {
+                      return MemoryImage(base64Decode(img.split(',').last));
+                    } else {
+                      return NetworkImage('https://urbantutors.pro/$img');
+                    }
+                  }() as ImageProvider,
+                )
+              : CircleAvatar(
+                  radius: 22,
+                  backgroundColor: Colors.white,
+                  child: Text(
+                    initial,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+        ),
         const SizedBox(width: 12),
 
         // Greeting + name (ellipsized)

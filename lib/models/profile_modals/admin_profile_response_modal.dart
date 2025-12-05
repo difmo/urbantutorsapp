@@ -253,9 +253,13 @@ class AdminProfileData {
       totalCoins: json['total_coins']?.toString(),
       totalSpentCoins: json['total_spent_coins']?.toString(),
       totalAvailableCoins: json['total_Available_coins']?.toString(),
-      tutorburoProfileStatus: json['tutorburo_profile_status'] is int
-          ? json['tutorburo_profile_status'] as int
-          : int.tryParse('${json['tutorburo_profile_status'] ?? ''}'),
+      tutorburoProfileStatus: (json['tutorburo_profile_status'] != null)
+          ? (json['tutorburo_profile_status'] is int
+              ? json['tutorburo_profile_status'] as int
+              : int.tryParse('${json['tutorburo_profile_status']}'))
+          : (json['profile_status'] is int
+              ? json['profile_status'] as int
+              : int.tryParse('${json['profile_status'] ?? ''}')),
       profilePicture: json['profile_picture']?.toString(),
       agencyLogo: json['agency_logo']?.toString(),
       fullName: json['full_name']?.toString(),
