@@ -54,6 +54,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   final _mobileCtrl = TextEditingController();
   final _localityCtrl = TextEditingController();
   final pinCodeController = TextEditingController();
+  final FocusNode _localityFocusNode = FocusNode();
 
   // Location data
   String? _latitude;
@@ -181,6 +182,7 @@ _getCurrentLocation();
     _nameCtrl.dispose();
     _mobileCtrl.dispose();
     _localityCtrl.dispose();
+    _localityFocusNode.dispose();
     super.dispose();
   }
 
@@ -768,63 +770,84 @@ _getCurrentLocation();
                   _sectionCard(
                     title: 'Location:',
                     children: [
-                      Obx(() {
+                  RawAutocomplete<String>(
+                    focusNode: _localityFocusNode,
+                    textEditingController: _localityCtrl,
+                    optionsBuilder: (TextEditingValue tev) {
+                      final q = tev.text.trim();
+                      if (q.isEmpty) {
+                        return const Iterable<String>.empty();
+                      }
+                      _loc.onQueryChanged(q);
+                      return _loc.suggestions;
+                    },
+                    onSelected: (val) {
+                      _localityCtrl.text = val;
+                      _loc.onQueryChanged('');
+                    },
+                    fieldViewBuilder:
+                        (context, textCtrl, focusNode, onFieldSubmitted) {
+                      return Obx(() {
                         final searching = _loc.isSearching.value;
-                        final opts = _loc.suggestions;
-                        return Autocomplete<String>(
-                          optionsBuilder: (TextEditingValue tev) {
-                            final q = tev.text.trim();
-                            if (q.isEmpty) {
-                              return const Iterable<String>.empty();
-                            }
-                            return opts;
-                          },
-                          onSelected: (val) {
-                            _localityCtrl.text = val;
-                            _loc.onQueryChanged('');
-                          },
-                          fieldViewBuilder:
-                              (context, textCtrl, focusNode, onFieldSubmitted) {
-                            if (textCtrl.text != _localityCtrl.text) {
-                              textCtrl.text = _localityCtrl.text;
-                              textCtrl.selection = TextSelection.fromPosition(
-                                TextPosition(offset: textCtrl.text.length),
-                              );
-                            }
-                            textCtrl.addListener(() {
-                              final q = textCtrl.text;
-                              if (_localityCtrl.text != q) {
-                                _localityCtrl.text = q;
-                                _loc.onQueryChanged(q);
-                              }
-                            });
-
-                            return TextFormField(
-                              controller: textCtrl,
-                              focusNode: focusNode,
-                              decoration: _dec(
-                                'Locality',
-                                icon: Icons.location_on_outlined,
-                                suffixIcon: searching
-                                    ? const Padding(
-                                        padding: EdgeInsets.all(10),
-                                        child: SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(
-                                              strokeWidth: 2),
-                                        ),
-                                      )
-                                    : null,
-                              ),
-                              validator: (v) => (v == null || v.trim().isEmpty)
-                                  ? 'Please enter locality'
-                                  : null,
-                              onFieldSubmitted: (_) => onFieldSubmitted(),
-                            );
-                          },
+                        return TextFormField(
+                          controller: textCtrl,
+                          focusNode: focusNode,
+                          decoration: _dec(
+                            'Locality',
+                            icon: Icons.location_on_outlined,
+                            suffixIcon: searching
+                                ? const Padding(
+                                    padding: EdgeInsets.all(10),
+                                    child: SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
+                                    ),
+                                  )
+                                : null,
+                          ),
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Please enter locality'
+                              : null,
+                          onFieldSubmitted: (_) => onFieldSubmitted(),
                         );
-                      }),
+                      });
+                    },
+                    optionsViewBuilder: (context, onSelected, options) {
+                      return Align(
+                        alignment: Alignment.topLeft,
+                        child: Material(
+                          elevation: 4,
+                          borderRadius: BorderRadius.circular(8),
+                          child: ConstrainedBox(
+                             constraints: BoxConstraints(
+                              maxHeight: 280,
+                              maxWidth: MediaQuery.of(context).size.width - 32,
+                            ),
+                            child: Obx(() {
+                              final list = _loc.suggestions.toList();
+                              return ListView.separated(
+                                padding: EdgeInsets.zero,
+                                shrinkWrap: true,
+                                itemCount: list.length,
+                                separatorBuilder: (_, __) =>
+                                    const Divider(height: 1),
+                                itemBuilder: (context, i) {
+                                  final item = list[i];
+                                  return ListTile(
+                                    dense: true,
+                                    title: Text(item),
+                                    onTap: () => onSelected(item),
+                                  );
+                                },
+                              );
+                            }),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                     ],
                   ),
 

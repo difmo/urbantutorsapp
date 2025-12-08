@@ -209,6 +209,7 @@ class AdminProfileData {
   final String? placeId;
   final String? latitude;
   final String? longitude;
+  final String? pincode;
 
   AdminProfileData({
     this.tutorburoId,
@@ -238,6 +239,7 @@ class AdminProfileData {
     this.placeId,
     this.latitude,
     this.longitude,
+    this.pincode,
   });
 
   factory AdminProfileData.fromJson(Map<String, dynamic> json) {
@@ -279,6 +281,7 @@ class AdminProfileData {
       placeId: json['place_id']?.toString(),
       latitude: json['latitude']?.toString(),
       longitude: json['longitude']?.toString(),
+      pincode: json['pincode']?.toString(),
     );
   }
 
@@ -310,7 +313,9 @@ class AdminProfileData {
       'ifsc_code': ifscCode,
       'place_id': placeId,
       'latitude': latitude,
+      'latitude': latitude,
       'longitude': longitude,
+      'pincode': pincode,
     };
   }
 }

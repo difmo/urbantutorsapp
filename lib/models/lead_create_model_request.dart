@@ -17,6 +17,8 @@ class LeadCreateRequest {
       final String longitude;
         final String place_id;
 
+      final String? coins;
+      final String? remark;
 
   LeadCreateRequest({
     required this.name,
@@ -36,7 +38,9 @@ class LeadCreateRequest {
   
     required this.place_id,
     required this.latitude,
-    required this.longitude,
+    required this.longitude, 
+     this.coins, 
+    this.remark,
   });
 
   /// ✅ Corrected method name and added all fields
@@ -57,7 +61,10 @@ class LeadCreateRequest {
       'support_agent': supportAgent,
       'place_id':place_id,
       'latitude':latitude,
-      'longitude':longitude
+      'longitude':longitude,
+      'pincode': pincode,
+      'coins': coins,
+      'remark': remark,
     };
   }
 }

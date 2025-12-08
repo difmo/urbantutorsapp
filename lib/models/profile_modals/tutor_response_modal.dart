@@ -52,7 +52,7 @@ class TutorProfileData {
   final double? minAmount;
   final double? maxAmount;
   final String? location;
-  final String ? pincode;
+  final String? pincode;
 
   final String? placeId;
   final double? latitude;
@@ -66,7 +66,7 @@ class TutorProfileData {
   final String? updatedAt;
   final List<TeachingDetails> teachingDetails;
   final String? mode;
-
+  final String? qualification;
 
   TutorProfileData({
     required this.id,
@@ -102,7 +102,8 @@ class TutorProfileData {
     this.updatedAt,
     this.teachingDetails = const [],
     this.mode,
-    this.pincode
+    this.pincode,
+    this.qualification,
   });
 
   // --- helpers to parse robustly ---
@@ -167,10 +168,11 @@ class TutorProfileData {
       status: json['status']?.toString(),
       createdAt: json['created_at']?.toString(),
       updatedAt: json['updated_at']?.toString(),
-      teachingDetails:
-          _parseTeachingDetails(json['teaching_details'] ?? json['teachingDetails']),
-             mode: json['mode']?.toString(),
-            pincode:json['pincode']?.toString()
+      teachingDetails: _parseTeachingDetails(
+          json['teaching_details'] ?? json['teachingDetails']),
+      mode: json['mode']?.toString(),
+      pincode: json['pincode']?.toString(),
+      qualification: json['qualification']?.toString(),
     );
   }
 
@@ -208,8 +210,9 @@ class TutorProfileData {
       'created_at': createdAt,
       'updated_at': updatedAt,
       'teaching_details': teachingDetails.map((e) => e.toJson()).toList(),
-       'mode': mode,
-       'pincode':pincode
+      'mode': mode,
+      'pincode': pincode,
+      'qualification': qualification,
     };
   }
 }

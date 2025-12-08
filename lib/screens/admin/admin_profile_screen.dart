@@ -4,6 +4,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -50,6 +52,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   // Form state
   final _formKey = GlobalKey<FormState>();
   bool _saving = false;
+  bool _locLoading = false;
 
   // Text fields
   final _fullNameCtrl = TextEditingController();
@@ -61,10 +64,17 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   final _instaLinkCtrl = TextEditingController();
   final _teleLinkCtrl = TextEditingController();
   final _localityCtrl = TextEditingController();
+  final _zipcodeCtrl = TextEditingController();
   final _accountHolderNameCtrl = TextEditingController();
   final _bankNameCtrl = TextEditingController();
   final _accountNumberCtrl = TextEditingController(); // renamed
   final _ifscCodeCtrl = TextEditingController();
+  final FocusNode _localityFocusNode = FocusNode();
+
+  // Location data
+  String? _latitude;
+  String? _longitude;
+  String? _placeId;
 
   int? _boardId;
   int? _classId;
@@ -123,7 +133,11 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     });
 
     // Re-hydrate whenever profile changes
-    ever(_p.adminProfileData, (_) async => await _hydrate());
+    ever(_p.adminProfileData, (_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await _hydrate();
+      });
+    });
   }
 
   @override
@@ -133,6 +147,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     _phoneCtrl.dispose();
     _emailCtrl.dispose();
     _localityCtrl.dispose();
+    _localityFocusNode.dispose();
+    _zipcodeCtrl.dispose();
     _accountHolderNameCtrl.dispose();
     _bankNameCtrl.dispose();
     _accountNumberCtrl.dispose();
@@ -153,11 +169,14 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     final p = _p.adminProfileData.value;
     if (p == null) return;
     print("all Admin Profile Data $p");
+
+    if (!mounted) return;
+
     // Populate text controllers if server returned values
     setState(() {
-      _fullNameCtrl.text = (p.fullName ?? '').toString().trim();
+      _fullNameCtrl.text = (p.fullName ?? p.tutorburoName ?? '').toString().trim();
       _agencyNameCtrl.text = (p.agencyName ?? '').toString().trim();
-      _phoneCtrl.text = (p.phone ?? '').toString().trim();
+      _phoneCtrl.text = (p.phone ?? p.tutorburoMobile ?? '').toString().trim();
       _emailCtrl.text = (p.email ?? '').toString().trim();
       _localityCtrl.text = (p.location ?? '').toString().trim();
       _bussinessInYearCtrl.text = (p.yearInBussiness?.toString() ?? '').trim();
@@ -174,7 +193,13 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       _profileImageUrl = _resolveImageUrl(p.profilePicture);
       _agencyLogoUrl = _resolveImageUrl(p.agencyLogo);
 
+      _latitude = p.latitude;
+      _longitude = p.longitude;
+      _placeId = p.placeId;
+      _zipcodeCtrl.text = (p.pincode ?? '').toString();
+
       stateVal = (p.state ?? stateVal)?.toString();
+      print("Hydrated Location: ${_localityCtrl.text}, Zip: ${_zipcodeCtrl.text}");
     });
   }
 
@@ -183,13 +208,74 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     final bytes = await File(file.path).readAsBytes();
     final ext = file.path.split('.').last.toLowerCase();
     return "data:image/$ext;base64,${base64Encode(bytes)}";
-    // If server expects raw bytes or multipart, adapt here.
   }
 
   num _toNum(dynamic v) {
     if (v == null) return 0;
     if (v is num) return v;
     return num.tryParse(v.toString()) ?? 0;
+  }
+
+  // -------------------- Location Logic --------------------
+
+  Future<void> _getCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        Get.snackbar('Error', 'Location services are disabled');
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          Get.snackbar('Error', 'Location permission denied');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        Get.snackbar('Error', 'Location permissions are permanently denied');
+        return;
+      }
+
+      if (mounted) setState(() => _locLoading = true);
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      String? postalCode;
+      try {
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
+        if (placemarks.isNotEmpty) {
+          postalCode = placemarks.first.postalCode;
+        }
+      } catch (e) {
+        debugPrint('Failed to get postal code: $e');
+      }
+
+      if (mounted) {
+        setState(() {
+          _latitude = position.latitude.toString();
+          _longitude = position.longitude.toString();
+          if (postalCode != null && postalCode.isNotEmpty) {
+            _zipcodeCtrl.text = postalCode;
+          }
+          _locLoading = false;
+        });
+        Get.snackbar('Success', 'Location retrieved successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green.shade100);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _locLoading = false);
+      Get.snackbar('Error', 'Failed to get location: $e');
+    }
   }
 
   // -------------------- Image pickers --------------------
@@ -205,7 +291,6 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         }
       });
     }
-    // close bottom sheet if present
     if (mounted) Navigator.pop(context);
   }
 
@@ -273,14 +358,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
 
   // -------------------- Payload builder --------------------
 
-  /// Build update payload exactly like the server expects.
-  /// Attaches base64 images only if user picked new ones.
   Future<Map<String, dynamic>> _buildUpdatePayload(int userId) async {
-    
     final profileBase64 = await _fileToBase64(_profileImage);
     final agencyBase64 = await _fileToBase64(_agencyLogo);
 
-    // get tutorburo_profile_id from controller model if present
     int? profileId;
     final stored = _p.adminProfileData.value;
     if (stored != null) {
@@ -303,9 +384,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       "insta_link": _instaLinkCtrl.text.trim(),
       "tel_link": _teleLinkCtrl.text.trim(),
       "location": _localityCtrl.text.trim(),
-      "place_id": "my place id",
-      "latitude": "28.663",
-      "longitude": "97.2255",
+      "place_id": _placeId ?? "",
+      "latitude": _latitude ?? "",
+      "longitude": _longitude ?? "",
+      "pincode": _zipcodeCtrl.text.trim(),
       "state": stateVal ?? '',
       "account_holder_name": _accountHolderNameCtrl.text.trim(),
       "bank_name": _bankNameCtrl.text.trim(),
@@ -313,9 +395,17 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       "ifsc_code": _ifscCodeCtrl.text.trim(),
     };
 
-    // Attach images only if user picked new ones (safer than sending empty strings)
-    if (profileBase64 != null) payload['profile_picture'] = profileBase64;
-    if (agencyBase64 != null) payload['agency_logo'] = agencyBase64;
+    if (profileBase64 != null) {
+      payload['profile_picture'] = profileBase64;
+    } else if (stored?.profilePicture != null) {
+      payload['profile_picture'] = stored!.profilePicture;
+    }
+
+    if (agencyBase64 != null) {
+      payload['agency_logo'] = agencyBase64;
+    } else if (stored?.agencyLogo != null) {
+      payload['agency_logo'] = stored!.agencyLogo;
+    }
 
     return payload;
   }
@@ -493,11 +583,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           final balanceNum = _toNum(wallet?.available);
           final balanceText = balanceNum.toStringAsFixed(0);
 
-          final prof = _p.studentprofileData.value;
-          final name =
-              prof?.studentName?.trim() ?? prof?.studentName?.trim() ?? '';
+          final prof = _p.adminProfileData.value;
+          final name = prof?.fullName?.trim() ?? '';
           final displayName =
-              name.isEmpty ? 'Student' : name.split(RegExp(r'\s+')).first;
+              name.isEmpty ? 'Admin' : name.split(RegExp(r'\s+')).first;
 
           if (loadingCoins && wallet == null && prof == null) {
             return const SizedBox(
@@ -511,7 +600,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           return _Header(
             primary: primary,
             accent: accent,
-            initial: (displayName.isEmpty ? 'S' : displayName[0].toUpperCase()),
+            initial: (displayName.isEmpty ? 'A' : displayName[0].toUpperCase()),
             greeting: "Edit Profile",
             name: displayName,
             balance: balanceText,
@@ -562,12 +651,12 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       ),
       body: Obx(() {
         final loading =
-            _p.isLoading.value && _p.studentprofileData.value == null;
+            _p.isLoading.value && _p.adminProfileData.value == null;
         if (loading) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final prof = _p.studentprofileData.value;
+        final prof = _p.adminProfileData.value;
 
         return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -601,9 +690,9 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                                       fallbackChild: Text(
                                         (() {
                                           final name =
-                                              (prof?.studentName ?? 'U').trim();
+                                              (prof?.fullName ?? 'A').trim();
                                           return name.isEmpty
-                                              ? 'U'
+                                              ? 'A'
                                               : name.characters.first
                                                   .toUpperCase();
                                         })(),
@@ -613,8 +702,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                                           color: Colors.white,
                                         ),
                                       ),
-                                      onEdit:
-                                          _showProfilePickerOptions, // <- do NOT call (no ())
+                                      onEdit: _showProfilePickerOptions,
                                       showEditBadge: true,
                                     ),
                                     const SizedBox(height: 8),
@@ -643,8 +731,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                                         color: Colors.white,
                                         size: 36,
                                       ),
-                                      onEdit:
-                                          _showAgencyPickerOptions, // <- do NOT call (no ())
+                                      onEdit: _showAgencyPickerOptions,
                                       showEditBadge: true,
                                     ),
                                     const SizedBox(height: 8),
@@ -748,10 +835,13 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                     Obx(() {
                       final searching = _loc.isSearching.value;
                       final opts = _loc.suggestions;
-                      return Autocomplete<String>(
+                      return RawAutocomplete<String>(
+                        focusNode: _localityFocusNode,
+                        textEditingController: _localityCtrl,
                         optionsBuilder: (TextEditingValue tev) {
                           final q = tev.text.trim();
                           if (q.isEmpty) return const Iterable<String>.empty();
+                          _loc.onQueryChanged(q);
                           return opts;
                         },
                         onSelected: (val) {
@@ -760,20 +850,6 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                         },
                         fieldViewBuilder:
                             (context, textCtrl, focusNode, onFieldSubmitted) {
-                          if (textCtrl.text != _localityCtrl.text) {
-                            textCtrl.text = _localityCtrl.text;
-                            textCtrl.selection = TextSelection.fromPosition(
-                              TextPosition(offset: textCtrl.text.length),
-                            );
-                          }
-                          textCtrl.addListener(() {
-                            final q = textCtrl.text;
-                            if (_localityCtrl.text != q) {
-                              _localityCtrl.text = q;
-                              _loc.onQueryChanged(q);
-                            }
-                          });
-
                           return TextFormField(
                             controller: textCtrl,
                             focusNode: focusNode,
@@ -798,8 +874,89 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                             onFieldSubmitted: (_) => onFieldSubmitted(),
                           );
                         },
+                        optionsViewBuilder: (context, onSelected, options) {
+                          final list = options.toList();
+                          return Align(
+                            alignment: Alignment.topLeft,
+                            child: Material(
+                              elevation: 4,
+                              borderRadius: BorderRadius.circular(12),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxHeight: 280,
+                                  maxWidth: MediaQuery.of(context).size.width - 40,
+                                ),
+                                child: ListView.separated(
+                                  padding: EdgeInsets.zero,
+                                  shrinkWrap: true,
+                                  itemCount: list.length,
+                                  separatorBuilder: (_, __) =>
+                                      const Divider(height: 1),
+                                  itemBuilder: (context, i) {
+                                    final item = list[i];
+                                    return ListTile(
+                                      dense: true,
+                                      leading: const Icon(Icons.location_on,
+                                          size: 20),
+                                      title: Text(item),
+                                      onTap: () => onSelected(item),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       );
                     }),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: _textField(
+                            'Zipcode',
+                            _zipcodeCtrl,
+                            icon: Icons.pin_drop_outlined,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly
+                            ],
+                            validator: (v) =>
+                                (v != null && v.isNotEmpty && v.length < 6)
+                                    ? 'Invalid Zipcode'
+                                    : null,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 2,
+                          child: Container(
+                            margin: const EdgeInsets.only(top: 4, bottom: 6),
+                            height: 48,
+                            child: ElevatedButton.icon(
+                              onPressed: _locLoading ? null : _getCurrentLocation,
+                              icon: _locLoading
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : const Icon(Icons.my_location, size: 18),
+                              label: Text(_locLoading ? '' : 'Use GPS'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryColor,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
 
@@ -1010,7 +1167,7 @@ class _Header extends StatelessWidget {
                     border:
                         Border.all(width: 1, color: AppColors.primaryColor)),
                 child: Row(
-                  children: [
+                    children: [
                     const SizedBox(width: 6),
                     Text(
                       "$balance coins",

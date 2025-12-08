@@ -232,7 +232,7 @@ class _TutorProfileState extends State<TutorProfile> {
       _emailCtrl.text = (p.email ?? '').toString().trim();
       _localityCtrl.text = (p.location ?? '').toString().trim();
       _expCtrl.text = (p.experienceYears?.toString() ?? '').toString();
-      _qualificationCtrl.text = (p.remark ?? '').toString();
+      _qualificationCtrl.text = (p.qualification ?? '').toString();
       _fbPageLinkCtrl.text = (p.fbLink ?? '').toString();
       _instaLinkCtrl.text = (p.instaLink ?? '').toString();
       _teleLinkCtrl.text = (p.whLink ?? '').toString();
@@ -440,7 +440,12 @@ class _TutorProfileState extends State<TutorProfile> {
         "insta_link": _instaLinkCtrl.text.trim(),
         "wh_link": _teleLinkCtrl.text.trim(),
       };
-      if (profileBase64 != null) payload["profile_picture"] = profileBase64;
+      if (profileBase64 != null) {
+        payload["profile_picture"] = profileBase64;
+      }
+      if (profileBase64 == null) {
+        payload["profile_picture"] = _profileImageUrl!;
+      }
 
       final ok = await _p.updateTutorProfile(payload);
       if (ok == true) {

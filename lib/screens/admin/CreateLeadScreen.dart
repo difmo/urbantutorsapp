@@ -166,16 +166,16 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
     feeCtrl.dispose();
     coinsCtrl.dispose();
     remarksCtrl.dispose();
+    _zipcodeCtrl.dispose();
     super.dispose();
   }
-
 
   // -------------------- Location Logic --------------------
   Future<void> _getCurrentLocation() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        Get.snackbar('Error', 'Location services are disabled');
+        // Get.snackbar('Error', 'Location services are disabled');
         return;
       }
 
@@ -183,13 +183,13 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          Get.snackbar('Error', 'Location permission denied');
+          // Get.snackbar('Error', 'Location permission denied');
           return;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        Get.snackbar('Error', 'Location permissions are permanently denied');
+        // Get.snackbar('Error', 'Location permissions are permanently denied');
         return;
       }
 
@@ -221,13 +221,13 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
           }
           _locLoading = false;
         });
-        Get.snackbar('Success', 'Location retrieved successfully',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.green.shade100);
+        // Get.snackbar('Success', 'Location retrieved successfully',
+        //     snackPosition: SnackPosition.BOTTOM,
+        //     backgroundColor: Colors.green.shade100);
       }
     } catch (e) {
       if (mounted) setState(() => _locLoading = false);
-      Get.snackbar('Error', 'Failed to get location: $e');
+      // Get.snackbar('Error', 'Failed to get location: $e');
     }
   }
 
@@ -313,14 +313,50 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
 
     setState(() {}); // final refresh after async loads
   }
-// ---------- UI helpers ----------
+  // ---------- UI helpers ----------
 
-  InputDecoration _dec(String label) => InputDecoration(
+  InputDecoration _dec(String label, {IconData? icon, Widget? suffix}) =>
+      InputDecoration(
         labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        prefixIcon:
+            icon != null ? Icon(icon, color: Colors.grey.shade600) : null,
+        suffixIcon: suffix,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.primaryColor, width: 2),
+        ),
         filled: true,
-        fillColor: Colors.grey.shade100,
+        fillColor: Colors.grey.shade50,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       );
+
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    IconData? icon,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    String? Function(String?)? validator,
+    FocusNode? focusNode,
+    Widget? suffix,
+    Function(String)? onSubmitted,
+  }) {
+    return TextFormField(
+      controller: controller,
+      focusNode: focusNode,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      validator: validator,
+      onFieldSubmitted: onSubmitted,
+      decoration: _dec(label, icon: icon, suffix: suffix),
+    );
+  }
 
   void _toast(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
@@ -346,7 +382,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
     if (locText.isEmpty) return _toast('Please enter your Locality');
 
     if (teachingMode == null) return _toast('Please select Teaching Mode');
-    if (selectedState == null) return _toast('Please select State');
+    // if (selectedState == null) return _toast('Please select State');
 
     final phoneOk = RegExp(r'^\d{10}$').hasMatch(phoneCtrl.text.trim());
     if (!phoneOk) return _toast('Enter a valid 10-digit mobile number');
@@ -355,7 +391,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
     if (userId == null) return _toast('User not found. Please login again.');
 
     final req = LeadCreateRequest(
-        name: nameCtrl.text.trim() ?? "Test",
+        name: nameCtrl.text.trim().isEmpty ? "Test" : nameCtrl.text.trim(),
         mobile: phoneCtrl.text.trim(),
         boardId: boardId!.toString(),
         classId: classId!.toString(),
@@ -365,13 +401,15 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
         fee: feeCtrl.text.trim(),
         userId: userId,
         tutorGender: tutorGender ?? 'Any',
-        maxHits: maxHits!,
+        maxHits: maxHits ?? '1',
         supportAgent: selectedSupportAgent ?? '',
         leadId: _isEditing ? (widget.lead!.id.toString() ?? '') : '',
         pincode: _zipcodeCtrl.text.toString(),
-        latitude: _latitude!,
-        longitude: _latitude!,
-        place_id: _placeId!);
+        latitude: _latitude ?? '0.0',
+        longitude: _longitude ?? '0.0',
+        coins: coinsCtrl.text.trim(),
+        remark: remarksCtrl.text.trim(),
+        place_id: _placeId ?? '');
 
     if (_submitting) return;
     setState(() => _submitting = true);
@@ -385,7 +423,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
           content: Text(res),
         ),
       );
-      // Navigator.pop(context, true);
+      Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -505,19 +543,21 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
               children: [
                 _sectionTitle('Student Details : '),
 
-                TextFormField(
+                _buildTextField(
+                  label: 'Student/Parent Name',
                   controller: nameCtrl,
-                  decoration: _dec('Student/Parent Name'),
+                  icon: Icons.person_outline,
                   validator: (v) =>
                       (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
                 const SizedBox(height: 16),
 
-                TextFormField(
+                _buildTextField(
+                  label: 'Mobile Number',
                   controller: phoneCtrl,
-                  decoration: _dec('Mobile Number'),
+                  icon: Icons.phone_outlined,
                   keyboardType: TextInputType.phone,
-                  maxLength: 10,
+                  inputFormatters: [LengthLimitingTextInputFormatter(10)],
                   validator: (v) =>
                       (v == null || !RegExp(r'^\d{10}$').hasMatch(v))
                           ? 'Enter 10-digit number'
@@ -559,9 +599,10 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                       return TextFormField(
                         controller: textCtrl,
                         focusNode: focusNode,
-                        decoration: _dec('Locality').copyWith(
-                          hintText: 'Type city/area (e.g., lko)…',
-                          suffixIcon: isLoading
+                        decoration: _dec(
+                          'Locality',
+                          icon: Icons.map_outlined,
+                          suffix: isLoading
                               ? const Padding(
                                   padding: EdgeInsets.all(10),
                                   child: SizedBox(
@@ -572,7 +613,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                                     ),
                                   ),
                                 )
-                              : const Icon(Icons.location_on_outlined),
+                              : null,
                         ),
                         validator: (v) =>
                             (v == null || v.trim().isEmpty) ? 'Required' : null,
@@ -618,7 +659,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                   return DropdownButtonFormField<int>(
                     isExpanded: true,
                     value: boardId,
-                    decoration: _dec('Board'),
+                    decoration: _dec('Board', icon: Icons.school_outlined),
                     items: boards
                         .map((b) => DropdownMenuItem<int>(
                               value: b.boardId,
@@ -647,19 +688,18 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                   return DropdownButtonFormField<int>(
                     isExpanded: true,
                     value: classId,
-                    decoration: _dec('Class').copyWith(
-                      suffixIcon: fetching
-                          ? const Padding(
-                              padding: EdgeInsets.all(10),
-                              child: SizedBox(
-                                width: 18,
-                                height: 18,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                            )
-                          : null,
-                    ),
+                    decoration: _dec('Class', icon: Icons.class_outlined,
+                        suffix: fetching
+                            ? const Padding(
+                                padding: EdgeInsets.all(10),
+                                child: SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              )
+                            : null),
                     items: classes
                         .map((c) => DropdownMenuItem<int>(
                               value: c.classId,
@@ -690,19 +730,18 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                   return DropdownButtonFormField<int>(
                     isExpanded: true,
                     value: subjectId,
-                    decoration: _dec('Subject').copyWith(
-                      suffixIcon: fetching
-                          ? const Padding(
-                              padding: EdgeInsets.all(10),
-                              child: SizedBox(
-                                width: 18,
-                                height: 18,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                            )
-                          : null,
-                    ),
+                    decoration: _dec('Subject', icon: Icons.book_outlined,
+                        suffix: fetching
+                            ? const Padding(
+                                padding: EdgeInsets.all(10),
+                                child: SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              )
+                            : null),
                     items: subjects
                         .map((s) => DropdownMenuItem<int>(
                               value: s.subjectId,
@@ -720,7 +759,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                 DropdownButtonFormField<String>(
                   isExpanded: true,
                   value: teachingMode,
-                  decoration: _dec('Teaching Mode'),
+                  decoration: _dec('Teaching Mode', icon: Icons.wifi),
                   items: _modes
                       .map((m) => DropdownMenuItem(value: m, child: Text(m)))
                       .toList(),
@@ -729,20 +768,18 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                 ),
                 const SizedBox(height: 16),
 
-             Expanded(
-              child: _buildTextField(
-                label: 'Zipcode',
-                controller: _zipcodeCtrl,
-                icon: Icons.pin_drop_outlined,
-                keyboardType: TextInputType.number,
-                validator: (v) => (v?.length ?? 0) < 6 ? 'Invalid' : null,
-              ),
-            ),
+                _buildTextField(
+                  label: 'Zipcode',
+                  controller: _zipcodeCtrl,
+                  icon: Icons.pin_drop_outlined,
+                  keyboardType: TextInputType.number,
+                  validator: (v) => (v?.length ?? 0) < 6 ? 'Invalid' : null,
+                ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   isExpanded: true,
                   value: maxHits,
-                  decoration: _dec('Max Hits'),
+                  decoration: _dec('Max Hits', icon: Icons.touch_app_outlined),
                   items: _maxHitsList
                       .map((max) => DropdownMenuItem(
                           value: max,
@@ -763,19 +800,22 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
 
                 const SizedBox(height: 16),
 
-                TextFormField(
+                _buildTextField(
+                  label: 'Fee (₹/Hrs)',
                   controller: feeCtrl,
-                  decoration: _dec('Fee (₹/Hrs)'),
+                  icon: Icons.currency_rupee,
                   keyboardType: TextInputType.number,
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
+
                 const SizedBox(height: 16),
 
-                TextFormField(
+                _buildTextField(
+                  label: 'Required Coins',
                   controller: coinsCtrl,
-                  decoration: _dec('Required Coins'),
+                  icon: Icons.monetization_on_outlined,
                   keyboardType: TextInputType.number,
-                  // Optional: hide the character counter if you set maxLength
-                  // buildCounter: (_, {required currentLength, required isFocused, required maxLength}) => null,
                   inputFormatters: [
                     FilteringTextInputFormatter.digitsOnly, // only 0-9
                     LengthLimitingTextInputFormatter(3), // up to 3 digits
@@ -800,7 +840,10 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                   minLines: 3,
                   maxLines: 4, // or null to grow freely
                   scrollPadding: EdgeInsets.zero,
-                  decoration: _dec('Any Remark').copyWith(
+                  decoration: _dec(
+                    'Any Remark',
+                    icon: Icons.note_alt_outlined,
+                  ).copyWith(
                     alignLabelWithHint: true, // label sits at the top
                   ),
                 ),
@@ -815,14 +858,26 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primaryColor,
                         minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                      child: Text(
-                        _submitting
-                            ? (_isEditing ? 'Updating…' : 'Submitting…')
-                            : (_isEditing
-                                ? 'Update Lead'
-                                : (_isRepost ? 'Post Lead' : 'Submit Lead')),
-                      ),
+                      child: _submitting
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 3,
+                              ),
+                            )
+                          : Text(
+                              _isEditing
+                                  ? 'Update Lead'
+                                  : (_isRepost ? 'Post Lead' : 'Submit Lead'),
+                              style: const TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
                     ),
                   ),
                 ),
@@ -849,52 +904,8 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
           ],
         ),
       );
-      
 
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    IconData? icon,
-    TextInputType? keyboardType,
-    List<TextInputFormatter>? inputFormatters,
-    String? Function(String?)? validator,
-    FocusNode? focusNode,
-    Widget? suffix,
-    Function(String)? onSubmitted,
-  }) {
-    return TextFormField(
-      controller: controller,
-      focusNode: focusNode,
-      keyboardType: keyboardType,
-      inputFormatters: inputFormatters,
-      validator: validator,
-      onFieldSubmitted: onSubmitted,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon:
-            icon != null ? Icon(icon, color: Colors.grey.shade600) : null,
-        suffixIcon: suffix != null
-            ? Padding(padding: const EdgeInsets.all(12), child: suffix)
-            : null,
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.primaryColor, width: 2),
-        ),
-      ),
-    );
-  }
+
 
  
 }

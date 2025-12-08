@@ -1,3 +1,4 @@
+
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -61,6 +62,19 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
     }).join(' ');
   }
 
+  final FocusNode _localityFocusNode = FocusNode();
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    emailController.dispose();
+    localityController.dispose();
+    remarkController.dispose();
+    priceController.dispose();
+    _localityFocusNode.dispose();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -69,9 +83,32 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
       AppLog.i('[UI] studentprofileData changed');
       if (student != null) {
         nameController.text = student.studentName ?? '';
-        emailController.text = student.mobile?.toString() ?? '';
+        // If email field contains phone (common in this app's messy data), show it
+        // Or prefer mobile if strictly separated. Model maps them.
+        emailController.text = (student.mobile != "0000000000")
+            ? student.mobile ?? ''
+            : student.email ?? '';
+        
         priceController.text = student.price?.toString() ?? '';
-        setState(() {});
+        localityController.text = student.location ?? '';
+        remarkController.text = student.remark ?? '';
+
+        setState(() {
+          selectedBoardId = student.boardId;
+          selectedClassId = student.courseId;
+          selectedSubjectId = student.subjectId;
+          selectedState = student.state;
+          selectedIdType = student.idType;
+        });
+
+        // Trigger cascade loads
+        if (selectedBoardId != null) {
+           _leadMetaController.loadClasses(selectedBoardId!);
+           if (selectedClassId != null) {
+               _leadMetaController.loadSubjects(
+                   classId: selectedClassId!, boardId: selectedBoardId!);
+           }
+        }
       }
     });
 
@@ -286,42 +323,24 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
                           const InputDecoration(labelText: "Email / Mobile")),
                   const SizedBox(height: 16),
 // LOCALITY (Autocomplete with POST search)
-                  Obx(() {
-                    final loading = _locationController.isSearching.value;
-                    final opts =
-                        _locationController.suggestions; // RxList<String>
-
-                    return Autocomplete<String>(
-                      optionsBuilder: (TextEditingValue tev) {
-                        // Return the latest suggestions as-is (already filtered by server)
-                        final q = tev.text.trim();
-                        if (q.isEmpty) return const Iterable<String>.empty();
-                        return opts; // show what controller fetched
-                      },
-                      onSelected: (val) {
-                        AppLog.i('[UI] Locality selected → $val');
-                        localityController.text = val;
-                        _locationController
-                            .onQueryChanged(''); // clear suggestion list
-                      },
-                      fieldViewBuilder:
-                          (context, textCtrl, focusNode, onFieldSubmitted) {
-                        // Keep autocomplete's controller in sync with your own
-                        if (textCtrl.text != localityController.text) {
-                          textCtrl.text = localityController.text;
-                          textCtrl.selection = TextSelection.fromPosition(
-                            TextPosition(offset: textCtrl.text.length),
-                          );
-                        }
-                        textCtrl.addListener(() {
-                          final q = textCtrl.text;
-                          if (localityController.text != q) {
-                            localityController.text = q;
-                          }
-                          _locationController
-                              .onQueryChanged(q); // triggers debounced POST
-                        });
-
+                  RawAutocomplete<String>(
+                    focusNode: _localityFocusNode,
+                    textEditingController: localityController,
+                    optionsBuilder: (TextEditingValue tev) {
+                      final q = tev.text.trim();
+                      if (q.isEmpty) return const Iterable<String>.empty();
+                      _locationController.onQueryChanged(q);
+                      return _locationController.suggestions;
+                    },
+                    onSelected: (val) {
+                      AppLog.i('[UI] Locality selected → $val');
+                      localityController.text = val;
+                      _locationController.onQueryChanged('');
+                    },
+                    fieldViewBuilder:
+                        (context, textCtrl, focusNode, onFieldSubmitted) {
+                      return Obx(() {
+                        final loading = _locationController.isSearching.value;
                         return TextField(
                           controller: textCtrl,
                           focusNode: focusNode,
@@ -341,22 +360,25 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
                           ),
                           onSubmitted: (_) => onFieldSubmitted(),
                         );
-                      },
-                      optionsViewBuilder: (context, onSelected, options) {
-                        final list = options.toList();
-                        return Align(
-                          alignment: Alignment.topLeft,
-                          child: Material(
-                            elevation: 4,
-                            borderRadius: BorderRadius.circular(8),
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxHeight: 280,
-                                maxWidth:
-                                    MediaQuery.of(context).size.width - 32,
-                              ),
-                              child: ListView.separated(
+                      });
+                    },
+                    optionsViewBuilder: (context, onSelected, options) {
+                      // Use Rx suggestions directly
+                      return Align(
+                        alignment: Alignment.topLeft,
+                        child: Material(
+                          elevation: 4,
+                          borderRadius: BorderRadius.circular(8),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: 280,
+                              maxWidth: MediaQuery.of(context).size.width - 32,
+                            ),
+                            child: Obx(() {
+                              final list = _locationController.suggestions.toList();
+                              return ListView.separated(
                                 padding: EdgeInsets.zero,
+                                shrinkWrap: true,
                                 itemCount: list.length,
                                 separatorBuilder: (_, __) =>
                                     const Divider(height: 1),
@@ -368,13 +390,13 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
                                     onTap: () => onSelected(item),
                                   );
                                 },
-                              ),
-                            ),
+                              );
+                            }),
                           ),
-                        );
-                      },
-                    );
-                  }),
+                        ),
+                      );
+                    },
+                  ),
                   const SizedBox(height: 16),
                   Obx(() => Text(
                       'Location results: ${_locationController.suggestions.length}',
