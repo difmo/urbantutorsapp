@@ -1201,18 +1201,65 @@ class _TutorProfileState extends State<TutorProfile> {
   // -------------------- Share Logic --------------------
 
   Future<String> _publicProfileUrl() async {
-    final uid = await StorageService.getUserId();
-    return 'https://urbantutors.pro/profile/$uid';
-  }
+  final uid = await StorageService.getUserId();
+  // Return a deep link / app link for sharing within the mobile app
+  return 'https://play.google.com/store/apps/details?id=pro.urbantutors.app';
+}
 
   Future<void> _shareProfile() async {
-    final url = await _publicProfileUrl();
-    final name =
-        _nameCtrl.text.trim().isEmpty ? 'Tutor' : _nameCtrl.text.trim();
-    final text = 'Check out $name\'s profile on Urban Tutors: $url';
+  // Generate the app deep link for the tutor profile
+  final appLink = await _publicProfileUrl();
 
-    await Share.share(text, subject: 'Tutor Profile');
-  }
+  // Gather basic info from the form controllers
+  final name = _nameCtrl.text.trim().isEmpty ? 'Tutor' : _nameCtrl.text.trim();
+  final email = _emailCtrl.text.trim();
+  final location = _localityCtrl.text.trim();
+  final experience = _expCtrl.text.trim();
+  final qualification = _qualificationCtrl.text.trim();
+  final fb = _fbPageLinkCtrl.text.trim();
+  final insta = _instaLinkCtrl.text.trim();
+  final whatsapp = _teleLinkCtrl.text.trim();
+  final zipcode = _zipcodeCtrl.text.trim();
+
+  // Fee range
+  final feeMin = selectedFeeMin != null ? selectedFeeMin.toString() : '-';
+  final feeMax = selectedFeeMax != null ? selectedFeeMax.toString() : '-';
+
+  // Mode (Online/Offline/Any)
+  final mode = modeVal ?? 'Online';
+
+  // Boards, Classes, Subjects labels (using helper _labelsFor if available)
+  String boards = '';
+  String classes = '';
+  String subjects = '';
+  try {
+    boards = _labelsFor(_selBoardIds, _boardOptions()).join(', ');
+    classes = _labelsFor(_selClassIds, _classOptions()).join(', ');
+    subjects = _labelsFor(_selSubjectIds, _subjectOptions()).join(', ');
+  } catch (_) {}
+
+  // Build the share message without the website URL, using the app link instead
+  final details = StringBuffer();
+  details.writeln('Download the app and check out $name\'s profile on Urban Tutors:');
+  details.writeln(appLink);
+  details.writeln('');
+  details.writeln('👤 Name: $name');
+  if (email.isNotEmpty) details.writeln('📧 Email: $email');
+  if (location.isNotEmpty) details.writeln('📍 Location: $location');
+  if (zipcode.isNotEmpty) details.writeln('🏷️ Zipcode: $zipcode');
+  if (experience.isNotEmpty) details.writeln('⏳ Experience: $experience years');
+  if (qualification.isNotEmpty) details.writeln('🎓 Qualification: $qualification');
+  details.writeln('💼 Mode: $mode');
+  details.writeln('💰 Fee: ₹$feeMin - ₹$feeMax');
+  if (boards.isNotEmpty) details.writeln('📚 Boards: $boards');
+  if (classes.isNotEmpty) details.writeln('🏫 Classes: $classes');
+  if (subjects.isNotEmpty) details.writeln('📖 Subjects: $subjects');
+  if (fb.isNotEmpty) details.writeln('🔗 Facebook: $fb');
+  if (insta.isNotEmpty) details.writeln('📸 Instagram: $insta');
+  if (whatsapp.isNotEmpty) details.writeln('💬 WhatsApp/Telegram: $whatsapp');
+
+  await Share.share(details.toString(), subject: 'Tutor Profile');
+}
 }
 
 // -------------------- Helper Classes --------------------

@@ -192,7 +192,7 @@ class _CourseTutorState extends State<MycoursesStudent> {
                       Icon(Icons.menu_book_outlined,
                           size: 64, color: Colors.black26),
                       SizedBox(height: 10),
-                      Text('No courses yet',
+                      Text('No Any course Purchsed yet',
                           style: TextStyle(color: Colors.black54)),
                     ],
                   ),

@@ -318,7 +318,7 @@ class _StudentDrawerState extends State<Tutordrawer> {
               ),
               _drawerItem(
                 Icons.history,
-                'My Courses',
+                'My Purchased Courses',
                 onTap: () => Get.to(() => const MycoursesTutor()),
               ),
 

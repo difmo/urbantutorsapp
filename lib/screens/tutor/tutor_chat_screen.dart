@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:urbantutorsapp/controllers/tutor_pro_controller.dart';
 import 'package:urbantutorsapp/models/nearby_student.dart';
+import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 
 class TutorChatScreen extends StatefulWidget {
@@ -58,18 +59,25 @@ class _TutorChatScreenState extends State<TutorChatScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 42),
+                  const Icon(Icons.wallet, color: Colors.red, size: 42),
                   const SizedBox(height: 10),
-                  Text(_c.error.value, textAlign: TextAlign.center),
+                  Text(_c.error.value=="Exception: Insufficient Coins in Your Wallet."?"Insufficient Coins in Your Wallet":_c.error.value, textAlign: TextAlign.center),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
-                    onPressed: () => _c.load(
-                      latitude: widget.latitude,
-                      longitude: widget.longitude,
-                      radiusKm: widget.radiusKm,
-                    ),
+                    onPressed: () {
+                       Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const TutorCoinsScreen()),
+                    );
+                      //    _c.load(
+                      //   latitude: widget.latitude,
+                      //   longitude: widget.longitude,
+                      //   radiusKm: widget.radiusKm,
+                      // );
+                    },
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
+                    label: const Text('Upgrade Wallet'),
                   ),
                 ],
               ),
