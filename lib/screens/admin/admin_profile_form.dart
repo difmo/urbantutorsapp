@@ -82,11 +82,13 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
     _wRouteOnce = once(profileUpdateController.adminProfileData, (student) {
       if (!mounted || student == null) return;
       final status = student.tutorburoProfileStatus;
-      if (status == 1) {
-        Get.offAll(() => const AdminProfileForm());
+      if (status == 0) {
+        // stay here (profile not submitted yet)
+      } else if (status == 1) {
+        Get.offAll(() => const AdminPendingScreen());
       } else if (status == 2) {
         Get.offAll(() => const AdminDashboard());
-      } else if (status == null) {
+      } else {
         Get.offAll(() => const WelcomeScreen());
       }
     });
@@ -109,7 +111,14 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
 
   // === Helpers ===
   Future<void> _pickImage(ImageSource source, String type) async {
-    final picked = await _picker.pickImage(source: source);
+    final picked = await _picker.pickImage(
+      source: source,
+      // ID photos are sent as base64 text; keep them small enough for the
+      // server's upload limits.
+      maxWidth: 1280,
+      maxHeight: 1280,
+      imageQuality: 70,
+    );
     if (!mounted) return;
     if (picked != null) {
       setState(() {
@@ -257,9 +266,12 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
         "pincode": pinCodeController.text.trim(),
       };
 
-      await profileUpdateController.updateAdminProfileVerify(req);
-      print(" ProfileUpdateThings : $req");
-      Get.snackbar('Success', 'Profile updated successfully');
+      // The controller shows the server's success/failure message.
+      final saved = await profileUpdateController.updateAdminProfileVerify(req);
+      if (!saved) return; // stay on the form so the user can fix and retry
+      // Submitted: wait for verification (status 1) until the server says
+      // otherwise.
+      await StorageService.saveIsProfileStatus(1);
       _refreshAdminProfile();
     } catch (e) {
       Get.snackbar('Error', e.toString());
@@ -506,7 +518,7 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
 
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(labelText: "State"),
-                    value: selectedState,
+                    initialValue: selectedState,
                     items: const [
                       "Andhra Pradesh",
                       "Arunachal Pradesh",
@@ -547,7 +559,7 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(labelText: "ID Type"),
-                    value: selectedIdType,
+                    initialValue: selectedIdType,
                     items: const [
                       "Aadhar",
                       "Voter ID",
@@ -584,7 +596,7 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
           ),
           if (_overlayLoading)
             Container(
-              color: Colors.black.withOpacity(0.25),
+              color: Colors.black.withValues(alpha: 0.25),
               alignment: Alignment.center,
               child: const CircularProgressIndicator(),
             ),

@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:urbantutorsapp/models/grabbed_lead_model.dart';
 import 'package:urbantutorsapp/models/lead_create_model_response.dart';
 import 'package:urbantutorsapp/models/tutor_lead.dart';
+import 'package:urbantutorsapp/services/api_exception.dart';
 import 'package:urbantutorsapp/services/leads_view_service.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
@@ -24,6 +25,18 @@ class TutorLeadsController extends GetxController {
     refreshAll();
   }
 
+  // Several loads run in parallel; stay "loading" until all have finished.
+  int _pending = 0;
+  void _begin() {
+    _pending++;
+    isLoading.value = true;
+  }
+
+  void _end() {
+    if (_pending > 0) _pending--;
+    isLoading.value = _pending > 0;
+  }
+
   Future<void> refreshAll() async {
     await Future.wait([loadAvailable(), loadGrabbed(), loadDeclined()]);
   }
@@ -31,7 +44,7 @@ class TutorLeadsController extends GetxController {
   Future<void> loadAvailable() async {
     try {
       error.value = '';
-      isLoading.value = true;
+      _begin();
       final data = await _service.fetchLeads();
       data.sort((a, b) =>
           (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0)));
@@ -39,32 +52,32 @@ class TutorLeadsController extends GetxController {
     } catch (e) {
       error.value = e.toString();
     } finally {
-      isLoading.value = false;
+      _end();
     }
   }
 
   Future<void> loadGrabbed() async {
     try {
       error.value = '';
-      isLoading.value = true;
+      _begin();
       final uid = await StorageService.getUserId();
-      if (uid == null) throw Exception('User not logged in');
+      if (uid == null) throw ApiException('User not logged in');
       final data = await _service.grabLeadList(uid);
    
       grabbedLeads.assignAll(data);
     } catch (e) {
       error.value = e.toString();
     } finally {
-      isLoading.value = false;
+      _end();
     }
   }
 
   Future<void> loadDeclined() async {
     try {
       error.value = '';
-      isLoading.value = true;
+      _begin();
       final uid = await StorageService.getUserId();
-      if (uid == null) throw Exception('User not logged in');
+      if (uid == null) throw ApiException('User not logged in');
       final data = await _service.declinedLeadList(uid);
       data.sort((a, b) =>
           (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0)));
@@ -72,7 +85,7 @@ class TutorLeadsController extends GetxController {
     } catch (e) {
       error.value = e.toString();
     } finally {
-      isLoading.value = false;
+      _end();
     }
   }
 
@@ -80,7 +93,7 @@ class TutorLeadsController extends GetxController {
   Future<String?> grabLead(String leadId) async {
     try {
       final uid = await StorageService.getUserId();
-      if (uid == null) throw Exception('User not logged in');
+      if (uid == null) throw ApiException('User not logged in');
 
       final msg = await _service.grabLead(userId: uid, leadId: leadId);
       await Future.wait([loadGrabbed(), loadAvailable()]);
@@ -91,28 +104,27 @@ class TutorLeadsController extends GetxController {
     }
   }
 
-  /// Decline a grabbed lead
-  Future<String?> declineLead({
+  /// Decline a grabbed lead. Throws if the server rejects it, so callers can
+  /// show the failure.
+  Future<String> declineLead({
     required String grabLeadId,
     required String remark,
   }) async {
-    try {
-      final uid = await StorageService.getUserId();
-      if (uid == null) throw Exception('User not logged in');
+    final uid = await StorageService.getUserId();
+    if (uid == null) throw const ApiException('User not logged in');
 
-      final msg = await _service.declineLead(
-        userId: uid,
-        grabLeadId: grabLeadId,
-        remark: remark,
-      );
-      print("Decline lead response: $msg");
-      await Future.wait([loadDeclined(), loadGrabbed()]);
-      return msg;
-    } catch (e) {
-      error.value = e.toString();
-      return null;
-    }
+    final msg = await _service.declineLead(
+      userId: uid,
+      grabLeadId: grabLeadId,
+      remark: remark,
+    );
+    await Future.wait([loadDeclined(), loadGrabbed()]);
+    return msg;
   }
+
+  /// The grab record for [leadId] if this tutor has already grabbed it.
+  GrabLead? grabbedFor(int leadId) =>
+      grabbedLeads.firstWhereOrNull((g) => g.leadId == leadId);
 
   // Convenience getters for tabs
   List<TutorLead> get enquiries => leads;

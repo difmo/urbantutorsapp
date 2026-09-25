@@ -1,17 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
-import 'package:urbantutorsapp/screens/admin/admin_dashboard.dart';
-import 'package:urbantutorsapp/screens/admin/admin_pending_screen.dart';
-import 'package:urbantutorsapp/screens/admin/admin_profile_form.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
-import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
-import 'package:urbantutorsapp/screens/tutor/student_peding_screen.dart';
-import 'package:urbantutorsapp/screens/tutor/teacher_pending_screen.dart';
-import 'package:urbantutorsapp/screens/tutor/tutor_profile_form.dart';
-import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
 import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
-import 'package:urbantutorsapp/shared/default_dashboard.dart';
+import 'package:urbantutorsapp/utils/home_router.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import '../theme/theme_constants.dart';
 
@@ -53,8 +45,7 @@ class _SplashScreenState extends State<SplashScreen>
     final status =
         _profileUpdateController.tutorprofileData.value?.profileStatus;
     if (status != null) {
-      print("running init profile ");
-      StorageService.saveIsProfileStatus(status);
+      await StorageService.saveIsProfileStatus(status);
     }
   }
 
@@ -63,8 +54,7 @@ class _SplashScreenState extends State<SplashScreen>
     final status =
         _profileUpdateController.studentprofileData.value?.profile_status;
     if (status != null) {
-      print("running init profile ");
-      StorageService.saveIsProfileStatus(status);
+      await StorageService.saveIsProfileStatus(status);
     }
   }
 
@@ -73,17 +63,7 @@ class _SplashScreenState extends State<SplashScreen>
     final status =
         _profileUpdateController.adminProfileData.value?.tutorburoProfileStatus;
     if (status != null) {
-      print("running init Admin profile ");
-      StorageService.saveIsProfileStatus(status);
-    }
-  }
-
-  Future<bool> isProfiledataEmpty() async {
-    await _profileUpdateController.fetchProfileForStudent();
-    if (_profileUpdateController.studentprofileData.value!.boardName!.isEmpty) {
-      return true;
-    } else {
-      return false;
+      await StorageService.saveIsProfileStatus(status);
     }
   }
 
@@ -91,65 +71,31 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(seconds: 2));
     final token = await StorageService.getToken();
     final roleId = await StorageService.getRoleId();
-    print("Role Id from splash screen  $roleId");
-    print("Comes from splash screen");
     if (!mounted) return;
-    if (roleId == 3) {
-      _initStudentProfile();
-    }
-    if (roleId == 2) {
-      _initTeacherProfile();
-    }
-    if (roleId == 5) {
-      _initAdminProfile();
+    // Refresh the profile status from the server before routing, so a
+    // profile approved since the last launch opens the right screen. If the
+    // server is slow or unreachable, fall back to the stored status.
+    if (token != null) {
+      final refresh = switch (roleId) {
+        3 => _initStudentProfile(),
+        2 => _initTeacherProfile(),
+        5 => _initAdminProfile(),
+        _ => Future<void>.value(),
+      };
+      try {
+        await refresh.timeout(const Duration(seconds: 8));
+      } catch (e) {
+        debugPrint('Splash profile refresh failed: $e');
+      }
+      if (!mounted) return;
     }
 
     final profileStatus = await StorageService.getIsProfileStatus();
-    print(profileStatus);
+    if (!mounted) return;
 
-    Widget dashboard;
-    if (token != null) {
-      switch (roleId) {
-        case 3:
-          if (profileStatus == 0) {
-            dashboard = StudentPendingScreen();
-          } else if (profileStatus == 1) {
-            dashboard = StudentDashboardScreen();
-            // dashboard = StudentProfileFormScreen();
-          } else if (profileStatus == 2) {
-            dashboard = StudentDashboardScreen();
-          } else {
-            dashboard = const DefaultDashboardScreen();
-          }
-          break;
-        case 2:
-          if (profileStatus == 0) {
-            dashboard = TutorProfileFormScreen();
-          } else if (profileStatus == 1) {
-            dashboard = TeacherPendingScreen();
-          } else if (profileStatus == 2) {
-            dashboard = TutorDashboard();
-          } else {
-            dashboard = const DefaultDashboardScreen();
-          }
-          break;
-        case 5:
-          if (profileStatus == 0) {
-            dashboard = AdminProfileForm();
-          } else if (profileStatus == 1) {
-            dashboard = AdminPendingScreen();
-          } else if (profileStatus == 2) {
-            dashboard = AdminDashboard();
-          } else {
-            dashboard = const DefaultDashboardScreen();
-          }
-          break;
-        default:
-          dashboard = const DefaultDashboardScreen();
-      }
-    } else {
-      dashboard = const WelcomeScreen();
-    }
+    final Widget dashboard = token != null
+        ? homeScreenFor(roleId, profileStatus)
+        : const WelcomeScreen();
     Navigator.pushReplacement(
         context, MaterialPageRoute(builder: (_) => dashboard));
   }
@@ -186,7 +132,7 @@ class _SplashScreenState extends State<SplashScreen>
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                     ),
                     child: CircleAvatar(
                       radius: 58,

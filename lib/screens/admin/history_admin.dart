@@ -3,16 +3,14 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:urbantutorsapp/controllers/lead_controller.dart';
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
-import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
-import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/AdminDrawer.dart';
 
 class HistoryAdmin extends StatefulWidget {
@@ -106,8 +104,8 @@ class _TransactionAdmin extends State<HistoryAdmin> {
       if (_master.masterData.value == null) {
         await _master.fetchMasterData();
       }
-      if (_p.studentprofileData.value == null && !_p.isLoading.value) {
-        await _p.fetchProfileForStudent();
+      if (_p.adminProfileData.value == null && !_p.isLoading.value) {
+        await _p.fetchProfileForAdmin();
       }
     });
   }
@@ -126,32 +124,8 @@ class _TransactionAdmin extends State<HistoryAdmin> {
     return Scaffold(
       backgroundColor: Colors.white,
       key: _scaffoldKey,
-      extendBodyBehindAppBar: true,
-      endDrawer: Admindrawer(onMenuTap: (label) async {
-        if (label == 'Logout') {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isLoggedIn', false);
-          await prefs.remove('user_name');
-          await prefs.remove('user_phone');
-          await prefs.remove('user_role');
-          await StorageService.clearTokenAndRole();
-          await StorageService.clear();
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Logged out successfully')),
-          );
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const SplashScreen()),
-            (route) => false,
-          );
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Navigating to $label')),
-          );
-        }
-      }),
+      extendBodyBehindAppBar: false,
+      endDrawer: Admindrawer(),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -177,11 +151,11 @@ class _TransactionAdmin extends State<HistoryAdmin> {
           final balanceNum = _toNum(wallet?.available);
           final balanceText = balanceNum.toStringAsFixed(0);
 
-          final prof = _p.studentprofileData.value;
+          final prof = _p.adminProfileData.value;
           final name =
-              prof?.studentName?.trim() ?? prof?.studentName?.trim() ?? '';
+              (prof?.tutorburoName ?? prof?.fullName)?.trim() ?? '';
           final displayName =
-              name.isEmpty ? 'Student' : name.split(RegExp(r'\s+')).first;
+              name.isEmpty ? 'Bureau' : name.split(RegExp(r'\s+')).first;
 
           if (loadingCoins && wallet == null && prof == null) {
             return const SizedBox(
@@ -220,7 +194,7 @@ class _TransactionAdmin extends State<HistoryAdmin> {
           ),
         ],
       ),
-      body: Container(),
+      body: const _ReportBody(),
     );
   }
 }
@@ -278,7 +252,7 @@ class _Header extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(.18),
+                    color: Colors.white.withValues(alpha: .18),
                     borderRadius: BorderRadius.circular(22),
                     border:
                         Border.all(width: 1, color: AppColors.primaryColor)),
@@ -306,3 +280,135 @@ class _Header extends StatelessWidget {
 }
 
 // -------------------- Multi-select Helpers (kept for future use) --------------------
+
+/// Bureau report: coin wallet, posted-lead summary and recent coin activity,
+/// built from the same APIs the dashboard uses.
+class _ReportBody extends StatefulWidget {
+  const _ReportBody();
+
+  @override
+  State<_ReportBody> createState() => _ReportBodyState();
+}
+
+class _ReportBodyState extends State<_ReportBody> {
+  late final LeadController _leads;
+  late final CoinsController _coins;
+
+  @override
+  void initState() {
+    super.initState();
+    _leads = Get.isRegistered<LeadController>()
+        ? Get.find<LeadController>()
+        : Get.put(LeadController());
+    _coins = Get.find<CoinsController>();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
+  }
+
+  Future<void> _refresh() =>
+      Future.wait([_leads.fetchLeads(), _coins.fetchMyCoins()]);
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: RefreshIndicator(
+        onRefresh: _refresh,
+        child: Obx(() {
+          final loading =
+              _leads.isLoading.value || _coins.loadingMyCoins.value;
+          final wallet = _coins.myCoins.value;
+          final leads = _leads.studentLeads;
+          final now = DateTime.now();
+          final thisMonth = leads
+              .where((l) =>
+                  l.createdAt != null &&
+                  l.createdAt!.year == now.year &&
+                  l.createdAt!.month == now.month)
+              .length;
+          final online =
+              leads.where((l) => l.mode.toLowerCase() == 'online').length;
+          final txns = _coins.txns.take(10).toList();
+
+          return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            children: [
+              if (loading && wallet == null && leads.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 80),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              _section('Coin wallet'),
+              Row(children: [
+                _stat('Available', _fmt(wallet?.available)),
+                _stat('Spent', _fmt(wallet?.spent)),
+                _stat('Total', _fmt(wallet?.total)),
+              ]),
+              if (_coins.myCoinsError.value.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(_coins.myCoinsError.value,
+                      style: const TextStyle(color: Colors.red)),
+                ),
+              const SizedBox(height: 20),
+              _section('Posted leads'),
+              Row(children: [
+                _stat('Total', '${leads.length}'),
+                _stat('This month', '$thisMonth'),
+                _stat('Online', '$online'),
+                _stat('Offline', '${leads.length - online}'),
+              ]),
+              const SizedBox(height: 20),
+              _section('Recent coin activity'),
+              if (txns.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Text('No coin purchases yet.',
+                      style: TextStyle(color: Colors.black54)),
+                )
+              else
+                ...txns.map((t) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        t.status == 1 ? Icons.check_circle : Icons.pending,
+                        color: t.status == 1 ? Colors.green : Colors.orange,
+                      ),
+                      title: Text('${_fmt(t.coins)} coins'),
+                      subtitle: Text(t.createdAt != null
+                          ? '${t.createdAt!.toLocal()}'.split('.').first
+                          : ''),
+                      trailing: Text('₹${t.finalAmount.toStringAsFixed(0)}'),
+                    )),
+            ],
+          );
+        }),
+      ),
+    );
+  }
+
+  static String _fmt(double? v) => (v ?? 0).toStringAsFixed(0);
+
+  Widget _section(String title) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+      );
+
+  Widget _stat(String label, String value) => Expanded(
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.primaryColor),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(children: [
+            Text(value,
+                style: const TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 2),
+            Text(label,
+                style: const TextStyle(fontSize: 11, color: Colors.black54)),
+          ]),
+        ),
+      );
+}

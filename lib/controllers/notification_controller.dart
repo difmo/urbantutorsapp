@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
+import 'package:urbantutorsapp/services/api_exception.dart';
 import 'package:urbantutorsapp/models/notification/AppNotification.dart';
-import 'package:urbantutorsapp/services/%20NotificationService.dart';
+import 'package:urbantutorsapp/services/notification_service.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 /// GetX controller that owns Notification state.
@@ -23,7 +24,7 @@ class NotificationController extends GetxController {
     try {
       final uidStr = await StorageService.getUserId();
       final uid = int.tryParse(uidStr ?? '') ?? 0;
-      if (uid <= 0) throw Exception('No user id found');
+      if (uid <= 0) throw ApiException('No user id found');
 
       userId.value = uid;
 

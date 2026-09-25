@@ -45,7 +45,7 @@ class CoinService {
       final List data = res.data['data'] as List;
       return data.map((e) => CoinPackage.fromJson(e)).toList();
     }
-    throw Exception('Failed to load coin packages');
+    throw ApiException('Failed to load coin packages');
   }
 
   /// Wallet + transactions
@@ -64,7 +64,7 @@ class CoinService {
         res.data['success'] == true) {
       return MyCoinsData.fromJson(res.data['data'] as Map<String, dynamic>);
     }
-    throw Exception(res.data?['message'] ?? 'Failed to load my coins');
+    throw ApiException((res.data is Map ? res.data['message']?.toString() : null) ?? 'Failed to load my coins');
   }
 
   /// Create Quince order (server returns checkout url)
@@ -91,7 +91,7 @@ class CoinService {
     if (ok && res.data is Map && (res.data['success'] == true)) {
       return QuinceOrder.fromJson(res.data['data'] ?? res.data);
     }
-    throw Exception(res.data?['message'] ?? 'Unable to create order');
+    throw ApiException((res.data is Map ? res.data['message']?.toString() : null) ?? 'Unable to create order');
   }
 
 
@@ -131,7 +131,9 @@ class CoinService {
       final id = res.data?['id']?.toString();
       if (id != null && id.isNotEmpty) return id;
     }
-    throw Exception('Razorpay order create failed: ${res.statusCode} ${res.data}');
+    developer.log('RZP order create failed: ${res.statusCode} ${res.data}',
+        name: 'CoinService');
+    throw const ApiException('Could not start the payment. Please try again.');
   }
 
  /// 2) Register that order in YOUR backend (so verify won’t say “Order Id Miss Match”)
@@ -161,7 +163,7 @@ class CoinService {
 
     final ok = (res.statusCode == 200 || res.statusCode == 201);
     if (!(ok && res.data is Map && res.data['success'] == true)) {
-      throw Exception(res.data?['message'] ?? 'create_order failed');
+      throw ApiException((res.data is Map ? res.data['message']?.toString() : null) ?? 'create_order failed');
     }
   }
   

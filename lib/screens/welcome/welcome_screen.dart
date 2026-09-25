@@ -33,7 +33,7 @@ class WelcomeScreen extends StatelessWidget {
 
   /// Reusable Role Button
   Widget _roleButton(BuildContext context, String label, int roleId,
-      IconData icon, Color color) {
+      FaIconData icon, Color color) {
     return SizedBox(
       width: double.infinity,
       child: GestureDetector(
@@ -42,11 +42,11 @@ class WelcomeScreen extends StatelessWidget {
           width: MediaQuery.of(context).size.width * 0.26,
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [color.withOpacity(0.8), color]),
+            gradient: LinearGradient(colors: [color.withValues(alpha: 0.8), color]),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: color.withOpacity(0.4),
+                color: color.withValues(alpha: 0.4),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -96,7 +96,7 @@ class WelcomeScreen extends StatelessWidget {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.3),
+                          color: Colors.white.withValues(alpha: 0.3),
                         ),
                         child: CircleAvatar(
                           radius: 40,

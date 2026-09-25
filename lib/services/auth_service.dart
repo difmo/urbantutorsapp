@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:urbantutorsapp/models/user_new_modal.dart';
 import 'package:urbantutorsapp/services/ApiService.dart';
 import 'package:urbantutorsapp/utils/api_constants.dart';
@@ -20,8 +21,6 @@ Future<LoginResponse> verifyOtp({
   required String firebaseToken,
 }) async {
   try {
-    print('mynameiskhan: $otp');
-
     final response = await ApiService.post(
       ApiConstants.VERIFY_OTP,
       FormData.fromMap({
@@ -32,12 +31,9 @@ Future<LoginResponse> verifyOtp({
         'firebase_token': "STATIC_FB_TOKEN_ABC123", 
       }),
     );
-    print("✅ Response from verifyOtp:");
-    print(response.data);
     return LoginResponse.fromJson(response.data);
   } catch (e) {
-    print("❌ Error in verifyOtp (from AuthService):");
-    print(e.toString());
+    debugPrint("❌ Error in verifyOtp: $e");
     rethrow;
   }
 }

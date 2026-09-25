@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:urbantutorsapp/services/api_exception.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:urbantutorsapp/models/my_course_models.dart';
@@ -26,7 +27,7 @@ class MyCourseController extends GetxController {
     try {
       final uidStr = await StorageService.getUserId();
       final userId = int.tryParse(uidStr ?? '') ?? 0;
-      if (userId <= 0) throw Exception('No user id found');
+      if (userId <= 0) throw ApiException('No user id found');
 
       final payload = await _svc.fetchMyCourses(userId);
       courses.assignAll(payload.items);
@@ -51,7 +52,7 @@ class MyCourseController extends GetxController {
     try {
       final view = await _svc.getViewInfo(item.courseId);
       var url = (view.url ?? '').trim();
-      if (url.isEmpty) throw Exception('No preview available for this course');
+      if (url.isEmpty) throw ApiException('No preview available for this course');
 
       if (!url.contains('://')) {
         // guess relative path

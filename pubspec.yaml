@@ -11,10 +11,10 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.3.5
-  font_awesome_flutter: ^10.9.0
+  font_awesome_flutter: ^11.0.0
   pin_code_fields: ^8.0.1
   flutter_launcher_icons: ^0.14.4
-  get: ^4.7.2
+  get: ^4.7.3
   dio: ^5.9.0
   lottie: ^3.3.1
   image_picker: ^1.1.2

@@ -66,6 +66,9 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
 
   @override
   void dispose() {
+    for (final w in _workers) {
+      w.dispose();
+    }
     nameController.dispose();
     emailController.dispose();
     localityController.dispose();
@@ -75,11 +78,13 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
     super.dispose();
   }
 
+  final List<Worker> _workers = [];
+
   @override
   void initState() {
     super.initState();
     print("dinesh");
-    ever(profileUpdateController.studentprofileData, (student) {
+    _workers.add(ever(profileUpdateController.studentprofileData, (student) {
       AppLog.i('[UI] studentprofileData changed');
       if (student != null) {
         nameController.text = student.studentName ?? '';
@@ -110,44 +115,51 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
            }
         }
       }
-    });
+    }));
 
-    ever(profileUpdateController.masterData, (masterData) {
+    _workers.add(ever(profileUpdateController.masterData, (masterData) {
       AppLog.i('[UI] masterData changed');
       if (masterData != null) {
         // Update any relevant fields in the UI with masterData
       }
       setState(() {});
-    });
+    }));
 
 // Also log when master data flips loading:
-    ever(_masterDataController.masterData, (val) {
+    _workers.add(ever(_masterDataController.masterData, (val) {
       final boards = val?.data.boardLead ?? [];
       AppLog.i('[UI] Board list: ${boards.map((b) => b.boardLabel).toList()}');
-    });
+    }));
 
 // Optional: log when master data object itself updates
-    ever(_masterDataController.masterData, (val) {
+    _workers.add(ever(_masterDataController.masterData, (val) {
       final n = val?.data.boardLead.length ?? 0;
       AppLog.i('[UI] masterData updated, boards=$n');
-    });
+    }));
     _masterDataController.fetchMasterData();
     profileUpdateController
         .fetchProfileForStudent(); // TODO: replace with actual logged-in user id
 
     // Log changes to lead meta controller states
-    ever(_leadMetaController.isFetchingClasses, (val) {
+    _workers.add(ever(_leadMetaController.isFetchingClasses, (val) {
       AppLog.i('[UI] isFetchingClasses=$val');
       setState(() {}); // to refresh UI loading indicators
-    });
-    ever(_leadMetaController.isFetchingSubjects, (val) {
+    }));
+    _workers.add(ever(_leadMetaController.isFetchingSubjects, (val) {
       AppLog.i('[UI] isFetchingSubjects=$val');
       setState(() {}); // to refresh UI loading indicators
-    });
+    }));
   }
 
   Future<void> _pickImage(ImageSource source, String type) async {
-    final picked = await _picker.pickImage(source: source);
+    final picked = await _picker.pickImage(
+      source: source,
+      // ID photos are sent as base64 text; keep them small enough for the
+      // server's upload limits.
+      maxWidth: 1280,
+      maxHeight: 1280,
+      imageQuality: 70,
+    );
     if (picked != null) {
       setState(() {
         if (type == "profile") _profileImage = picked;
@@ -229,7 +241,6 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
       );
 
       await profileUpdateController.updateProfileForStudent(request);
-      Get.snackbar('Success', 'Profile updated successfully');
     } catch (e) {
       Get.snackbar('Error', e.toString());
     } finally {
@@ -430,7 +441,10 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
                                   )
                                 : const SizedBox.shrink()),
                       ),
-                      value: selectedBoardId,
+                      // Dropdowns throw if the value isn't one of the items.
+                      initialValue: boards.any((b) => b.boardId == selectedBoardId)
+                          ? selectedBoardId
+                          : null,
                       items: boards
                           .map((b) => DropdownMenuItem<int>(
                                 value: b.boardId,
@@ -474,7 +488,10 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
                               )
                             : null,
                       ),
-                      value: selectedClassId,
+                      initialValue:
+                          classItems.any((c) => c.classId == selectedClassId)
+                              ? selectedClassId
+                              : null,
                       items: classItems
                           .map((c) => DropdownMenuItem(
                               value: c.classId, child: Text(c.className)))
@@ -516,7 +533,10 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
                               )
                             : null,
                       ),
-                      value: selectedSubjectId,
+                      initialValue:
+                          subjectItems.any((x) => x.subjectId == selectedSubjectId)
+                              ? selectedSubjectId
+                              : null,
                       items: subjectItems
                           .map((s) => DropdownMenuItem(
                               value: s.subjectId, child: Text(s.subjectName)))
@@ -537,38 +557,8 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
                   // State
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(labelText: "State"),
-                    value: selectedState,
-                    items: const [
-                      "Andhra Pradesh",
-                      "Arunachal Pradesh",
-                      "Assam",
-                      "Bihar",
-                      "Chhattisgarh",
-                      "Goa",
-                      "Gujarat",
-                      "Haryana",
-                      "Himachal Pradesh",
-                      "Jharkhand",
-                      "Karnataka",
-                      "Kerala",
-                      "Madhya Pradesh",
-                      "Maharashtra",
-                      "Manipur",
-                      "Meghalaya",
-                      "Mizoram",
-                      "Nagaland",
-                      "Odisha",
-                      "Punjab",
-                      "Rajasthan",
-                      "Sikkim",
-                      "Tamil Nadu",
-                      "Telangana",
-                      "Tripura",
-                      "Uttar Pradesh",
-                      "Uttarakhand",
-                      "West Bengal",
-                      "Delhi"
-                    ]
+                    initialValue: _kStates.contains(selectedState) ? selectedState : null,
+                    items: _kStates
                         .map((st) =>
                             DropdownMenuItem(value: st, child: Text(st)))
                         .toList(),
@@ -586,7 +576,10 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
 
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(labelText: "ID Type"),
-                    value: selectedIdType,
+                    initialValue: const ["Aadhar", "PAN", "Voter ID"]
+                            .contains(selectedIdType)
+                        ? selectedIdType
+                        : null,
                     items: const ["Aadhar", "PAN", "Voter ID"]
                         .map((id) =>
                             DropdownMenuItem(value: id, child: Text(id)))
@@ -622,7 +615,7 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
           // Loader Overlay
           if (_overlayLoading)
             Container(
-              color: Colors.black.withOpacity(0.25),
+              color: Colors.black.withValues(alpha: 0.25),
               child: const Center(child: CircularProgressIndicator()),
             ),
         ],
@@ -656,3 +649,35 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
     );
   }
 }
+
+const _kStates = <String>[
+                      "Andhra Pradesh",
+                      "Arunachal Pradesh",
+                      "Assam",
+                      "Bihar",
+                      "Chhattisgarh",
+                      "Goa",
+                      "Gujarat",
+                      "Haryana",
+                      "Himachal Pradesh",
+                      "Jharkhand",
+                      "Karnataka",
+                      "Kerala",
+                      "Madhya Pradesh",
+                      "Maharashtra",
+                      "Manipur",
+                      "Meghalaya",
+                      "Mizoram",
+                      "Nagaland",
+                      "Odisha",
+                      "Punjab",
+                      "Rajasthan",
+                      "Sikkim",
+                      "Tamil Nadu",
+                      "Telangana",
+                      "Tripura",
+                      "Uttar Pradesh",
+                      "Uttarakhand",
+                      "West Bengal",
+                      "Delhi",
+];

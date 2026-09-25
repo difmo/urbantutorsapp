@@ -96,7 +96,7 @@ class _NotesTutorState extends State<NotesTutor> {
                     return _dropdownDec(
                       DropdownButtonFormField<int>(
                         isExpanded: true,
-                        value: boardId,
+                        initialValue: boardId,
                         decoration: _fieldDec('Select Board'),
                         items: boards
                             .map((b) => DropdownMenuItem<int>(
@@ -135,7 +135,7 @@ class _NotesTutorState extends State<NotesTutor> {
                     return _dropdownDec(
                       DropdownButtonFormField<int>(
                         isExpanded: true,
-                        value: classId,
+                        initialValue: classId,
                         decoration: _fieldDec('Select Class').copyWith(
                           suffixIcon: fetching
                               ? const Padding(
@@ -186,7 +186,7 @@ class _NotesTutorState extends State<NotesTutor> {
                     return _dropdownDec(
                       DropdownButtonFormField<int>(
                         isExpanded: true,
-                        value: subjectId,
+                        initialValue: subjectId,
                         decoration: _fieldDec('Select Subject').copyWith(
                           suffixIcon: fetching
                               ? const Padding(
@@ -233,7 +233,7 @@ class _NotesTutorState extends State<NotesTutor> {
                     return _dropdownDec(
                       DropdownButtonFormField<int>(
                         isExpanded: true,
-                        value: chapterId,
+                        initialValue: chapterId,
                         decoration: _fieldDec('Select Chapter').copyWith(
                           suffixIcon: fetching
                               ? const Padding(
@@ -270,6 +270,7 @@ class _NotesTutorState extends State<NotesTutor> {
                                   MaterialPageRoute(
                                     builder: (_) => ChapterDetailsScreen(
                                       chapterId: val!,
+                                      type: widget.flags,
                                     ),
                                   ),
                                 );

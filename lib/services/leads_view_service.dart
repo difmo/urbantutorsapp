@@ -14,8 +14,7 @@ class LeadsViewService {
 
       return list.map((e) => TutorLead.fromJson(e)).toList();
     }
-    throw Exception(
-        (data is Map ? data['message'] : null) ?? 'Failed to fetch leads');
+    throw ApiException((data is Map ? data['message']?.toString() : null) ?? 'Failed to fetch leads');
   }
 
   /// Returns message from server (use it in a snackbar/toast)
@@ -32,8 +31,7 @@ class LeadsViewService {
     if (data is Map && data['success'] == true) {
       return (data['message'] ?? 'Lead grabbed successfully').toString();
     }
-    throw Exception(
-        (data is Map ? data['message'] : null) ?? 'Failed to grab lead');
+    throw ApiException((data is Map ? data['message']?.toString() : null) ?? 'Failed to grab lead');
   }
 
   Future<List<GrabLead>> grabLeadList(String userId) async {
@@ -46,8 +44,7 @@ class LeadsViewService {
       final List list = data['data'] ?? [];
       return list.map((e) => GrabLead.fromJson(e)).toList();
     }
-    throw Exception((data is Map ? data['message'] : null) ??
-        'Failed to fetch grabbed leads');
+    throw ApiException((data is Map ? data['message']?.toString() : null) ?? 'Failed to fetch grabbed leads');
   }
 
   Future<List<TutorLead>> declinedLeadList(String userId) async {
@@ -60,8 +57,7 @@ class LeadsViewService {
       final List list = data['data'] ?? [];
       return list.map((e) => TutorLead.fromJson(e)).toList();
     }
-    throw Exception((data is Map ? data['message'] : null) ??
-        'Failed to fetch declined leads');
+    throw ApiException((data is Map ? data['message']?.toString() : null) ?? 'Failed to fetch declined leads');
   }
 
   /// Decline a grabbed lead – returns message
@@ -84,7 +80,6 @@ class LeadsViewService {
     if (data is Map && data['success'] == true) {
       return (data['message'] ?? 'Lead declined').toString();
     }
-    throw Exception(
-        (data is Map ? data['message'] : null) ?? 'Failed to decline lead');
+    throw ApiException((data is Map ? data['message']?.toString() : null) ?? 'Failed to decline lead');
   }
 }

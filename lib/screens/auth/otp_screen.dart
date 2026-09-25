@@ -4,19 +4,10 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:urbantutorsapp/controllers/auth_controller.dart';
-import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/models/user_new_modal.dart';
 
-import 'package:urbantutorsapp/screens/admin/admin_dashboard.dart';
-import 'package:urbantutorsapp/screens/admin/admin_pending_screen.dart';
-import 'package:urbantutorsapp/screens/admin/admin_profile_form.dart';
-import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
-import 'package:urbantutorsapp/screens/student/student_profile_form.dart';
-import 'package:urbantutorsapp/screens/tutor/student_peding_screen.dart';
-import 'package:urbantutorsapp/screens/tutor/teacher_pending_screen.dart';
-import 'package:urbantutorsapp/screens/tutor/tutor_profile_form.dart';
-import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
-import 'package:urbantutorsapp/shared/default_dashboard.dart';
+import 'package:urbantutorsapp/utils/home_router.dart';
+import 'package:urbantutorsapp/utils/session.dart';
 import '../../theme/theme_constants.dart';
 
 class OTPScreen extends StatefulWidget {
@@ -24,6 +15,7 @@ class OTPScreen extends StatefulWidget {
   final String role;
   final int roleId;
   final String otp;
+  final String name;
 
   const OTPScreen({
     super.key,
@@ -31,7 +23,7 @@ class OTPScreen extends StatefulWidget {
     required this.role,
     required this.roleId,
     required this.otp,
-    required String name,
+    required this.name,
   });
 
   @override
@@ -41,9 +33,8 @@ class OTPScreen extends StatefulWidget {
 class _OTPScreenState extends State<OTPScreen> {
   String otp = '';
   bool isResending = false;
+  bool isVerifying = false;
   final TextEditingController _otpController = TextEditingController();
-  final ProfileUpdateController _profileUpdateController =
-      Get.put(ProfileUpdateController());
   final AuthController auth = Get.find<AuthController>();
   
   @override
@@ -51,75 +42,32 @@ class _OTPScreenState extends State<OTPScreen> {
     _otpController.dispose();
     super.dispose();
   }
-  Future<bool> isProfiledataEmpty() async {
-    await _profileUpdateController.fetchProfileForStudent();
-    if (_profileUpdateController.studentprofileData.value!.boardName!.isEmpty) {
-      return true;
-    } else {
-      return false;
-    }
-  }
-
   Future<void> _verifyOtp() async {
+    if (isVerifying) return;
+    setState(() => isVerifying = true);
     final prefs = await SharedPreferences.getInstance();
-    final name = prefs.getString('reg_name') ?? 'User';
+    final name = widget.name.isNotEmpty
+        ? widget.name
+        : (prefs.getString('reg_name') ?? 'User');
     final firebaseToken = 'dummy_token';
-    print("verifyotpfunction from verifyotp 2");
     try {
-      final auth = Get.find<AuthController>();
       LoginResponse loginResponse = await auth.verifyOtp(
           widget.phone, otp, name, widget.roleId.toString(), firebaseToken);
-      
-      print(loginResponse.message);
-      
+      if (!mounted) return;
+
       // Check if the response is successful and data is not null
       if (loginResponse.success && loginResponse.data != null) {
-        prefs.setString("userData", jsonEncode(loginResponse.data!.toJson()));
+        await prefs.setString(
+            "userData", jsonEncode(loginResponse.data!.toJson()));
         final roleId = loginResponse.data!.userData!.roles[0].roleId;
         final profileStatus = loginResponse.data!.userData!.profileStatus ?? 0;
-        print("Role id from otp screen $roleId");
-        print("Profile status from otp screen $profileStatus");
+        // Start the new session with fresh controllers (no cached data from
+        // before login).
+        await Session.resetControllers();
+        if (!mounted) return;
         
-        Widget dashboard;
-        
-        switch (roleId) {
-          case 3:
-            if (profileStatus == 0) {
-              dashboard = StudentProfileFormScreen();
-            } else if (profileStatus == 1) {
-              dashboard = StudentPendingScreen();
-            } else if (profileStatus == 2) {
-              dashboard = StudentDashboardScreen();
-            } else {
-              dashboard = const DefaultDashboardScreen();
-            }
-            break;
-          case 2:
-            if (profileStatus == 0) {
-              dashboard = TutorProfileFormScreen();
-            } else if (profileStatus == 1) {
-              dashboard = TeacherPendingScreen();
-            } else if (profileStatus == 2) {
-              dashboard = TutorDashboard();
-            } else {
-              dashboard = const DefaultDashboardScreen();
-            }
-            break;
-          case 5:
-            if (profileStatus == 0) {
-              dashboard = AdminProfileForm();
-            } else if (profileStatus == 1) {
-              dashboard = AdminPendingScreen();
-            } else if (profileStatus == 2) {
-              dashboard = AdminDashboard();
-            } else {
-              dashboard = const DefaultDashboardScreen();
-            }
-            break;
-          default:
-            dashboard = const DefaultDashboardScreen();
-        }
-        
+        final dashboard = homeScreenFor(roleId, profileStatus);
+
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => dashboard),
@@ -140,6 +88,7 @@ class _OTPScreenState extends State<OTPScreen> {
         _otpController.clear();
         setState(() {
           otp = '';
+          isVerifying = false;
         });
       }
     } catch (e) {
@@ -156,33 +105,23 @@ class _OTPScreenState extends State<OTPScreen> {
       _otpController.clear();
       setState(() {
         otp = '';
+        isVerifying = false;
       });
     }
   }
 
   Future<void> _resendCode() async {
+    if (isResending) return;
     setState(() => isResending = true);
-    final prefs = await SharedPreferences.getInstance();
-    final name = prefs.getString('reg_name');
-    print(widget.roleId);
-    print(widget.role);
-    try {
-      final otp =
-          await auth.sendOtp(widget.phone, name: name!, roleId: widget.roleId);
-      if (otp != null) {
-        debugPrint('🔐 OTP for testing: $otp');
-      }
-
-      Future.delayed(const Duration(seconds: 2), () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('OTP resent')),
-        );
-        setState(() => isResending = false);
-      });
-    } catch (e) {
-      setState(() => isResending = false);
+    final sent = widget.name.isNotEmpty
+        ? await auth.sendOtp(widget.phone,
+            name: widget.name, roleId: widget.roleId)
+        : await auth.sendOtpForLogin(widget.phone, roleId: widget.roleId);
+    if (!mounted) return;
+    setState(() => isResending = false);
+    if (sent) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        const SnackBar(content: Text('OTP resent')),
       );
     }
   }
@@ -253,15 +192,23 @@ class _OTPScreenState extends State<OTPScreen> {
 
               /// Verify Button
               ElevatedButton(
-                onPressed: otp.length == 6 ? _verifyOtp : null,
+                onPressed:
+                    otp.length == 6 && !isVerifying ? _verifyOtp : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
-                      otp.length == 6 ? primary : primary.withOpacity(0.4),
+                      otp.length == 6 ? primary : primary.withValues(alpha: 0.4),
                   minimumSize: const Size.fromHeight(50),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                 ),
-                child: const Text('Verify OTP', style: TextStyle(fontSize: 16)),
+                child: isVerifying
+                    ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2.5, color: Colors.white),
+                      )
+                    : const Text('Verify OTP', style: TextStyle(fontSize: 16)),
               ),
               const SizedBox(height: 16),
 

@@ -8,7 +8,7 @@ import 'package:urbantutorsapp/models/profile_modals/student_profile_response_mo
 import 'package:urbantutorsapp/models/profile_modals/tutor_profile_request_modal.dart';
 import 'package:urbantutorsapp/models/profile_modals/tutor_response_modal.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_modal.dart';
-import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
+import 'package:urbantutorsapp/utils/home_router.dart';
 import 'package:urbantutorsapp/services/profile_update_service.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
@@ -25,9 +25,7 @@ class ProfileUpdateController extends GetxController {
     isLoading.value = true;
     try {
       final response = await _profileUpdateService.getProfileForAdmin();
-      isLoading.value = false;
-      debugPrint("✅ Admin Profile fetched successfully:  ${response.data}");
-      if (response.data == []) {
+      if (response.data == null) {
         setAdminProfile(null);
       } else {
         final leadStatus = response.data!.tutorburoProfileStatus;
@@ -36,7 +34,6 @@ class ProfileUpdateController extends GetxController {
       }
     } catch (e) {
       debugPrint("❌ Error in fetchProfileUpdate: $e");
-      isLoading.value = false;
     } finally {
       isLoading.value = false;
     }
@@ -66,9 +63,7 @@ class ProfileUpdateController extends GetxController {
     isLoading.value = true;
     try {
       final response = await _profileUpdateService.getProfileForStudent();
-      isLoading.value = false;
-      debugPrint("✅ Profile fetched successfully:  ${response.data}");
-      if (response.data == []) {
+      if (response.data == null) {
         setProfile(null);
       } else {
         final leadStatus = response.data!.leadStatus;
@@ -77,7 +72,6 @@ class ProfileUpdateController extends GetxController {
       }
     } catch (e) {
       debugPrint("❌ Error in fetchProfileUpdate: $e");
-      isLoading.value = false;
     } finally {
       isLoading.value = false;
     }
@@ -124,8 +118,8 @@ class ProfileUpdateController extends GetxController {
     try {
       final response =
           await _profileUpdateService.updateProfileForTutor(updateData);
+      if (!response.success) return _failed(response.message);
       tutorprofileData.value = response.data;
-      debugPrint("✅ Profile updated successfully");
       Get.snackbar(
         'Success',
         response.message,
@@ -146,19 +140,16 @@ class ProfileUpdateController extends GetxController {
       return false;
     } finally {
       isLoading.value = false;
-      return false;
     }
   }
 
   Future<bool> updateTutorProfile(updateData) async {
-    print(updateData);
     isLoading.value = true;
     try {
       final response =
           await _profileUpdateService.updateTutorProfile(updateData);
-      tutorprofileData.value = response.data;
-      debugPrint("✅ Profile updated successfully");
       if (response.success) {
+        tutorprofileData.value = response.data;
         Get.snackbar(
           'Success',
           response.message,
@@ -199,11 +190,12 @@ class ProfileUpdateController extends GetxController {
     try {
       final response =
           await _profileUpdateService.updateProfileForStudent(updateData);
-      debugPrint("✅ Profile updated successfully");
-      final int? profileStatus = await StorageService.getIsProfileStatus();
-      print("profilstatuse");
-      print(profileStatus);
-      Get.offAll(() => const StudentDashboardScreen());
+      if (!response.success) return _failed(response.message);
+      // Route by the status the server now reports (pending until approved).
+      await fetchProfileForStudent();
+      final status = studentprofileData.value?.profile_status ?? 1;
+      await StorageService.saveIsProfileStatus(status);
+      Get.offAll(() => homeScreenFor(Roles.student, status));
       Get.snackbar(
         'Success',
         response.message,
@@ -224,7 +216,6 @@ class ProfileUpdateController extends GetxController {
       return false;
     } finally {
       isLoading.value = false;
-      return false;
     }
   }
 
@@ -232,11 +223,12 @@ class ProfileUpdateController extends GetxController {
     isLoading.value = true;
     try {
       final response = await _profileUpdateService.updateStudentProfile(data);
-      
-      if (response.success) {
+      if (!response.success) return _failed(response.message);
+
+      {
         // Optimistically update local state if we have the data map
         if (studentprofileData.value != null && data is Map) {
-          final map = data as Map;
+          final map = data;
           // Extract values safely
           final String? newName = map['student_name']?.toString();
           final String? newMobile = map['mobile']?.toString();
@@ -293,8 +285,8 @@ class ProfileUpdateController extends GetxController {
     try {
       final response =
           await _profileUpdateService.updateProfileForTutor(updateData);
+      if (!response.success) return _failed(response.message);
       tutorprofileData.value = response.data;
-      debugPrint("✅ Profile updated successfully");
       Get.snackbar(
         'Success',
         response.message,
@@ -315,7 +307,6 @@ class ProfileUpdateController extends GetxController {
       return false;
     } finally {
       isLoading.value = false;
-      return false;
     }
   }
 
@@ -374,7 +365,7 @@ class ProfileUpdateController extends GetxController {
       if (response.success != true) {
         Get.snackbar(
           'Error',
-          response.message ?? 'Failed to update profile',
+          response.message.isNotEmpty ? response.message : 'Failed to update profile',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.redAccent,
           colorText: Colors.white,
@@ -387,7 +378,7 @@ class ProfileUpdateController extends GetxController {
       debugPrint("✅ Profile updated successfully");
       Get.snackbar(
         'Success',
-        response.message ?? 'Profile updated successfully',
+        response.message.isNotEmpty ? response.message : 'Profile updated successfully',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.green,
         colorText: Colors.white,
@@ -414,5 +405,16 @@ class ProfileUpdateController extends GetxController {
       // only cleanup here — do NOT return from finally
       isLoading.value = false;
     }
+  }
+
+  bool _failed(String message) {
+    Get.snackbar(
+      'Failed',
+      message.isNotEmpty ? message : 'Could not update profile. Please try again.',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.redAccent,
+      colorText: Colors.white,
+    );
+    return false;
   }
 }

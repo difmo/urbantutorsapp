@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/lead_create_controller.dart';
 import 'package:urbantutorsapp/controllers/notes_controller.dart';
@@ -12,7 +11,6 @@ import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
-import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/student/ChapterDetailsScreen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
@@ -195,31 +193,7 @@ class _NotesScreenState extends State<NotesScreen> {
       backgroundColor: const Color(0xFFF7F8FA),
       key: _scaffoldKey,
       extendBodyBehindAppBar: true,
-      endDrawer: StudentDrawer(onMenuTap: (label) async {
-        if (label == 'Logout') {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isLoggedIn', false);
-          await prefs.remove('user_name');
-          await prefs.remove('user_phone');
-          await prefs.remove('user_role');
-          await StorageService.clearTokenAndRole();
-          await StorageService.clear();
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Logged out successfully')),
-          );
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const SplashScreen()),
-            (route) => false,
-          );
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Navigating to $label')),
-          );
-        }
-      }),
+      endDrawer: StudentDrawer(),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -307,7 +281,7 @@ class _NotesScreenState extends State<NotesScreen> {
                     return _dropdownDec(
                       DropdownButtonFormField<int>(
                         isExpanded: true,
-                        value: boardId,
+                        initialValue: boardId,
                         decoration: _fieldDec('Select Board'),
                         items: boards
                             .map((b) => DropdownMenuItem<int>(
@@ -346,7 +320,7 @@ class _NotesScreenState extends State<NotesScreen> {
                     return _dropdownDec(
                       DropdownButtonFormField<int>(
                         isExpanded: true,
-                        value: classId,
+                        initialValue: classId,
                         decoration: _fieldDec('Select Class').copyWith(
                           suffixIcon: fetching
                               ? const Padding(
@@ -397,7 +371,7 @@ class _NotesScreenState extends State<NotesScreen> {
                     return _dropdownDec(
                       DropdownButtonFormField<int>(
                         isExpanded: true,
-                        value: subjectId,
+                        initialValue: subjectId,
                         decoration: _fieldDec('Select Subject').copyWith(
                           suffixIcon: fetching
                               ? const Padding(
@@ -444,7 +418,7 @@ class _NotesScreenState extends State<NotesScreen> {
                     return _dropdownDec(
                       DropdownButtonFormField<int>(
                         isExpanded: true,
-                        value: chapterId,
+                        initialValue: chapterId,
                         decoration: _fieldDec('Select Chapter').copyWith(
                           suffixIcon: fetching
                               ? const Padding(
@@ -481,6 +455,7 @@ class _NotesScreenState extends State<NotesScreen> {
                                   MaterialPageRoute(
                                     builder: (_) => ChapterDetailsScreen(
                                       chapterId: val!,
+                                      type: widget.flags,
                                     ),
                                   ),
                                 );
@@ -549,7 +524,7 @@ class _Header extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(.18),
+                  color: Colors.white.withValues(alpha: .18),
                   borderRadius: BorderRadius.circular(22),
                   border: Border.all(width: 1, color: AppColors.primaryColor),
                 ),

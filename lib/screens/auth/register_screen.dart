@@ -28,53 +28,51 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _phoneController = TextEditingController();
   final AuthController auth = Get.find<AuthController>();
   bool _agreed = false;
+  bool _sending = false;
   Future<void> _sendOtp() async {
+    if (_sending) return;
     if (!_agreed) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please agree to Terms & Conditions')),
       );
       return;
     }
-    if (_formKey.currentState!.validate()) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('reg_name', _nameController.text.trim());
-      await prefs.setString('reg_phone', _phoneController.text.trim());
-      print(_nameController.text.toString());
-      print(_phoneController.text.toString());
-      print(widget.roleId);
-      print(widget.role);
-      try {
-        final otp = await auth.sendOtp(_phoneController.text.trim(),
-            name: _nameController.text.toString(), roleId: widget.roleId);
-        if (otp != null) {
-          debugPrint('🔐 OTP for testing: $otp');
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => OTPScreen(
-                role: widget.role,
-                phone: _phoneController.text.trim(),
-                roleId: widget.roleId,
-                name: _nameController.text.toString(),
-                otp: otp,
-              ),
-            ),
-          );
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
-      }
-    }
+    if (!_formKey.currentState!.validate()) return;
+
+    final name = _nameController.text.trim();
+    final phone = _phoneController.text.trim();
+    FocusScope.of(context).unfocus();
+    setState(() => _sending = true);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('reg_name', name);
+    await prefs.setString('reg_phone', phone);
+    final sent = await auth.sendOtp(phone, name: name, roleId: widget.roleId);
+    if (!mounted) return;
+    setState(() => _sending = false);
+    if (!sent) return; // the controller already showed the error
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OTPScreen(
+          role: widget.role,
+          phone: phone,
+          roleId: widget.roleId,
+          name: name,
+          otp: '',
+        ),
+      ),
+    );
   }
 
   Future<void> _openTerms() async {
-    const url = 'https://urbantutors.pro/privacy-policy';
-    if (await canLaunch(url)) {
-      await launch(url, forceSafariVC: false, forceWebView: false);
-    } else {
-      throw 'Could not launch $url';
+    final url = Uri.parse('https://urbantutors.pro/privacy-policy');
+    final opened = await canLaunchUrl(url) &&
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open Terms & Conditions')),
+      );
     }
   }
 
@@ -163,7 +161,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   CustomInputField(
                     controller: _phoneController,
                     label: 'Mobile Number',
-                    icon: FontAwesomeIcons.mobileAlt,
+                    icon: FontAwesomeIcons.mobileAlt.data,
                     keyboardType: TextInputType.phone,
                     maxLength: 10,
                     labelStyle: const TextStyle(color: Color(0xFF9B9B9B)),

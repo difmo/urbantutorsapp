@@ -4,25 +4,20 @@ import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/lead_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
-import 'package:urbantutorsapp/controllers/tutor_leads_controller.dart';
 
 import 'package:urbantutorsapp/models/lead__model.dart';
-import 'package:urbantutorsapp/models/tutor_lead.dart';
 
 import 'package:urbantutorsapp/screens/admin/CreateLeadScreen.dart' as create;
 import 'package:urbantutorsapp/screens/admin/LeadDetailsScreen.dart' as details;
 import 'package:urbantutorsapp/screens/admin/add_tutor_admin.dart';
 import 'package:urbantutorsapp/screens/admin/history_admin.dart';
 import 'package:urbantutorsapp/screens/admin/promot_admin.dart';
-import 'package:urbantutorsapp/screens/splash_screen.dart';
 
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
-import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/AdminDrawer.dart';
 import '../../theme/theme_constants.dart';
 
@@ -45,7 +40,6 @@ class _AdminDashboardState extends State<AdminDashboard>
   ];
 
   final LeadController leadController = Get.put(LeadController());
-  final TutorLeadsController _leads = Get.put(TutorLeadsController());
 
   late final CoinsController _coins;
   late final ProfileUpdateController _p;
@@ -70,7 +64,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     _p = Get.isRegistered<ProfileUpdateController>()
         ? Get.find<ProfileUpdateController>()
         : Get.put(ProfileUpdateController());
-    _p.fetchProfileForStudent();
+    _p.fetchProfileForAdmin();
   }
 
   @override
@@ -97,13 +91,13 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   String _initial(String? name) {
     final n = (name ?? '').trim();
-    if (n.isEmpty) return 'S';
+    if (n.isEmpty) return 'B';
     return n.characters.first.toUpperCase();
   }
 
   String _firstName(String? name) {
     final n = (name ?? '').trim();
-    if (n.isEmpty) return 'Student';
+    if (n.isEmpty) return 'Bureau';
     final parts = n.split(RegExp(r'\s+'));
     return parts.first;
   }
@@ -115,52 +109,6 @@ class _AdminDashboardState extends State<AdminDashboard>
     return 'Good evening';
   }
 
-  Future<void> _handleMenuTap(String label) async {
-    Navigator.of(context).pop();
-    if (label == 'Logout') {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
-      await StorageService.clear();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Logged out successfully')),
-      );
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const SplashScreen()),
-        (_) => false,
-      );
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Navigating to $label')),
-      );
-    }
-  }
-
-  bool _isGrabbed(TutorLead e) =>
-      _leads.grabbedLeads.any((g) => g.grabLeadId == e.id);
-
-  Future<void> _grabThisLead(TutorLead e) async {
-    final msg = await _leads.grabLead(e.id.toString());
-    if (!mounted) return;
-    if (msg != null) {
-      Get.snackbar(
-        'Success',
-        msg,
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 2),
-      );
-    } else if (_leads.error.isNotEmpty) {
-      Get.snackbar(
-        'Error',
-        _leads.error.value,
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 2),
-      );
-    }
-  }
-
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   @override
   Widget build(BuildContext context) {
@@ -170,31 +118,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     return Scaffold(
       key: _scaffoldKey,
       extendBodyBehindAppBar: true,
-      endDrawer: Admindrawer(onMenuTap: (label) async {
-        if (label == 'Logout') {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isLoggedIn', false);
-          await prefs.remove('user_name');
-          await prefs.remove('user_phone');
-          await prefs.remove('user_role');
-          await StorageService.clearTokenAndRole();
-          await StorageService.clear();
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Logged out successfully')),
-          );
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const SplashScreen()),
-            (route) => false,
-          );
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Navigating to $label')),
-          );
-        }
-      }),
+      endDrawer: Admindrawer(),
       appBar: AppBar(
         elevation: 0, // cleaner edge; we'll draw our own line
         backgroundColor: Colors.transparent,
@@ -304,19 +228,14 @@ class _AdminDashboardState extends State<AdminDashboard>
               const SizedBox(width: 8),
               InkWell(
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const TutorCoinsScreen(),
-                    ),
-                  );
+                  _openPage(const TutorCoinsScreen());
                 },
                 borderRadius: BorderRadius.circular(20),
                 child: Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.18),
+                    color: Colors.white.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(width: 2, color: AppColors.primaryColor),
                   ),
@@ -341,7 +260,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               Divider(
                 height: 2,
                 thickness: 1,
-                color: Colors.white.withOpacity(0.28),
+                color: Colors.white.withValues(alpha: 0.28),
               ),
               TabBar(
                 tabAlignment: TabAlignment.center,
@@ -462,8 +381,6 @@ class _AdminDashboardState extends State<AdminDashboard>
                       onTap: () => _openDetails(lead),
                       child: _LeadCard(
                         lead: lead,
-                        isContacted: true,
-                        onContactToggle: () {},
                         onReadMore: () => _openDetails(lead),
                       ),
                     );
@@ -480,14 +397,14 @@ class _AdminDashboardState extends State<AdminDashboard>
         borderRadius: BorderRadius.circular(16),
         child: BottomAppBar(
           shape: const CircularNotchedRectangle(),
-          color: Colors.white.withOpacity(.94),
+          color: Colors.white.withValues(alpha: .94),
           child: SizedBox(
             height: 64,
             child: Row(
               children: [
                 Expanded(
                   child: _NavItem(
-                    icon: FontAwesomeIcons.house,
+                    icon: FontAwesomeIcons.house.data,
                     label: 'Home',
                     selected: _selectedIndex == 0,
                     onTap: () {
@@ -501,10 +418,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                     onTap: () {
                       HapticFeedback.selectionClick();
                       setState(() => _selectedIndex = 1);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => AddTutorAdmin()),
-                      );
+                      _openPage(AddTutorAdmin());
                     },
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -522,35 +436,25 @@ class _AdminDashboardState extends State<AdminDashboard>
                 ),
                 Expanded(
                   child: _NavItem(
-                    icon: FontAwesomeIcons.add,
+                    icon: FontAwesomeIcons.add.data,
                     label: 'Add Lead',
                     selected: _selectedIndex == 2,
                     onTap: () {
                       HapticFeedback.selectionClick();
                       setState(() => _selectedIndex = 2);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const create.CreateLeadScreen(),
-                        ),
-                      );
+                      _openPage(const create.CreateLeadScreen());
                     },
                   ),
                 ),
                 Expanded(
                   child: _NavItem(
-                    icon: FontAwesomeIcons.share,
+                    icon: FontAwesomeIcons.share.data,
                     label: 'Promot',
                     selected: _selectedIndex == 3,
                     onTap: () {
                       HapticFeedback.selectionClick();
                       setState(() => _selectedIndex = 3);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PromotAdmin(),
-                        ),
-                      );
+                      _openPage(PromotAdmin());
                     },
                   ),
                 ),
@@ -562,12 +466,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                     onTap: () {
                       HapticFeedback.selectionClick();
                       setState(() => _selectedIndex = 4);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => HistoryAdmin(),
-                        ),
-                      );
+                      _openPage(HistoryAdmin());
                     },
                   ),
                 ),
@@ -577,6 +476,15 @@ class _AdminDashboardState extends State<AdminDashboard>
         ),
       ),
     );
+  }
+
+  /// Opens a bottom-bar page, then returns the bar to Home and reloads leads
+  /// (a lead may have been created or edited there).
+  Future<void> _openPage(Widget page) async {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+    if (!mounted) return;
+    setState(() => _selectedIndex = 0);
+    await _refreshLeads();
   }
 
   Future<void> _openDetails(StudentLead lead) async {
@@ -650,14 +558,10 @@ class _NavItem extends StatelessWidget {
 class _LeadCard extends StatelessWidget {
   const _LeadCard({
     required this.lead,
-    required this.isContacted,
-    required this.onContactToggle,
     required this.onReadMore,
   });
 
   final StudentLead lead;
-  final bool isContacted;
-  final VoidCallback? onContactToggle; // null => disabled
   final VoidCallback onReadMore;
 
   @override
@@ -714,7 +618,10 @@ class _LeadCard extends StatelessWidget {
                   label: 'Mode',
                   value: lead.mode,
                   iconColor: AppColors.accentColor,
-                  trailing: leadCountPill('0/3'),
+                  // lead_count = max tutors who may grab this lead
+                  trailing: (int.tryParse(lead.leadCount) ?? 0) > 0
+                      ? leadCountPill('Max ${lead.leadCount}')
+                      : null,
                 ),
                 const SizedBox(height: 6),
                 LeadMetaRow(
@@ -723,14 +630,7 @@ class _LeadCard extends StatelessWidget {
                   value: "₹${lead.price}/Hr",
                   iconColor: AppColors.accentColor,
                   inlineLinkText: '(Read more)',
-                  onInlineLinkTap: onContactToggle,
-                  trailing: const Text(
-                    'Responded',
-                    style: TextStyle(
-                      color: AppColors.textColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  onInlineLinkTap: onReadMore,
                 ),
               ],
             ),

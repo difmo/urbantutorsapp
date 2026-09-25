@@ -1,9 +1,10 @@
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:urbantutorsapp/models/user_new_modal.dart';
+import 'package:urbantutorsapp/services/api_exception.dart';
 import 'package:urbantutorsapp/services/auth_service.dart';
+import 'package:urbantutorsapp/utils/session.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class AuthController extends GetxController {
@@ -13,37 +14,32 @@ class AuthController extends GetxController {
   var token = ''.obs;
   var roleId = 0.obs;
 
-  Future<String?> sendOtp(String mobile,
+  /// Requests an OTP. Returns true when the server accepted the request;
+  /// on failure the error is shown to the user and false is returned.
+  Future<bool> sendOtp(String mobile,
       {required String name, required int roleId}) async {
     isLoading.value = true;
     try {
       final res =
           await _authService.sendOtp(mobile, name: name, roleId: roleId);
-      final otp = res.data?['data']?['otp_data']?['mobile_otp']?.toString();
-      debugPrint('OTP sent: $otp');
-      return otp;
+      final body = res.data;
+      if (body is Map && body['success'] == true) return true;
+      Get.snackbar(
+        'Error',
+        (body is Map ? body['message']?.toString() : null) ??
+            'Could not send OTP. Please try again.',
+      );
+      return false;
     } catch (e) {
       Get.snackbar('Error', e.toString());
-      return null;
+      return false;
     } finally {
       isLoading.value = false;
     }
   }
 
-  Future<String?> sendOtpForLogin(String mobile, {required int roleId}) async {
-    isLoading.value = true;
-    try {
-      final res = await _authService.sendOtp(mobile, name: "", roleId: roleId);
-      final otp = res.data?['data']?['otp_data']?['mobile_otp']?.toString();
-      debugPrint('OTP sent: $otp');
-      return otp;
-    } catch (e) {
-      Get.snackbar('Error', e.toString());
-      return null;
-    } finally {
-      isLoading.value = false;
-    }
-  }
+  Future<bool> sendOtpForLogin(String mobile, {required int roleId}) =>
+      sendOtp(mobile, name: '', roleId: roleId);
 
   void printJson(dynamic data) {
     const JsonEncoder encoder = JsonEncoder.withIndent('  ');
@@ -53,7 +49,6 @@ class AuthController extends GetxController {
 
   Future<LoginResponse> verifyOtp(String mobile, String otp, String name,
       String roleId, String fbToken) async {
-    print("verifyotpfunction from verifyotp $roleId");
     isLoading.value = true;
     try {
       final res = await _authService.verifyOtp(
@@ -63,8 +58,13 @@ class AuthController extends GetxController {
         roleId: roleId,
         firebaseToken: fbToken,
       );
-      print("Response from verify otp: ${res.data}");
       if (res.success) {
+        if (res.data?.token == null ||
+            res.data?.userData == null ||
+            res.data!.userData!.roles.isEmpty) {
+          throw const ApiException(
+              'Login failed: incomplete account data. Please contact support.');
+        }
         token.value = res.data!.token!;
         int roleIdd = res.data!.userData!.roles[0].roleId;
         int userId = res.data!.userData!.id;
@@ -82,24 +82,11 @@ class AuthController extends GetxController {
       }
 
       return res;
-    } catch (e) {
-      Get.snackbar('Error', e.toString());
-      rethrow;
     } finally {
       isLoading.value = false;
     }
   }
 
   /// ✅ Logout clears everything
-  Future<void> logout() async {
-    try {
-      token.value = '';
-      roleId.value = 0; // reset to default
-      await StorageService.clear();
-      Get.offAllNamed('/role-intro');
-      Get.snackbar("sdlkfjdsf", "Logout Successfully");
-    } catch (e) {
-      Get.snackbar('Logout Error', e.toString());
-    }
-  }
+  Future<void> logout() => Session.logout();
 }

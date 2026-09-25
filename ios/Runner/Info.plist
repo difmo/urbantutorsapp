@@ -51,6 +51,14 @@
 	<string>We need access to your camera</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>We need access to your gallery</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your location is used to find tutors and students near you.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+		<string>mailto</string>
+		<string>https</string>
+	</array>
 
 </dict>
 </plist>

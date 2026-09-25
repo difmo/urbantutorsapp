@@ -1,18 +1,16 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:urbantutorsapp/utils/support_contact.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
-import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
-import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/AdminDrawer.dart';
 
 class AdminSupportScreen extends StatefulWidget {
@@ -34,13 +32,22 @@ class _NotificationStudentState extends State<AdminSupportScreen> {
     super.dispose();
   }
 
-  void _submitFeedback() {
+  Future<void> _submitFeedback() async {
     if (!_formKey.currentState!.validate()) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Feedback submitted")),
+    final sent = await SupportContact.compose(
+      subject: 'Feedback: ${_titleCtrl.text.trim()}',
+      body: _descCtrl.text.trim(),
     );
-    _titleCtrl.clear();
-    _descCtrl.clear();
+    if (!mounted) return;
+    if (sent) {
+      _titleCtrl.clear();
+      _descCtrl.clear();
+    }
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(sent
+          ? 'Your email app is open. Tap Send to deliver your feedback.'
+          : 'No email app found. Please write to ${SupportContact.email}.'),
+    ));
   }
 
   // Controllers
@@ -128,31 +135,7 @@ class _NotificationStudentState extends State<AdminSupportScreen> {
         backgroundColor: Colors.white,
         key: _scaffoldKey,
         extendBodyBehindAppBar: true,
-        endDrawer: Admindrawer(onMenuTap: (label) async {
-          if (label == 'Logout') {
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.setBool('isLoggedIn', false);
-            await prefs.remove('user_name');
-            await prefs.remove('user_phone');
-            await prefs.remove('user_role');
-            await StorageService.clearTokenAndRole();
-            await StorageService.clear();
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Logged out successfully')),
-            );
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => const SplashScreen()),
-              (route) => false,
-            );
-          } else {
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Navigating to $label')),
-            );
-          }
-        }),
+        endDrawer: Admindrawer(),
         appBar: AppBar(
           elevation: 0,
           backgroundColor: Colors.transparent,
@@ -256,9 +239,7 @@ class _NotificationStudentState extends State<AdminSupportScreen> {
                       icon: Icons.email_outlined,
                       title: "Email Us",
                       subtitle: "support@urbantutors.pro",
-                      onTap: () => {
-                        // launchUrl(Uri.parse('mailto:support@urbantutors.com')),
-                      },
+                      onTap: () => SupportContact.compose(subject: 'Support request'),
                       color: Colors.green,
                     ),
                   ),
@@ -342,7 +323,7 @@ class _NotificationStudentState extends State<AdminSupportScreen> {
         decoration: BoxDecoration(
             borderRadius: BorderRadius.all(Radius.circular(8)),
             gradient: LinearGradient(
-              colors: [AppColors.accentColor.withOpacity(.18), Colors.white],
+              colors: [AppColors.accentColor.withValues(alpha: .18), Colors.white],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -353,7 +334,7 @@ class _NotificationStudentState extends State<AdminSupportScreen> {
           child: Column(
             children: [
               CircleAvatar(
-                backgroundColor: color.withOpacity(0.1),
+                backgroundColor: color.withValues(alpha: 0.1),
                 child: Icon(icon, color: color),
               ),
               Text(title,
@@ -449,7 +430,7 @@ class _Header extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(.18),
+                    color: Colors.white.withValues(alpha: .18),
                     borderRadius: BorderRadius.circular(22),
                     border:
                         Border.all(width: 1, color: AppColors.primaryColor)),

@@ -8,7 +8,7 @@ class GetMasterdataService {
       print("Master Data: ${response.data}");
       return MasterDataResponse.fromJson(response.data);
     } catch (e) {
-      throw Exception("Failed to fetch master data: $e");
+      throw ApiException("Failed to fetch master data: $e");
     }
   }
 }

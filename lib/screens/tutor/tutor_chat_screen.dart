@@ -1,21 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
+import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/controllers/tutor_pro_controller.dart';
 import 'package:urbantutorsapp/models/nearby_student.dart';
+import 'package:urbantutorsapp/screens/tutor/pro_plan_picker.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 
 class TutorChatScreen extends StatefulWidget {
   const TutorChatScreen({
     super.key,
-    this.latitude = 28.0014, // you can inject live GPS here
-    this.longitude = 75.6663, // you can inject live GPS here
+    this.latitude, // optional override; otherwise device GPS / profile
+    this.longitude,
     this.radiusKm = 10,
     this.subscriptionPlanId = 1, // default Pro plan
   });
 
-  final double latitude;
-  final double longitude;
+  final double? latitude;
+  final double? longitude;
   final int radiusKm;
   final int subscriptionPlanId;
 
@@ -34,14 +37,82 @@ class _TutorChatScreenState extends State<TutorChatScreen> {
         : Get.put(TutorProController());
 
     // Defer network + Rx updates to next frame to avoid build conflicts
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _c.load(
-        latitude: widget.latitude,
-        longitude: widget.longitude,
-        radiusKm: widget.radiusKm,
-      );
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
+
+  double? _lat;
+  double? _lng;
+
+  /// Where to search from: explicit override, then device GPS, then the
+  /// location saved in the tutor's profile.
+  Future<bool> _resolveLocation() async {
+    if (widget.latitude != null && widget.longitude != null) {
+      _lat = widget.latitude;
+      _lng = widget.longitude;
+      return true;
+    }
+    try {
+      if (await Geolocator.isLocationServiceEnabled()) {
+        var perm = await Geolocator.checkPermission();
+        if (perm == LocationPermission.denied) {
+          perm = await Geolocator.requestPermission();
+        }
+        if (perm == LocationPermission.whileInUse ||
+            perm == LocationPermission.always) {
+          final pos = await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.medium,
+              timeLimit: Duration(seconds: 10),
+            ),
+          );
+          _lat = pos.latitude;
+          _lng = pos.longitude;
+          return true;
+        }
+      }
+    } catch (e) {
+      debugPrint('Nearby: GPS unavailable: $e');
+    }
+    final profile = Get.find<ProfileUpdateController>();
+    if (profile.tutorprofileData.value == null) {
+      await profile.fetchProfileForTutor();
+    }
+    final t = profile.tutorprofileData.value;
+    if (t?.latitude != null && t?.longitude != null) {
+      _lat = t!.latitude;
+      _lng = t.longitude;
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> _load() async {
+    if (_lat == null || _lng == null) {
+      _c.isLoading.value = true;
+      final ok = await _resolveLocation();
+      if (!ok) {
+        _c.isLoading.value = false;
+        _c.error.value =
+            'Turn on location access (or add your location to your profile) to see students near you.';
+        return;
+      }
+    }
+    await _c.load(latitude: _lat!, longitude: _lng!, radiusKm: widget.radiusKm);
+  }
+
+  Future<void> _buyPro() async {
+    if (_lat == null || _lng == null) return _load();
+    final planId = await pickProPlan(context);
+    if (planId == null) return;
+    await _c.buyProAndReload(
+      subscriptionPlanId: planId,
+      latitude: _lat!,
+      longitude: _lng!,
+      radiusKm: widget.radiusKm,
+    );
+  }
+
+  bool get _isCoinError => _c.error.value.toLowerCase().contains('coin');
 
   @override
   Widget build(BuildContext context) {
@@ -59,26 +130,29 @@ class _TutorChatScreenState extends State<TutorChatScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.wallet, color: Colors.red, size: 42),
+                  Icon(_isCoinError ? Icons.wallet : Icons.error_outline,
+                      color: Colors.red, size: 42),
                   const SizedBox(height: 10),
-                  Text(_c.error.value=="Exception: Insufficient Coins in Your Wallet."?"Insufficient Coins in Your Wallet":_c.error.value, textAlign: TextAlign.center),
+                  Text(_c.error.value, textAlign: TextAlign.center),
                   const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                       Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const TutorCoinsScreen()),
-                    );
-                      //    _c.load(
-                      //   latitude: widget.latitude,
-                      //   longitude: widget.longitude,
-                      //   radiusKm: widget.radiusKm,
-                      // );
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Upgrade Wallet'),
-                  ),
+                  if (_isCoinError)
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const TutorCoinsScreen()),
+                        );
+                      },
+                      icon: const Icon(Icons.account_balance_wallet_outlined),
+                      label: const Text('Upgrade Wallet'),
+                    )
+                  else
+                    OutlinedButton.icon(
+                      onPressed: _load,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry'),
+                    ),
                 ],
               ),
             ),
@@ -89,12 +163,7 @@ class _TutorChatScreenState extends State<TutorChatScreen> {
           return _ProUpsell(
             onBuy: _c.isPurchasing.value
                 ? null
-                : () => _c.buyProAndReload(
-                      subscriptionPlanId: widget.subscriptionPlanId,
-                      latitude: widget.latitude,
-                      longitude: widget.longitude,
-                      radiusKm: widget.radiusKm,
-                    ),
+                : _buyPro,
             busy: _c.isPurchasing.value,
           );
         }
@@ -102,11 +171,7 @@ class _TutorChatScreenState extends State<TutorChatScreen> {
         // Has Pro → show nearby students
         if (_c.students.isEmpty) {
           return RefreshIndicator(
-            onRefresh: () => _c.load(
-              latitude: widget.latitude,
-              longitude: widget.longitude,
-              radiusKm: widget.radiusKm,
-            ),
+            onRefresh: _load,
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               children: const [
@@ -128,11 +193,7 @@ class _TutorChatScreenState extends State<TutorChatScreen> {
         }
 
         return RefreshIndicator(
-          onRefresh: () => _c.load(
-            latitude: widget.latitude,
-            longitude: widget.longitude,
-            radiusKm: widget.radiusKm,
-          ),
+          onRefresh: _load,
           child: ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 36, 16, 16),
             itemCount: _c.students.length,
@@ -212,7 +273,7 @@ class _NearbyStudentCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(.03),
+            color: Colors.black.withValues(alpha: .03),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -223,7 +284,7 @@ class _NearbyStudentCard extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 26,
-            backgroundColor: AppColors.primaryColor.withOpacity(.12),
+            backgroundColor: AppColors.primaryColor.withValues(alpha: .12),
             child: const Icon(Icons.person, color: Colors.black54),
           ),
           const SizedBox(width: 12),

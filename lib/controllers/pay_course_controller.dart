@@ -4,7 +4,9 @@ import 'dart:io';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/models/pay_course_models.dart';
+import 'package:urbantutorsapp/services/api_exception.dart';
 import 'package:urbantutorsapp/services/pay_course_service.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
@@ -30,7 +32,6 @@ class PayCourseController extends GetxController {
     error.value = '';
     try {
       final payload = await _svc.fetchCourses();
-      print("Loaded ho gya  :$payload");
       courses.assignAll(payload.items);
     } catch (e) {
       error.value = e.toString();
@@ -71,7 +72,7 @@ class PayCourseController extends GetxController {
       // handle service-level failure
       if (!res.success) {
         // optionally, detect specific API error codes/messages
-        final msg = (res.message ?? '').toString();
+        final msg = res.message;
         if (msg.toLowerCase().contains('insufficient')) {
           throw InsufficientBalanceException(msg);
         }
@@ -79,11 +80,15 @@ class PayCourseController extends GetxController {
       }
 
       // success
-      final successMessage = (res.message.isNotEmpty ?? false)
+      final successMessage = res.message.isNotEmpty
           ? res.message
           : 'Course purchased successfully';
       Get.snackbar('Success', successMessage,
           snackPosition: SnackPosition.BOTTOM);
+      // The purchase spent coins: refresh the wallet balance shown in headers.
+      if (Get.isRegistered<CoinsController>()) {
+        Get.find<CoinsController>().fetchMyCoins();
+      }
       return PurchaseResult(true, successMessage);
     } on InsufficientBalanceException catch (e) {
       Get.snackbar('Insufficient balance', e.message,
@@ -107,7 +112,7 @@ class PayCourseController extends GetxController {
       return PurchaseResult(false, msg);
     } catch (e, st) {
       // last-resort fallback
-      final msg = e.toString() ?? 'An unknown error occurred';
+      final msg = e.toString();
       print('buy() unknown error: $e\n$st');
       Get.snackbar('Error', msg, snackPosition: SnackPosition.BOTTOM);
       return PurchaseResult(false, msg);
@@ -116,30 +121,40 @@ class PayCourseController extends GetxController {
     }
   }
 
+  /// URL of the free sample PDF for [course] (no purchase needed).
   Future<String?> getPreviewUrl(PayCourse course) async {
+    final url = _absolute((course.pdf ?? '').trim());
+    if (url.isEmpty) {
+      Get.snackbar('Preview', 'No preview available for this course');
+      return null;
+    }
+    return url;
+  }
+
+  /// URL of the full course file, which the server only returns once the
+  /// course has been purchased (/viewpdf/{id}).
+  Future<String?> getPurchasedUrl(PayCourse course) async {
     if (openingCourseId.value != 0) return null;
     openingCourseId.value = course.id;
     try {
-      // Prefer endpoint; fallback to course.pdf if backend returns empty
       final v = await _svc.getViewInfo(course.id);
-      String url = v.url.trim();
-      if (url.isEmpty) {
-        url = (course.pdf ?? '').trim();
+      final url = v.url.trim();
+      if (!v.success || url.isEmpty) {
+        // On failure the server puts its explanation in `data`.
+        throw ApiException(url.isNotEmpty ? url : 'Could not open this course');
       }
-
-      if (url.isEmpty) throw Exception('No preview available');
-
-      // If relative, guess base path used in admin uploads
-      if (!url.contains('://')) {
-        url = 'https://urbantutors.pro/public/admin/uploads/paycourse/$url';
-      }
-      return url;
+      return _absolute(url);
     } catch (e) {
       Get.snackbar('Error', e.toString());
       return null;
     } finally {
       openingCourseId.value = 0;
     }
+  }
+
+  String _absolute(String url) {
+    if (url.isEmpty || url.contains('://')) return url;
+    return 'https://urbantutors.pro/public/admin/uploads/paycourse/$url';
   }
 
   Future<void> launchUrlExternal(String url) async {
@@ -163,13 +178,6 @@ class InsufficientBalanceException implements Exception {
   final String message;
   InsufficientBalanceException(
       [this.message = 'Insufficient balance. Please purchase more coins.']);
-  @override
-  String toString() => message;
-}
-
-class ApiException implements Exception {
-  final String message;
-  ApiException([this.message = 'API error']);
   @override
   String toString() => message;
 }

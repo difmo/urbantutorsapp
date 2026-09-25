@@ -1,132 +1,58 @@
 import 'package:flutter/material.dart';
+import 'package:urbantutorsapp/screens/student/search_tutor_screen.dart';
+import 'package:urbantutorsapp/theme/theme_constants.dart';
 
-class ChatScreen extends StatefulWidget {
+/// Chat with a tutor.
+///
+/// The server can send chat messages (/chat_send) but has no endpoint to load
+/// a conversation, so real two-way chat isn't possible yet. Until then this
+/// screen says so and points students to posting a requirement, instead of
+/// showing a made-up conversation whose messages were never delivered.
+class ChatScreen extends StatelessWidget {
   final String teacherName;
 
-  const ChatScreen({super.key, this.teacherName = 'Tutor John'});
-
-  @override
-  State<ChatScreen> createState() => _ChatScreenState();
-}
-
-class _ChatScreenState extends State<ChatScreen> {
-  final List<Map<String, dynamic>> _messages = [
-    {'text': 'Hi! How can I help you today?', 'isMe': false},
-    {'text': 'I need help with calculus.', 'isMe': true},
-    {'text': 'Sure, let’s start from the basics.', 'isMe': false},
-  ];
-
-  final TextEditingController _controller = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
-
-  void _sendMessage() {
-    final text = _controller.text.trim();
-    if (text.isNotEmpty) {
-      setState(() {
-        _messages.add({'text': text, 'isMe': true});
-        _controller.clear();
-      });
-
-      Future.delayed(Duration(milliseconds: 100), () {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      });
-    }
-  }
+  const ChatScreen({super.key, this.teacherName = 'Tutor'});
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).primaryColor;
-
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            const CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Icon(Icons.person, color: Colors.black),
-            ),
-            const SizedBox(width: 10),
-            Text(widget.teacherName),
-          ],
-        ),
-        elevation: 1,
+        title: Text(teacherName),
+        backgroundColor: AppColors.primaryColor,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final msg = _messages[index];
-                return Align(
-                  alignment: msg['isMe']
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.7,
-                    ),
-                    decoration: BoxDecoration(
-                      color: msg['isMe']
-                          ? primaryColor.withOpacity(0.15)
-                          : Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      msg['text'],
-                      style: const TextStyle(fontSize: 15),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          SafeArea(
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              color: Colors.white,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      textCapitalization: TextCapitalization.sentences,
-                      decoration: InputDecoration(
-                        hintText: "Type a message...",
-                        filled: true,
-                        fillColor: Colors.grey.shade100,
-                        contentPadding: const EdgeInsets.symmetric(
-                            vertical: 12, horizontal: 16),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(25),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  CircleAvatar(
-                    backgroundColor: primaryColor,
-                    child: IconButton(
-                      icon: const Icon(Icons.send, color: Colors.white),
-                      onPressed: _sendMessage,
-                    ),
-                  )
-                ],
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.forum_outlined,
+                  size: 64, color: AppColors.primaryColor),
+              const SizedBox(height: 16),
+              const Text(
+                'In-app chat is coming soon',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
               ),
-            ),
-          )
-        ],
+              const SizedBox(height: 8),
+              const Text(
+                'To connect with a tutor now, post your requirement. '
+                'Matching tutors will contact you directly.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.black54, fontSize: 15),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.search_rounded),
+                label: const Text('Search a Private Tutor'),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SearchTutorScreen()),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

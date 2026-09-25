@@ -20,9 +20,16 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _phoneController = TextEditingController();
 
-  final AuthController auth = Get.put(AuthController());
+  final AuthController auth = Get.find<AuthController>();
 
   bool _isChecked = false;
+  bool _sending = false;
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    super.dispose();
+  }
 
   // Show loading dialog
   void showLoadingDialog() {
@@ -56,6 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not open Terms & Conditions')),
       );
@@ -63,7 +71,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // Send OTP
-  void _sendOtp() async {
+  Future<void> _sendOtp() async {
+    if (_sending) return;
     final phone = _phoneController.text.trim();
 
     if (!_isChecked) {
@@ -73,38 +82,35 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    if (phone.length == 10 && RegExp(r'^[1-9]\d{9}$').hasMatch(phone)) {
-      showLoadingDialog();
-
-      try {
-        Future.delayed(const Duration(seconds: 2), () async {
-          final otp = await auth.sendOtpForLogin(phone, roleId: widget.roleId);
-          Navigator.of(context).pop();
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => OTPScreen(
-                phone: phone,
-                role: widget.role,
-                roleId: widget.roleId,
-                otp: otp ?? "0000",
-                name: "",
-              ),
-            ),
-          );
-        });
-      } catch (e) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
-      }
-    } else {
+    if (!RegExp(r'^[1-9]\d{9}$').hasMatch(phone)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text('Please enter a valid 10-digit mobile number')),
       );
+      return;
     }
+
+    FocusScope.of(context).unfocus();
+    setState(() => _sending = true);
+    showLoadingDialog();
+    final sent = await auth.sendOtpForLogin(phone, roleId: widget.roleId);
+    if (!mounted) return;
+    Navigator.of(context).pop(); // close loading dialog
+    setState(() => _sending = false);
+    if (!sent) return; // the controller already showed the error
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OTPScreen(
+          phone: phone,
+          role: widget.role,
+          roleId: widget.roleId,
+          otp: '',
+          name: '',
+        ),
+      ),
+    );
   }
 
   @override
@@ -126,7 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                   ),
                   child: CircleAvatar(
                     radius: 40,
@@ -169,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide(
-                        color: const Color(0xFF9B9B9B).withOpacity(0.1)),
+                        color: const Color(0xFF9B9B9B).withValues(alpha: 0.1)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -225,7 +231,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 24),
 
               ElevatedButton(
-                onPressed: _sendOtp,
+                onPressed: _sending ? null : _sendOtp,
                 child: const Text('Send OTP'),
               ),
             ],

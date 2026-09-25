@@ -15,55 +15,60 @@ class NotesController extends GetxController {
   var loadingSubjects = false.obs;
   var loadingChapters = false.obs;
   var loadingChapterDetails = false.obs;
+  final error = ''.obs;
 
-  // Fetch Classes
-  Future<void> fetchClasses({required int boardId, String? type}) async {
+  /// Content type sent to the API: 'Note' (default) or 'pyq'.
+  String _type(String? type) =>
+      (type == null || type.trim().isEmpty) ? 'Note' : type;
+
+  Future<void> _run(RxBool loading, Future<void> Function() body) async {
     try {
-      loadingClasses.value = true;
-      final result = await _svc.fetchClasses(boardId: boardId, type: type!=null?"Note":"Note");
-      classes.assignAll(result ?? []);
+      loading.value = true;
+      error.value = '';
+      await body();
+    } catch (e) {
+      error.value = e.toString();
+      Get.snackbar('Error', e.toString(), snackPosition: SnackPosition.BOTTOM);
     } finally {
-      loadingClasses.value = false;
+      loading.value = false;
     }
   }
+
+  // Fetch Classes
+  Future<void> fetchClasses({required int boardId, String? type}) =>
+      _run(loadingClasses, () async {
+        classes.clear();
+        subjects.clear();
+        chapters.clear();
+        classes.assignAll(
+            await _svc.fetchClasses(boardId: boardId, type: _type(type)));
+      });
 
   // Fetch Subjects
   Future<void> fetchSubjects({
     required int boardId,
-    required int classId, String? type,
-  }) async {
-    try {
-      loadingSubjects.value = true;
-      final result = await _svc.fetchSubjects(
-        // boardId: boardId,
-        classId: classId,
-         type: type!=null?"Note":"Note"
-      );
-      subjects.assignAll(result ?? []);
-    } finally {
-      loadingSubjects.value = false;
-    }
-  }
+    required int classId,
+    String? type,
+  }) =>
+      _run(loadingSubjects, () async {
+        subjects.clear();
+        chapters.clear();
+        subjects.assignAll(
+            await _svc.fetchSubjects(classId: classId, type: _type(type)));
+      });
 
   // Fetch Chapters
-  Future<void> fetchChapters({required int subjectId, String? type}) async {
-    try {
-      loadingChapters.value = true;
-      final result = await _svc.fetchChapters(subjectId: subjectId,  type:type!=null?"Note":"Note");
-      chapters.assignAll(result ?? []);
-    } finally {
-      loadingChapters.value = false;
-    }
-  }
+  Future<void> fetchChapters({required int subjectId, String? type}) =>
+      _run(loadingChapters, () async {
+        chapters.clear();
+        chapters.assignAll(
+            await _svc.fetchChapters(subjectId: subjectId, type: _type(type)));
+      });
 
-    // Fetch Chapter Details
-  Future<void> fetchChapterDetails({required int chapterId, String? type}) async {
-    try {
-      loadingChapterDetails.value = true;
-      final result = await _svc.fetchChapterDetails(chapterId: chapterId, type: type!=null?"Note":"Note");
-      chapterDetails.value = result;
-    } finally {
-      loadingChapterDetails.value = false;
-    }
-  }
+  // Fetch Chapter Details
+  Future<void> fetchChapterDetails({required int chapterId, String? type}) =>
+      _run(loadingChapterDetails, () async {
+        chapterDetails.value = await _svc.fetchChapterDetails(
+            chapterId: chapterId, type: _type(type));
+      });
 }

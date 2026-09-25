@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:urbantutorsapp/utils/session.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/history_student.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/support_student.dart';
@@ -12,13 +13,10 @@ import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/feedback_student.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/notification_student.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/student_profile_screen.dart';
-import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
-import 'package:urbantutorsapp/utils/storage_helper.dart';
 import '../theme/theme_constants.dart';
 
 class StudentDrawer extends StatefulWidget {
-  final Function(String label) onMenuTap;
-  const StudentDrawer({super.key, required this.onMenuTap});
+  const StudentDrawer({super.key});
 
   @override
   State<StudentDrawer> createState() => _StudentDrawerState();
@@ -70,7 +68,7 @@ class _StudentDrawerState extends State<StudentDrawer> {
       child: Container(
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primaryColor.withOpacity(0.08)
+              ? AppColors.primaryColor.withValues(alpha: 0.08)
               : Colors.white,
           borderRadius: BorderRadius.circular(12),
         ),
@@ -114,6 +112,7 @@ class _StudentDrawerState extends State<StudentDrawer> {
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not open Terms & Conditions')),
       );
@@ -221,7 +220,7 @@ class _StudentDrawerState extends State<StudentDrawer> {
                                   )
                                 : CircleAvatar(
                                     radius: 30,
-                                    backgroundColor: primaryColor.withOpacity(0.12),
+                                    backgroundColor: primaryColor.withValues(alpha: 0.12),
                                     child: Text(
                                       _initialFrom(name),
                                       style: const TextStyle(
@@ -357,11 +356,7 @@ class _StudentDrawerState extends State<StudentDrawer> {
                 Icons.logout,
                 'Logout',
                 color: Colors.red,
-                onTap: () async {
-                  await StorageService.clearTokenAndRole();
-                  await StorageService.clear();
-                  Get.offAll(() => const WelcomeScreen());
-                },
+                onTap: () => Session.logout(),
               ),
             ],
           ),

@@ -9,14 +9,12 @@ import 'package:geocoding/geocoding.dart' show Placemark, placemarkFromCoordinat
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/pay_course_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
-import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
@@ -82,6 +80,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     return '$base$path';
   }
 
+  final List<Worker> _workers = [];
+
   @override
   void initState() {
     super.initState();
@@ -114,13 +114,13 @@ _getCurrentLocation();
     });
 
     // Re-hydrate whenever the profile RX changes
-    ever(_p.studentprofileData, (_) async {
+    _workers.add(ever(_p.studentprofileData, (_) async {
       try {
         await _hydrate();
       } catch (e) {
         debugPrint('ever hydrate error: $e');
       }
-    });
+    }));
   }
 
   Future<void> _hydrate() async {
@@ -165,20 +165,47 @@ _getCurrentLocation();
     selectedBoardName = p.boardName;
     selectedClassName = p.courseName;
 
+    // The profile API returns board/class *names* only, so resolve the ids
+    // from master data (boards) and the board's class list.
+    int? boardId = (p.boardId != null && p.boardId! > 0) ? p.boardId : null;
+    final boardName = (p.boardName ?? '').trim().toLowerCase();
+    if (boardId == null && boardName.isNotEmpty) {
+      final boards = _master.masterData.value?.data.boardLead ?? const [];
+      for (final b in boards) {
+        if (b.boardLabel.toString().trim().toLowerCase() == boardName) {
+          boardId = b.boardId;
+          break;
+        }
+      }
+    }
+
     // Load classes for the board first, then set IDs
-    if (p.boardId != null && p.boardId! > 0) {
-      await _leadMeta.loadClasses(p.boardId!);
+    int? classId = (p.courseId != null && p.courseId! > 0) ? p.courseId : null;
+    if (boardId != null) {
+      await _leadMeta.loadClasses(boardId);
+      final className = (p.courseName ?? '').trim().toLowerCase();
+      if (classId == null && className.isNotEmpty) {
+        for (final c in _leadMeta.classes) {
+          if (c.className.trim().toLowerCase() == className) {
+            classId = c.classId;
+            break;
+          }
+        }
+      }
     }
 
     if (!mounted) return;
     setState(() {
-      _boardId = p.boardId;
-      _classId = p.courseId;
+      _boardId = boardId;
+      _classId = classId;
     });
   }
 
   @override
   void dispose() {
+    for (final w in _workers) {
+      w.dispose();
+    }
     _nameCtrl.dispose();
     _mobileCtrl.dispose();
     _localityCtrl.dispose();
@@ -401,44 +428,37 @@ _getCurrentLocation();
     
       final profileBase64 = await _fileToBase64(_profileImage);
 
+      final stored = _p.studentprofileData.value;
       final req = {
         'user_id': userId,
         'student_name': _nameCtrl.text.trim(),
         'mobile': _mobileCtrl.text.trim(),
         'board_id': _boardId,
         'course_id': _classId,
-        'price': 800,
+        // Keep the student's own budget (this screen doesn't edit it).
+        if ((stored?.price ?? '').isNotEmpty) 'price': stored!.price,
         'location': _localityCtrl.text.trim(),
         'pincode': pincode,
         'remark': '', // Can be used for additional notes
-        'profile_picture': profileBase64 ?? '',
+        // New photo → base64; otherwise resend the stored path so the
+        // existing photo is kept (an empty value could clear it).
+        if (profileBase64 != null)
+          'profile_picture': profileBase64
+        else if ((stored?.profile_picture ?? '').isNotEmpty)
+          'profile_picture': stored!.profile_picture,
         'place_id': placeId,
         'latitude': latitude,
         'longitude': longitude,
       };
 
-    print( req);
+      // The controller shows the server's success/failure message.
       final ok = await _p.updateStudentProfile(req);
       if (ok == true) {
-        if (mounted) {
-          Get.snackbar('Success', 'Student Profile Updated Successfully',
-              snackPosition: SnackPosition.BOTTOM,
-              backgroundColor: Colors.green,
-              colorText: Colors.white);
-        }
-
         // re-fetch and re-hydrate
         await _p.fetchProfileForStudent();
         await _hydrate();
 
         if (mounted) setState(() => _profileImage = null);
-      } else {
-        if (mounted) {
-          Get.snackbar('Error', 'Failed to update profile',
-              snackPosition: SnackPosition.BOTTOM,
-              backgroundColor: Colors.redAccent,
-              colorText: Colors.white);
-        }
       }
     } catch (e, st) {
       debugPrint('Failed saving profile: $e\n$st');
@@ -488,31 +508,7 @@ _getCurrentLocation();
       backgroundColor: Colors.white,
       key: _scaffoldKey,
       extendBodyBehindAppBar: true,
-      endDrawer: StudentDrawer(onMenuTap: (label) async {
-        if (label == 'Logout') {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isLoggedIn', false);
-          await prefs.remove('user_name');
-          await prefs.remove('user_phone');
-          await prefs.remove('user_role');
-          await StorageService.clearTokenAndRole();
-          await StorageService.clear();
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Logged out successfully')),
-          );
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const SplashScreen()),
-            (route) => false,
-          );
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Navigating to $label')),
-          );
-        }
-      }),
+      endDrawer: StudentDrawer(),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -707,7 +703,7 @@ _getCurrentLocation();
                         final boards =
                             _master.masterData.value?.data.boardLead ?? [];
                         return DropdownButtonFormField<int>(
-                          value: _boardId,
+                          initialValue: _boardId,
                           isExpanded: true,
                           decoration:
                               _dec(selectedBoardName!, icon: Icons.school),
@@ -735,7 +731,7 @@ _getCurrentLocation();
                         final classes = _leadMeta.classes;
                         final busy = _leadMeta.isFetchingClasses.value;
                         return DropdownButtonFormField<int>(
-                          value: _classId,
+                          initialValue: _classId,
                           isExpanded: true,
                           decoration: _dec(selectedClassName!,
                               icon: Icons.menu_book,
@@ -1018,7 +1014,7 @@ class _Header extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(.18),
+                    color: Colors.white.withValues(alpha: .18),
                     borderRadius: BorderRadius.circular(22),
                     border:
                         Border.all(width: 1, color: AppColors.primaryColor)),

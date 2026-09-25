@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:urbantutorsapp/utils/session.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:urbantutorsapp/screens/tutor/feedback_tutor.dart';
 import 'package:urbantutorsapp/screens/tutor/mycourses_tutor.dart';
@@ -12,13 +13,10 @@ import 'package:urbantutorsapp/screens/tutor/tutor_profile.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
-import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
-import 'package:urbantutorsapp/utils/storage_helper.dart';
 import '../theme/theme_constants.dart';
 
 class Tutordrawer extends StatefulWidget {
-  final Function(String label) onMenuTap;
-  const Tutordrawer({super.key, required this.onMenuTap});
+  const Tutordrawer({super.key});
 
   @override
   State<Tutordrawer> createState() => _StudentDrawerState();
@@ -54,7 +52,7 @@ class _StudentDrawerState extends State<Tutordrawer> {
 
   String _firstName(String? name) {
     final n = (name ?? '').trim();
-    if (n.isEmpty) return 'Student';
+    if (n.isEmpty) return 'Tutor';
     final parts = n.split(RegExp(r'\s+'));
     return parts.first;
   }
@@ -71,7 +69,7 @@ class _StudentDrawerState extends State<Tutordrawer> {
       child: Container(
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primaryColor.withOpacity(0.08)
+              ? AppColors.primaryColor.withValues(alpha: 0.08)
               : Colors.white,
           borderRadius: BorderRadius.circular(12),
         ),
@@ -115,6 +113,7 @@ class _StudentDrawerState extends State<Tutordrawer> {
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not open Terms & Conditions')),
       );
@@ -361,11 +360,7 @@ class _StudentDrawerState extends State<Tutordrawer> {
                 Icons.logout,
                 'Logout',
                 color: Colors.red,
-                onTap: () async {
-                  await StorageService.clearTokenAndRole();
-                  await StorageService.clear();
-                  Get.offAll(() => const WelcomeScreen());
-                },
+                onTap: () => Session.logout(),
               ),
             ],
           ),

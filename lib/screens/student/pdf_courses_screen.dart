@@ -4,15 +4,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/pay_course_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/models/pay_course_models.dart';
-import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
-import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/StudentDrawer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -95,31 +92,7 @@ class _PDFCoursesScreenState extends State<PDFCoursesScreen> {
       backgroundColor: const Color(0xFFF7F8FA),
       key: _scaffoldKey,
       extendBodyBehindAppBar: true,
-      endDrawer: StudentDrawer(onMenuTap: (label) async {
-        if (label == 'Logout') {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isLoggedIn', false);
-          await prefs.remove('user_name');
-          await prefs.remove('user_phone');
-          await prefs.remove('user_role');
-          await StorageService.clearTokenAndRole();
-          await StorageService.clear();
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Logged out successfully')),
-          );
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const SplashScreen()),
-            (route) => false,
-          );
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Navigating to $label')),
-          );
-        }
-      }),
+      endDrawer: StudentDrawer(),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -392,26 +365,28 @@ class _PDFCoursesScreenState extends State<PDFCoursesScreen> {
       fragment: uri.fragment,
     );
 
-    if (!await canLaunchUrl(uri)) return;
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    final opened = await canLaunchUrl(uri) &&
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open this course file')),
+      );
+    }
   }
 
-  void _onBuy(PayCourse item) async {
+  Future<void> _onBuy(PayCourse item) async {
     final result = await _payCourseController.buy(item);
+    if (!mounted) return;
     if (!result.success) {
       // already shown snack; you could show dialog here if desired
       return;
     }
 
-    // Only open the PDF / purchase link on success
-    final link = (item.pdf?.isNotEmpty ?? false) ? item.pdf! : '';
-    if (link.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No purchase link available')),
-      );
-      return;
-    }
-    await _openPdf(link);
+    // Open the purchased (full) course. `item.pdf` is only the free sample,
+    // so ask the server for the paid file, as My Courses does.
+    final url = await _payCourseController.getPurchasedUrl(item);
+    if (!mounted || url == null) return; // controller already showed the error
+    await _openPdf(url);
   }
 }
 
@@ -513,7 +488,7 @@ class _Header extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(.18),
+                    color: Colors.white.withValues(alpha: .18),
                     borderRadius: BorderRadius.circular(22),
                     border:
                         Border.all(width: 1, color: AppColors.primaryColor)),

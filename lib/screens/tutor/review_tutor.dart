@@ -1,16 +1,14 @@
 import 'dart:io';
 import 'dart:ui';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:urbantutorsapp/utils/support_contact.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart' hide MultipartFile;
 import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
-import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
@@ -59,7 +57,7 @@ class _FeedbackStudentState extends State<ReviewTutor> {
     _p = Get.isRegistered<ProfileUpdateController>()
         ? Get.find<ProfileUpdateController>()
         : Get.put(ProfileUpdateController());
-    _p.fetchProfileForStudent();
+    _p.fetchProfileForTutor();
 
     _loadUserMeta();
   }
@@ -183,32 +181,24 @@ class _FeedbackStudentState extends State<ReviewTutor> {
 
     setState(() => _posting = true);
     try {
-      final uidStr = await StorageService.getUserId();
-      final userId = int.tryParse('$uidStr') ?? 0;
-
-      final map = <String, dynamic>{
-        'user_id': userId,
-        'rating': _rating,
-        'title': '',
-        'review': _descCtrl.text.trim(),
-      };
-
-      final files = <MultipartFile>[];
-      for (final img in _images) {
-        files.add(await MultipartFile.fromFile(img.path, filename: img.name));
+      final attachments = _images.length + (_video != null ? 1 : 0);
+      final sent = await SupportContact.compose(
+        subject: 'App review: $_rating/5 stars',
+        body: 'Rating: $_rating/5\n\n${_descCtrl.text.trim()}'
+            '${attachments > 0 ? '\n\n($attachments photo/video attachment(s) to be added in this email.)' : ''}',
+      );
+      if (!mounted) return;
+      if (!sent) {
+        setState(() => _posting = false);
+        Get.snackbar('No email app',
+            'Please send your review to ${SupportContact.email}.',
+            snackPosition: SnackPosition.BOTTOM);
+        return;
       }
-      if (_video != null) {
-        files.add(
-            await MultipartFile.fromFile(_video!.path, filename: _video!.name));
-      }
-
-      // If your backend expects a different key (e.g., "images[]" & "video"),
-      // adjust here. Using media[] is common for multiple uploads.
-      if (files.isNotEmpty) map['media[]'] = files;
-
-      // TODO: change endpoint to your real route
-      // await ApiService.post(Uri.parse("api/feedback"),map,null);
-      Get.snackbar('Thanks!', 'Your review was posted.',
+      Get.snackbar('Almost done',
+          attachments > 0
+              ? 'Attach your photos/video in the email, then tap Send.'
+              : 'Tap Send in your email app to post your review.',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.green,
           colorText: Colors.white);
@@ -240,31 +230,7 @@ class _FeedbackStudentState extends State<ReviewTutor> {
       backgroundColor: Colors.white,
       key: _scaffoldKey,
       extendBodyBehindAppBar: true,
-      endDrawer: Tutordrawer(onMenuTap: (label) async {
-        if (label == 'Logout') {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isLoggedIn', false);
-          await prefs.remove('user_name');
-          await prefs.remove('user_phone');
-          await prefs.remove('user_role');
-          await StorageService.clearTokenAndRole();
-          await StorageService.clear();
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Logged out successfully')),
-          );
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const SplashScreen()),
-            (route) => false,
-          );
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Navigating to $label')),
-          );
-        }
-      }),
+      endDrawer: Tutordrawer(),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -290,8 +256,8 @@ class _FeedbackStudentState extends State<ReviewTutor> {
           final balanceNum = _toNum(wallet?.available);
           final balanceText = balanceNum.toStringAsFixed(0);
 
-          final prof = _p.studentprofileData.value;
-          final name = prof?.studentName?.trim() ?? '';
+          final prof = _p.tutorprofileData.value;
+          final name = prof?.teacherName?.trim() ?? '';
           final displayName =
               name.isEmpty ? 'Tutor' : name.split(RegExp(r'\s+')).first;
 
@@ -532,7 +498,7 @@ class _Header extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(.18),
+                    color: Colors.white.withValues(alpha: .18),
                     borderRadius: BorderRadius.circular(22),
                     border:
                         Border.all(width: 1, color: AppColors.primaryColor)),
@@ -585,7 +551,7 @@ class _Thumb extends StatelessWidget {
             onTap: onRemove,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(.6),
+                color: Colors.black.withValues(alpha: .6),
                 shape: BoxShape.circle,
               ),
               padding: const EdgeInsets.all(2),
@@ -626,7 +592,7 @@ class _VideoThumb extends StatelessWidget {
             onTap: onRemove,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(.6),
+                color: Colors.black.withValues(alpha: .6),
                 shape: BoxShape.circle,
               ),
               padding: const EdgeInsets.all(2),

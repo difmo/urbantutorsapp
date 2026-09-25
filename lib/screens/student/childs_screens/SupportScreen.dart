@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:urbantutorsapp/utils/support_contact.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 
 class SupportScreen extends StatelessWidget {
@@ -44,9 +45,7 @@ class SupportScreen extends StatelessWidget {
                     icon: Icons.email_outlined,
                     title: "Email Us",
                     subtitle: "support@urbantutors.pro",
-                    onTap: () => {
-// launchUrl(Uri.parse('mailto:support@urbantutors.com')),
-                    },
+                    onTap: () => SupportContact.compose(subject: 'Support request'),
                     color: Colors.green,
                   ),
                 ),
@@ -129,7 +128,7 @@ class SupportScreen extends StatelessWidget {
         decoration: BoxDecoration(
             borderRadius: BorderRadius.all(Radius.circular(8)),
             gradient: LinearGradient(
-              colors: [AppColors.accentColor.withOpacity(.18), Colors.white],
+              colors: [AppColors.accentColor.withValues(alpha: .18), Colors.white],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -140,7 +139,7 @@ class SupportScreen extends StatelessWidget {
           child: Column(
             children: [
               CircleAvatar(
-                backgroundColor: color.withOpacity(0.1),
+                backgroundColor: color.withValues(alpha: 0.1),
                 child: Icon(icon, color: color),
               ),
               Text(title,

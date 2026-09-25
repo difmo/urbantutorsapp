@@ -1,5 +1,6 @@
 // lib/controllers/coins_controller.dart
 import 'dart:convert';
+import 'package:urbantutorsapp/services/api_exception.dart';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -35,7 +36,6 @@ class CoinsController extends GetxController {
   static const String _rzpKeyId = 'rzp_test_G8C4fq7TzDzwgm';
   @override
   void onInit() {
-    super.onInit();
     super.onInit();
     fetchCoins();
     fetchMyCoins();
@@ -102,17 +102,27 @@ class CoinsController extends GetxController {
       _razorpay!.clear(); // avoid duplicate handlers
       _razorpay!.on(Razorpay.EVENT_PAYMENT_SUCCESS,
           (PaymentSuccessResponse r) async {
-        final ok = await _service.verifyRazorpayPayment(
-          userId: userId,
-          razorpayOrderId: r.orderId ?? '',
-          razorpayPaymentId: r.paymentId ?? '',
-          razorpaySignature: r.signature ?? '',
-          token: token,
-        );
-        _toast(context, ok ? 'Payment verified' : 'Verification failed');
-        if (ok) {
-          await refreshAll(); // reload packs + wallet + txns
+        bool ok = false;
+        try {
+          ok = await _service.verifyRazorpayPayment(
+            userId: userId,
+            razorpayOrderId: r.orderId ?? '',
+            razorpayPaymentId: r.paymentId ?? '',
+            razorpaySignature: r.signature ?? '',
+            token: token,
+          );
+        } catch (e) {
+          debugPrint('Payment verification error: $e');
         }
+        _toast(
+          context,
+          ok
+              ? 'Payment successful. Coins added to your wallet.'
+              : 'Payment received but could not be verified yet. '
+                  'If coins are not credited soon, contact support with '
+                  'payment ID ${r.paymentId ?? ''}.',
+        );
+        await refreshAll(); // reload packs + wallet + txns
       });
 
       _razorpay!.on(
@@ -147,21 +157,22 @@ class CoinsController extends GetxController {
   }
 
   Future<void> _onPaymentSuccess(PaymentSuccessResponse r) async {
-    print(
-        "Payment successful: ${r.paymentId}, order: ${r.orderId}, signature: ${r.signature}");
     // Verify with backend (mandatory)
     final token = await StorageService.getToken();
     final userId = await StorageService.getUserId();
-    print("User id in payment success $userId");
-    print("Token in payment success $token");
     if (token == null || userId == null) return;
-    final ok = await _service.verifyRazorpayPayment(
-      userId: userId,
-      razorpayOrderId: r.orderId ?? '',
-      razorpayPaymentId: r.paymentId ?? '',
-      razorpaySignature: r.signature ?? '',
-      token: token,
-    );
+    bool ok = false;
+    try {
+      ok = await _service.verifyRazorpayPayment(
+        userId: userId,
+        razorpayOrderId: r.orderId ?? '',
+        razorpayPaymentId: r.paymentId ?? '',
+        razorpaySignature: r.signature ?? '',
+        token: token,
+      );
+    } catch (e) {
+      debugPrint('Payment verification error: $e');
+    }
     if (ok) {
       print("Payment successful and verified $ok");
       Get.snackbar('Payment', 'Payment successful 🎉');
@@ -190,7 +201,7 @@ class CoinsController extends GetxController {
       loadingCoins.value = true;
       errorMessage.value = '';
       final token = await StorageService.getToken();
-      if (token == null) throw Exception('Auth token missing');
+      if (token == null) throw ApiException('Auth token missing');
       final res = await _service.fetchPackages(token: token);
       coins.assignAll(res);
     } catch (e) {
@@ -206,7 +217,7 @@ class CoinsController extends GetxController {
       myCoinsError.value = '';
       final token = await StorageService.getToken();
       final userId = await StorageService.getUserId();
-      if (token == null || userId == null) throw Exception('Not logged in');
+      if (token == null || userId == null) throw ApiException('Not logged in');
       final data = await _service.fetchMyCoins(userId: userId, token: token);
       myCoins.value = data;
       txns.assignAll(data.details);
@@ -272,7 +283,7 @@ class CoinsController extends GetxController {
       final id = (resp.data['id'] ?? '').toString();
       if (id.isNotEmpty) return id;
     }
-    throw Exception(
+    throw ApiException(
         'Failed to create Razorpay order: ${resp.statusCode} ${resp.data}');
   }
 

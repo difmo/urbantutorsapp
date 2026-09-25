@@ -4,16 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
-import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
-import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/AdminDrawer.dart';
 
 class AddTutorAdmin extends StatefulWidget {
@@ -107,8 +104,8 @@ class _TransactionAdmin extends State<AddTutorAdmin> {
       if (_master.masterData.value == null) {
         await _master.fetchMasterData();
       }
-      if (_p.studentprofileData.value == null && !_p.isLoading.value) {
-        await _p.fetchProfileForStudent();
+      if (_p.adminProfileData.value == null && !_p.isLoading.value) {
+        await _p.fetchProfileForAdmin();
       }
     });
   }
@@ -134,31 +131,7 @@ class _TransactionAdmin extends State<AddTutorAdmin> {
       backgroundColor: Colors.white,
       key: _scaffoldKey,
       extendBodyBehindAppBar: true,
-      endDrawer: Admindrawer(onMenuTap: (label) async {
-        if (label == 'Logout') {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isLoggedIn', false);
-          await prefs.remove('user_name');
-          await prefs.remove('user_phone');
-          await prefs.remove('user_role');
-          await StorageService.clearTokenAndRole();
-          await StorageService.clear();
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Logged out successfully')),
-          );
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const SplashScreen()),
-            (route) => false,
-          );
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Navigating to $label')),
-          );
-        }
-      }),
+      endDrawer: Admindrawer(),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -184,11 +157,11 @@ class _TransactionAdmin extends State<AddTutorAdmin> {
           final balanceNum = _toNum(wallet?.available);
           final balanceText = balanceNum.toStringAsFixed(0);
 
-          final prof = _p.studentprofileData.value;
+          final prof = _p.adminProfileData.value;
           final name =
-              prof?.studentName?.trim() ?? prof?.studentName?.trim() ?? '';
+              (prof?.tutorburoName ?? prof?.fullName)?.trim() ?? '';
           final displayName =
-              name.isEmpty ? 'Student' : name.split(RegExp(r'\s+')).first;
+              name.isEmpty ? 'Bureau' : name.split(RegExp(r'\s+')).first;
 
           if (loadingCoins && wallet == null && prof == null) {
             return const SizedBox(
@@ -363,7 +336,7 @@ class _Header extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(.18),
+                    color: Colors.white.withValues(alpha: .18),
                     borderRadius: BorderRadius.circular(22),
                     border:
                         Border.all(width: 1, color: AppColors.primaryColor)),

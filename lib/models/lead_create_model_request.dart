@@ -19,6 +19,7 @@ class LeadCreateRequest {
 
       final String? coins;
       final String? remark;
+  final String? state;
 
   LeadCreateRequest({
     required this.name,
@@ -41,6 +42,7 @@ class LeadCreateRequest {
     required this.longitude, 
      this.coins, 
     this.remark,
+    this.state,
   });
 
   /// ✅ Corrected method name and added all fields
@@ -65,6 +67,7 @@ class LeadCreateRequest {
       'pincode': pincode,
       'coins': coins,
       'remark': remark,
+      'state': state,
     };
   }
 }

@@ -2,16 +2,13 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/controllers/notification_controller.dart';
 import 'package:urbantutorsapp/models/notification/AppNotification.dart';
-import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
-import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/TutorDrawer.dart';
 
 class NotificationTutor extends StatefulWidget {
@@ -47,7 +44,7 @@ class _NotificationTutorState extends State<NotificationTutor> {
     // Defer reactive updates to after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _c.refreshAll();
-      _p.fetchProfileForStudent();
+      _p.fetchProfileForTutor();
       _n.bootstrap();
     });
   }
@@ -61,31 +58,7 @@ class _NotificationTutorState extends State<NotificationTutor> {
       backgroundColor: Colors.white,
       key: _scaffoldKey,
       extendBodyBehindAppBar: true,
-      endDrawer: Tutordrawer(onMenuTap: (label) async {
-        if (label == 'Logout') {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isLoggedIn', false);
-          await prefs.remove('user_name');
-          await prefs.remove('user_phone');
-          await prefs.remove('user_role');
-          await StorageService.clearTokenAndRole();
-          await StorageService.clear();
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Logged out successfully')),
-          );
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const SplashScreen()),
-            (route) => false,
-          );
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Navigating to $label')),
-          );
-        }
-      }),
+      endDrawer: Tutordrawer(),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -111,10 +84,10 @@ class _NotificationTutorState extends State<NotificationTutor> {
           final balanceNum = _toNum(wallet?.available);
           final balanceText = balanceNum.toStringAsFixed(0);
 
-          final prof = _p.studentprofileData.value;
-          final name = prof?.studentName?.trim() ?? '';
+          final prof = _p.tutorprofileData.value;
+          final name = prof?.teacherName?.trim() ?? '';
           final displayName =
-              name.isEmpty ? 'Student' : name.split(RegExp(r'\s+')).first;
+              name.isEmpty ? 'Tutor' : name.split(RegExp(r'\s+')).first;
 
           if (loadingCoins && wallet == null && prof == null) {
             return const SizedBox(
@@ -149,7 +122,7 @@ class _NotificationTutorState extends State<NotificationTutor> {
               onPressed: canMarkAll && !_n.markingAll.value
                   ? () async {
                       await _n.markAll();
-                      if (!mounted) return;
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('All notifications read')),
                       );
@@ -277,7 +250,7 @@ class _NotificationTutorState extends State<NotificationTutor> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
+                      color: Colors.black.withValues(alpha: 0.03),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     )
@@ -295,7 +268,7 @@ class _NotificationTutorState extends State<NotificationTutor> {
                         CircleAvatar(
                           radius: 22,
                           backgroundColor:
-                              unread ? Colors.blue.withOpacity(.12) : Colors.grey.shade200,
+                              unread ? Colors.blue.withValues(alpha: .12) : Colors.grey.shade200,
                           child: Icon(
                             unread
                                 ? Icons.notifications_active_rounded
@@ -484,7 +457,7 @@ class _Header extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(.18),
+                  color: Colors.white.withValues(alpha: .18),
                   borderRadius: BorderRadius.circular(22),
                   border: Border.all(width: 1, color: AppColors.primaryColor),
                 ),

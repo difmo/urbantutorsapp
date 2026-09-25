@@ -61,7 +61,7 @@ class ProMembershipService {
     );
     final m = res.data as Map<String, dynamic>;
     if (m['success'] != true) {
-      throw Exception(m['message']?.toString() ?? 'Failed to purchase membership');
+      throw ApiException(m['message']?.toString() ?? 'Failed to purchase membership');
     }
   }
 

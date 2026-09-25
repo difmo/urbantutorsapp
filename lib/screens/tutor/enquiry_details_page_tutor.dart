@@ -11,6 +11,7 @@ import 'package:urbantutorsapp/controllers/pay_course_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/controllers/tutor_leads_controller.dart';
 import 'package:urbantutorsapp/models/tutor_lead.dart';
+import 'package:urbantutorsapp/screens/tutor/lead_unlock.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 
@@ -47,7 +48,7 @@ class _LeadDetailPageState extends State<LeadDetailPage> {
     _p = Get.isRegistered<ProfileUpdateController>()
         ? Get.find<ProfileUpdateController>()
         : Get.put(ProfileUpdateController());
-    _p.fetchProfileForStudent();
+    _p.fetchProfileForTutor();
 
     // Debug (optional)
     // for (var course in _payCourseController.courses) {
@@ -68,13 +69,13 @@ class _LeadDetailPageState extends State<LeadDetailPage> {
 
   String _initial(String? name) {
     final n = (name ?? '').trim();
-    if (n.isEmpty) return 'S';
+    if (n.isEmpty) return 'T';
     return n.characters.first.toUpperCase();
   }
 
   String _firstName(String? name) {
     final n = (name ?? '').trim();
-    if (n.isEmpty) return 'Student';
+    if (n.isEmpty) return 'Tutor';
     final parts = n.split(RegExp(r'\s+'));
     return parts.first;
   }
@@ -143,9 +144,7 @@ class _LeadDetailPageState extends State<LeadDetailPage> {
     final gender = _val(['tutor_gender', 'type_of_teacher'], 'Any');
     final note = _val(['remarks', 'remark', 'note'], '—');
     final coins = _val(['coins', 'coins_needed'], '—');
-    final responded = _val(['responded'], '—');
-    final name = _val(['student_name', 'name'], widget.enquiry.studentName);
-    final phone = _val(['mobile', 'phone'], '');
+    final maxTutors = _val(['lead_count'], '—');
 
     final text = '''
 Tuition Lead #$leadNo
@@ -162,11 +161,10 @@ Fee: $fee
 Note: $note
 
 Coins needed: $coins
-Responded: $responded
+Max tutors: $maxTutors
 
-Contact:
-$name
-$phone
+Apply on the Urban Tutors app:
+https://play.google.com/store/apps/details?id=pro.urbantutors.app
 ''';
 
     Share.share(text, subject: 'Tuition Lead #$leadNo');
@@ -208,8 +206,8 @@ $phone
           final balanceText = balanceNum.toStringAsFixed(0);
 
           // profile
-          final prof = _p.studentprofileData.value;
-          final name = prof?.studentName?.trim();
+          final prof = _p.tutorprofileData.value;
+          final name = prof?.teacherName?.trim();
           final displayName = _firstName(name);
 
           if (loadingCoins && wallet == null && prof == null) {
@@ -253,8 +251,7 @@ $phone
                 const Text("Note : ",
                     style: TextStyle(fontWeight: FontWeight.bold)),
                 Text(
-                  _val(['remarks', 'remark', 'note'],
-                      'Required Only Professional Tutor.'),
+                  _val(['remarks', 'remark', 'note'], '—'),
                   style: const TextStyle(color: Colors.blue),
                 ),
               ],
@@ -262,9 +259,9 @@ $phone
             const SizedBox(height: 12),
 
             _buildDetailRow(Icons.credit_card, "Coins needed:",
-                _val(['coins', 'coins_needed'], '300')),
+                _val(['coins', 'coins_needed'], '—')),
             _buildDetailRow(
-                Icons.group, "Responded:", _val(['responded'], '0/3')),
+                Icons.group, "Max tutors:", _val(['lead_count'], '—')),
             const SizedBox(height: 24),
 
             if (grabId != null)
@@ -299,11 +296,14 @@ $phone
                     MaterialPageRoute(builder: (_) => const TutorCoinsScreen()),
                   ),
                 ),
-                _buildBlueButton(
-                  context,
-                  "Show Contact",
-                  () => _showContactSheet(context),
-                ),
+                Obx(() => _buildBlueButton(
+                      context,
+                      _leads.grabbedFor(widget.enquiry.id) != null
+                          ? "View Contact"
+                          : "Unlock Contact",
+                      // The server masks the number until the lead is grabbed.
+                      () => unlockLeadContact(context, widget.enquiry),
+                    )),
               ],
             ),
             const SizedBox(height: 12),
@@ -663,7 +663,7 @@ class _Header extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(.18),
+                    color: Colors.white.withValues(alpha: .18),
                     borderRadius: BorderRadius.circular(22),
                     border:
                         Border.all(width: 1, color: AppColors.primaryColor)),

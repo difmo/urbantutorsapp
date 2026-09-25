@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'package:urbantutorsapp/services/api_exception.dart';
 import 'package:http/http.dart' as http;
 import 'package:urbantutorsapp/models/notes_models.dart.dart';
 
@@ -70,8 +73,8 @@ class LeadChapter {
   LeadChapter({required this.chapterId, required this.chapterName});
 
   factory LeadChapter.fromJson(Map<String, dynamic> j) {
-    final rawId = j['chapter_id'] ?? j['ChapterName'];
-    final rawName = j['ChapterName'] ?? j['ChapterName'];
+    final rawId = j['chapter_id'] ?? j['id'];
+    final rawName = j['ChapterName'] ?? j['chapter_name'] ?? j['name'];
     return LeadChapter(
         chapterId: int.tryParse('$rawId') ?? 0,
         chapterName: (rawName ?? '').toString());
@@ -180,8 +183,7 @@ class LeadMetaService {
   static const _base = 'https://urbantutors.pro/api';
   Future<List<LeadClass>> getClassesByBoard(int boardId) async {
     final uri = Uri.parse('$_base/leadclassget');
-    final res = await http.post(
-      uri,
+    final res = await _httpPost(uri,
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded'
@@ -190,13 +192,13 @@ class LeadMetaService {
     );
     print("[API] POST ${res.body}");
     if (res.statusCode >= 200 && res.statusCode < 300) {
-      final body = jsonDecode(res.body);
+      final body = _decodeJson(res.body);
       final list = body['data'] ?? [];
       return List.from(list)
           .map((e) => LeadClass.fromJson(Map<String, dynamic>.from(e)))
           .toList();
     }
-    throw Exception('Failed to load classes (${res.statusCode})');
+    throw ApiException('Failed to load classes (${res.statusCode})');
   }
 
   Future<List<LeadSubject>> getSubjectsByClassAndBoard1(
@@ -209,8 +211,7 @@ class LeadMetaService {
     print('Request Body: ${jsonEncode(requestBody)}');
     print('URI: $uri');
     
-    final res = await http.post(
-      uri,
+    final res = await _httpPost(uri,
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -220,20 +221,19 @@ class LeadMetaService {
     print("[API] Response: ${res.body}");
     
     if (res.statusCode >= 200 && res.statusCode < 300) {
-      final body = jsonDecode(res.body);
+      final body = _decodeJson(res.body);
       final list = body['data'] ?? [];
       return List.from(list)
           .map((e) => LeadSubject.fromJson(Map<String, dynamic>.from(e)))
           .toList();
     }
-    throw Exception('Failed to load subjects (${res.statusCode})');
+    throw ApiException('Failed to load subjects (${res.statusCode})');
   }
 
   Future<List<LeadSubject>> getSubjectsByClassAndBoard(
       {required int classId, required int boardId}) async {
     final uri = Uri.parse('$_base/leadgetsubjects');
-    final res = await http.post(
-      uri,
+    final res = await _httpPost(uri,
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded'
@@ -242,20 +242,19 @@ class LeadMetaService {
     );
     print("[API] POST ${res.body}");
     if (res.statusCode >= 200 && res.statusCode < 300) {
-      final body = jsonDecode(res.body);
+      final body = _decodeJson(res.body);
       final list = body['data'] ?? [];
       return List.from(list)
           .map((e) => LeadSubject.fromJson(Map<String, dynamic>.from(e)))
           .toList();
     }
-    throw Exception('Failed to load subjects (${res.statusCode})');
+    throw ApiException('Failed to load subjects (${res.statusCode})');
   }
 
   Future<List<LeadChapter>> getChaptersBySubject(
       {required int subjectId, required String type}) async {
     final uri = Uri.parse('$_base/leadgetchapters');
-    final res = await http.post(
-      uri,
+    final res = await _httpPost(uri,
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded'
@@ -267,13 +266,13 @@ class LeadMetaService {
     );
     print("[API] POST ${res.body}");
     if (res.statusCode >= 200 && res.statusCode < 300) {
-      final body = jsonDecode(res.body);
+      final body = _decodeJson(res.body);
       final list = body['data'] ?? [];
       return List.from(list)
           .map((e) => LeadChapter.fromJson(Map<String, dynamic>.from(e)))
           .toList();
     }
-    throw Exception('Failed to load chapters (${res.statusCode})');
+    throw ApiException('Failed to load chapters (${res.statusCode})');
   }
 
   Future<ChapterDetails> getChapterDetails({
@@ -281,8 +280,7 @@ class LeadMetaService {
     required String type,
   }) async {
     final uri = Uri.parse('$_base/getchapterdetails');
-    final res = await http.post(
-      uri,
+    final res = await _httpPost(uri,
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded'
@@ -294,10 +292,36 @@ class LeadMetaService {
     );
     print("[API] POST ${res.body}");
     if (res.statusCode >= 200 && res.statusCode < 300) {
-      final body = jsonDecode(res.body);
+      final body = _decodeJson(res.body);
       final data = body['data'] ?? {};
       return ChapterDetails.fromJson(Map<String, dynamic>.from(data));
     }
-    throw Exception('Failed to load chapter details (${res.statusCode})');
+    throw ApiException('Failed to load chapter details (${res.statusCode})');
+  }
+}
+
+/// POST with a timeout; maps network failures to readable [ApiException]s.
+Future<http.Response> _httpPost(Uri uri,
+    {Map<String, String>? headers, Object? body}) async {
+  try {
+    return await http
+        .post(uri, headers: headers, body: body)
+        .timeout(const Duration(seconds: 20));
+  } on TimeoutException {
+    throw const ApiException(
+        'The server is taking too long to respond. Please try again.');
+  } on SocketException {
+    throw const ApiException(
+        'No internet connection. Please check your network and try again.');
+  }
+}
+
+/// Decodes a JSON body, or throws a readable [ApiException].
+dynamic _decodeJson(String body) {
+  try {
+    return jsonDecode(body);
+  } on FormatException {
+    throw const ApiException(
+        'Unexpected response from server. Please try again later.');
   }
 }

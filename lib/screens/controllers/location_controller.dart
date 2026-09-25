@@ -48,36 +48,6 @@ class LocationController extends GetxController {
     }
   }
 
-  /// ✅ Get current lat/lng + place_id
-  Future<void> getCurrentLocation() async {
-    try {
-      error.value = '';
-      AppLog.i('[LOC] Getting current location...');
-      // final loc = await _svc.getCurrentPosition(); // {lat, lng}
-      // latitude.value = loc.latitude;
-      // longitude.value = loc.longitude;
-      latitude.value = 26.8604607;
-      longitude.value = 81.02013;
-
-      AppLog.i('[LOC] Coordinates: ${latitude.value}, ${longitude.value}');
-
-      // final place = await _svc.reverseGeocode(
-      //   latitude.value,
-      //   longitude.value,
-      // );
-
-      // placeId.value = place['place_id'] ?? '';
-      // address.value = place['formatted_address'] ?? '';
-
-      placeId.value = "ChIJD9zE2Z2P4zsRzZtZLxQw8Yg";
-
-      AppLog.i('[LOC] Place → id=${placeId.value}, address=${address.value}');
-    } catch (e, st) {
-      error.value = e.toString();
-      AppLog.e('[LOC] getCurrentLocation error', error: e, st: st);
-    }
-  }
-
   @override
   void onClose() {
     _debounce?.dispose();

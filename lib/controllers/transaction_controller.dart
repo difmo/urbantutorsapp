@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:urbantutorsapp/services/api_exception.dart';
 import 'package:urbantutorsapp/models/transaction_models.dart';
 import 'package:urbantutorsapp/services/transaction_service.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
@@ -24,7 +25,7 @@ class TransactionController extends GetxController {
     try {
       final uidStr = await StorageService.getUserId();
       final uid = int.tryParse(uidStr ?? '') ?? 0;
-      if (uid <= 0) throw Exception('No user id found');
+      if (uid <= 0) throw ApiException('No user id found');
 
       userId.value = uid;
 

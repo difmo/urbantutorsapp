@@ -36,7 +36,7 @@ class LeadMetaController extends GetxController {
       isFetchingSubjects.value = true;
       subjects.clear();
       subjects.assignAll(await _service.getSubjectsByClassAndBoard1(
-          selBoardIds: selClassIds, selClassIds: selClassIds));
+          selBoardIds: selBoardIds, selClassIds: selClassIds));
       print('Fetched subjects: ${subjects.toList()}');
     } catch (e) {
       error.value = e.toString();
@@ -74,25 +74,6 @@ class LeadMetaController extends GetxController {
       error.value = e.toString();
     } finally {
       isFetchingChapters.value = false;
-    }
-  }
-
-  Future<void> loadChaptersDetails(
-      {required int chapterId, required String type}) async {
-    try {
-      error.value = '';
-      isFetchingChapterDetails.value = true;
-      chapterDetails.clear();
-      final details =
-          await _service.getChapterDetails(chapterId: chapterId, type: type);
-      chapterDetails.assignAll(details is Iterable<ChapterDetail>
-          ? (details as Iterable<ChapterDetail>)
-          : [details as ChapterDetail]);
-      print('Fetched chapter details: ${chapterDetails.toList()}');
-    } catch (e) {
-      error.value = e.toString();
-    } finally {
-      isFetchingChapterDetails.value = false;
     }
   }
 }

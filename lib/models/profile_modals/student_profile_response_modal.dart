@@ -11,8 +11,9 @@ class StudentProfileResponsdModal {
   factory StudentProfileResponsdModal.fromJson(Map<String, dynamic> json) {
     return StudentProfileResponsdModal(
       success: json['success'] ?? false,
-      data: json['data'] != null
-          ? StudentProfileDataNew.fromJson(json['data'])
+      data: json['data'] is Map
+          ? StudentProfileDataNew.fromJson(
+              Map<String, dynamic>.from(json['data']))
           : null,
       message: json['message'] ?? '',
     );

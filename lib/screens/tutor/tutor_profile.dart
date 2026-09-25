@@ -1,15 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:urbantutorsapp/widgets/TutorDrawer.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:urbantutorsapp/screens/tutor/teacher_pending_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/models/profile_modals/tutor_response_modal.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 
@@ -18,11 +17,9 @@ import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
-import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
-import 'package:urbantutorsapp/widgets/StudentDrawer.dart';
 
 class TutorProfile extends StatefulWidget {
   const TutorProfile({super.key});
@@ -70,6 +67,11 @@ class _TutorProfileState extends State<TutorProfile> {
   final List<int> minOptions = [for (int v = 100; v <= 1000; v += 100) v];
   final List<int> maxOptionsBase = [for (int v = 300; v <= 3000; v += 100) v];
 
+  /// [v] if it is one of [options], otherwise null. Dropdowns throw when
+  /// their value is not among their items, so server values must be checked.
+  T? _oneOf<T>(T? v, List<T> options) =>
+      (v != null && options.contains(v)) ? v : null;
+
   int? selectedFeeMin; // 100..1000
   int? selectedFeeMax; // 300..3000
 
@@ -79,7 +81,8 @@ class _TutorProfileState extends State<TutorProfile> {
   final List<int> _selSubjectIds = [];
 
   // Mode & State
-  static const _modes = <String>['Online', 'Offline', 'Any'];
+  // Values accepted by the server (it rejects 'Any').
+  static const _modes = <String>['Online', 'Offline', 'Both'];
   String? modeVal;
 
   // Image picker
@@ -96,6 +99,8 @@ class _TutorProfileState extends State<TutorProfile> {
   // Misc
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  final List<Worker> _workers = [];
+
   @override
   void initState() {
     super.initState();
@@ -105,25 +110,25 @@ class _TutorProfileState extends State<TutorProfile> {
         : Get.put(CoinsController());
     WidgetsBinding.instance.addPostFrameCallback((_) => _c.refreshAll());
 
-    // fetch master data and profile and try to get location
+    // fetch master data and profile
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _master.fetchMasterData();
       _p.fetchProfileForTutor();
-      try {
-        _loc.getCurrentLocation();
-      } catch (_) {}
     });
 
     // Hydrate whenever profile or master data changes
-    everAll([_p.tutorprofileData, _master.masterData], (_) async {
+    _workers.add(everAll([_p.tutorprofileData, _master.masterData], (_) async {
       if (_master.masterData.value != null) {
         await _hydrate();
       }
-    });
+    }));
   }
 
   @override
   void dispose() {
+    for (final w in _workers) {
+      w.dispose();
+    }
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _localityCtrl.dispose();
@@ -225,8 +230,8 @@ class _TutorProfileState extends State<TutorProfile> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      selectedFeeMin = p.minAmount?.toInt() ?? 0;
-      selectedFeeMax = p.maxAmount?.toInt() ?? 0;
+      selectedFeeMin = _oneOf(p.minAmount?.toInt() ?? 0, minOptions);
+      selectedFeeMax = _oneOf(p.maxAmount?.toInt() ?? 0, maxOptionsBase);
 
       _nameCtrl.text = (p.teacherName ?? '').toString().trim();
       _emailCtrl.text = (p.email ?? '').toString().trim();
@@ -246,8 +251,8 @@ class _TutorProfileState extends State<TutorProfile> {
           normalizedMode = 'Online';
         } else if (low == 'offline') {
           normalizedMode = 'Offline';
-        } else if (low == 'any') {
-          normalizedMode = 'Any';
+        } else if (low == 'any' || low == 'both') {
+          normalizedMode = 'Both';
         } else {
           // Try to match case-insensitive
           final match = _modes.firstWhere((m) => m.toLowerCase() == low,
@@ -392,6 +397,32 @@ class _TutorProfileState extends State<TutorProfile> {
   // -------------------- Save / Update --------------------
 
   Future<void> _save() async {
+    if ((modeVal ?? '').isEmpty) {
+      Get.snackbar('Teaching mode', 'Please select a teaching mode.',
+          snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
+    // Saving sends a verified tutor's profile back for admin verification.
+    if (_p.tutorprofileData.value?.profileStatus == 2) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Send for re-verification?'),
+          content: const Text(
+              'After you save, the admin team will verify your updated profile '
+              'again. Until it is approved you will see the verification screen.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('CANCEL')),
+            ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('SAVE')),
+          ],
+        ),
+      );
+      if (ok != true || !mounted) return;
+    }
     if (!_formKey.currentState!.validate()) {
       Get.snackbar('Error', 'Please fill all required fields',
           snackPosition: SnackPosition.BOTTOM,
@@ -440,27 +471,25 @@ class _TutorProfileState extends State<TutorProfile> {
         "insta_link": _instaLinkCtrl.text.trim(),
         "wh_link": _teleLinkCtrl.text.trim(),
       };
+      // New photo → base64; otherwise resend the stored path (the server
+      // keeps it). A tutor without any photo sends none.
+      final storedPicture = _p.tutorprofileData.value?.profilePicture;
       if (profileBase64 != null) {
         payload["profile_picture"] = profileBase64;
-      }
-      if (profileBase64 == null) {
-        payload["profile_picture"] = _profileImageUrl!;
+      } else if (storedPicture != null && storedPicture.isNotEmpty) {
+        payload["profile_picture"] = storedPicture;
       }
 
       final ok = await _p.updateTutorProfile(payload);
+      // The controller already shows the server's success/failure message.
       if (ok == true) {
-        Get.snackbar('Success', 'Profile Updated Successfully',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.green,
-            colorText: Colors.white);
         await _p.fetchProfileForTutor();
+        if (_p.tutorprofileData.value?.profileStatus == 1) {
+          Get.offAll(() => const TeacherPendingScreen());
+          return;
+        }
         await _hydrate();
-        setState(() => _profileImage = null);
-      } else {
-        Get.snackbar('Error', 'Failed to update profile',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.redAccent,
-            colorText: Colors.white);
+        if (mounted) setState(() => _profileImage = null);
       }
     } catch (e) {
       Get.snackbar('Error', 'Failed to update profile: $e',
@@ -482,24 +511,7 @@ class _TutorProfileState extends State<TutorProfile> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       key: _scaffoldKey,
-      endDrawer: StudentDrawer(onMenuTap: (label) async {
-        if (label == 'Logout') {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isLoggedIn', false);
-          await prefs.remove('user_name');
-          await prefs.remove('user_phone');
-          await prefs.remove('user_role');
-          await StorageService.clearTokenAndRole();
-          await StorageService.clear();
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Logged out successfully')));
-          Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => const SplashScreen()),
-              (route) => false);
-        }
-      }),
+      endDrawer: Tutordrawer(),
       body: Obx(() {
         final loading = _p.isLoading.value && _p.tutorprofileData.value == null;
         if (loading) return const Center(child: CircularProgressIndicator());
@@ -585,9 +597,9 @@ class _TutorProfileState extends State<TutorProfile> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withOpacity(0.5)),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
                     ),
                     child: Row(
                       children: [
@@ -630,7 +642,7 @@ class _TutorProfileState extends State<TutorProfile> {
               border: Border.all(color: AppColors.primaryColor, width: 2),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 5),
                 ),
@@ -689,7 +701,7 @@ class _TutorProfileState extends State<TutorProfile> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -776,6 +788,7 @@ class _TutorProfileState extends State<TutorProfile> {
             if (_leadMeta.classes.isEmpty) {
               await _leadMeta.loadClasses(_selBoardIds.first);
             }
+            if (!mounted) return;
             final picked = await _showMultiSelect(
               context,
               title: 'Select Classes',
@@ -911,7 +924,7 @@ class _TutorProfileState extends State<TutorProfile> {
               height: 56,
               width: 56,
               decoration: BoxDecoration(
-                color: AppColors.primaryColor.withOpacity(0.1),
+                color: AppColors.primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: _locLoading
@@ -1094,7 +1107,7 @@ class _TutorProfileState extends State<TutorProfile> {
     required Function(T?) onChanged,
   }) {
     return DropdownButtonFormField<T>(
-      value: value,
+      initialValue: value,
       items: items,
       onChanged: onChanged,
       decoration: InputDecoration(
@@ -1155,10 +1168,10 @@ class _TutorProfileState extends State<TutorProfile> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppColors.primaryColor.withOpacity(0.1),
+                            color: AppColors.primaryColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                                color: AppColors.primaryColor.withOpacity(0.3)),
+                                color: AppColors.primaryColor.withValues(alpha: 0.3)),
                           ),
                           child: Text(
                             n,

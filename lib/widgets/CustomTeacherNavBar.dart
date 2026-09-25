@@ -53,7 +53,7 @@ class CustomTeacherNavBar extends StatelessWidget {
   }
 
   BottomNavigationBarItem _buildItem(
-      IconData icon, String label, int index, int current) {
+      FaIconData icon, String label, int index, int current) {
     final bool isActive = index == current;
 
     return BottomNavigationBarItem(
@@ -64,7 +64,7 @@ class CustomTeacherNavBar extends StatelessWidget {
             duration: const Duration(milliseconds: 250),
             decoration: BoxDecoration(
               color: isActive
-                  ? AppColors.primaryColor.withOpacity(0.12)
+                  ? AppColors.primaryColor.withValues(alpha: 0.12)
                   : Colors.transparent,
               shape: BoxShape.circle,
             ),

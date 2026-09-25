@@ -79,7 +79,7 @@ class _ChatUserListScreenState extends State<ChatUserListScreen> {
                   // test
                   child: CircleAvatar(
                     radius: 26,
-                    backgroundColor: primaryColor.withOpacity(0.1),
+                    backgroundColor: primaryColor.withValues(alpha: 0.1),
                     child: Text(
                       profileChar,
                       style: TextStyle(

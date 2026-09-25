@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
 
 import 'package:urbantutorsapp/controllers/lead_create_controller.dart';
@@ -13,7 +12,6 @@ import 'package:urbantutorsapp/models/lead__model.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
-import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
@@ -88,7 +86,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
     _p = Get.isRegistered<ProfileUpdateController>()
         ? Get.find<ProfileUpdateController>()
         : Get.put(ProfileUpdateController());
-    _p.fetchProfileForStudent();
+    _p.fetchProfileForAdmin();
 
     _loadUserMeta();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -102,13 +100,13 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
 
   String _initial(String? name) {
     final n = (name ?? '').trim();
-    if (n.isEmpty) return 'S';
+    if (n.isEmpty) return 'B';
     return n.characters.first.toUpperCase();
   }
 
   String _firstName(String? name) {
     final n = (name ?? '').trim();
-    if (n.isEmpty) return 'Student';
+    if (n.isEmpty) return 'Bureau';
     final parts = n.split(RegExp(r'\s+'));
     return parts.first;
   }
@@ -151,7 +149,8 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
 
   bool _submitting = false;
 
-  static const _modes = <String>['Online', 'Offline', 'Hybrid'];
+  // Lead modes the server accepts (as in the admin panel's lead form).
+  static const _modes = <String>['Online', 'Offline', 'Any'];
   static const _genders = <String>['Male', 'Female', 'Other'];
   static const _maxHitsList = <String>['1', '2', '3'];
 
@@ -267,7 +266,11 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
     coinsCtrl.text = coinsStr;
 
     // ---- Selects (mode, state, max hits, gender if you use it) ----
-    teachingMode = (l.mode ?? '').trim().isEmpty ? null : l.mode.trim();
+    // Only a value the dropdown offers (old leads may say 'Hybrid').
+    final mode = l.mode.trim().toLowerCase();
+    teachingMode = mode == 'hybrid'
+        ? 'Any'
+        : _modes.firstWhereOrNull((m) => m.toLowerCase() == mode);
     selectedState = (l.state ?? '').trim().isEmpty ? null : l.state.trim();
 
     // Max hits (lead_count) → your Dropdown needs a string like "1","2","3"
@@ -391,7 +394,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
     if (userId == null) return _toast('User not found. Please login again.');
 
     final req = LeadCreateRequest(
-        name: nameCtrl.text.trim().isEmpty ? "Test" : nameCtrl.text.trim(),
+        name: nameCtrl.text.trim(),
         mobile: phoneCtrl.text.trim(),
         boardId: boardId!.toString(),
         classId: classId!.toString(),
@@ -409,6 +412,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
         longitude: _longitude ?? '0.0',
         coins: coinsCtrl.text.trim(),
         remark: remarksCtrl.text.trim(),
+        state: selectedState,
         place_id: _placeId ?? '');
 
     if (_submitting) return;
@@ -416,7 +420,6 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
 
     try {
       final res = await _leadCreate.createOrUpdateLead(req);
-      print(res);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -442,31 +445,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
       backgroundColor: Colors.white,
       key: _scaffoldKey,
       extendBodyBehindAppBar: true,
-      endDrawer: Admindrawer(onMenuTap: (label) async {
-        if (label == 'Logout') {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isLoggedIn', false);
-          await prefs.remove('user_name');
-          await prefs.remove('user_phone');
-          await prefs.remove('user_role');
-          await StorageService.clearTokenAndRole();
-          await StorageService.clear();
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Logged out successfully')),
-          );
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const SplashScreen()),
-            (route) => false,
-          );
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Navigating to $label')),
-          );
-        }
-      }),
+      endDrawer: Admindrawer(),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -492,10 +471,10 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
           final balanceNum = _toNum(wallet?.available);
           final balanceText = balanceNum.toStringAsFixed(0);
 
-          final prof = _p.studentprofileData.value;
-          final name = prof?.studentName?.trim() ?? '';
+          final prof = _p.adminProfileData.value;
+          final name = (prof?.tutorburoName ?? prof?.fullName)?.trim() ?? '';
           final displayName =
-              name.isEmpty ? 'Student' : name.split(RegExp(r'\s+')).first;
+              name.isEmpty ? 'Bureau' : name.split(RegExp(r'\s+')).first;
 
           if (loadingCoins && wallet == null && prof == null) {
             return const SizedBox(
@@ -658,7 +637,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                   final boards = _md.masterData.value?.data.boardLead ?? [];
                   return DropdownButtonFormField<int>(
                     isExpanded: true,
-                    value: boardId,
+                    initialValue: boardId,
                     decoration: _dec('Board', icon: Icons.school_outlined),
                     items: boards
                         .map((b) => DropdownMenuItem<int>(
@@ -687,7 +666,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                   final fetching = _lead.isFetchingClasses.value;
                   return DropdownButtonFormField<int>(
                     isExpanded: true,
-                    value: classId,
+                    initialValue: classId,
                     decoration: _dec('Class', icon: Icons.class_outlined,
                         suffix: fetching
                             ? const Padding(
@@ -729,7 +708,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                   final fetching = _lead.isFetchingSubjects.value;
                   return DropdownButtonFormField<int>(
                     isExpanded: true,
-                    value: subjectId,
+                    initialValue: subjectId,
                     decoration: _dec('Subject', icon: Icons.book_outlined,
                         suffix: fetching
                             ? const Padding(
@@ -758,7 +737,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   isExpanded: true,
-                  value: teachingMode,
+                  initialValue: teachingMode,
                   decoration: _dec('Teaching Mode', icon: Icons.wifi),
                   items: _modes
                       .map((m) => DropdownMenuItem(value: m, child: Text(m)))
@@ -778,7 +757,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   isExpanded: true,
-                  value: maxHits,
+                  initialValue: maxHits,
                   decoration: _dec('Max Hits', icon: Icons.touch_app_outlined),
                   items: _maxHitsList
                       .map((max) => DropdownMenuItem(

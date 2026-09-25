@@ -47,7 +47,7 @@ class _LeadDetailPageState extends State<LeadDetailsScreen> {
     _p = Get.isRegistered<ProfileUpdateController>()
         ? Get.find<ProfileUpdateController>()
         : Get.put(ProfileUpdateController());
-    _p.fetchProfileForStudent();
+    _p.fetchProfileForAdmin();
 
     // Debug (optional)
     // for (var course in _payCourseController.courses) {
@@ -68,13 +68,13 @@ class _LeadDetailPageState extends State<LeadDetailsScreen> {
 
   String _initial(String? name) {
     final n = (name ?? '').trim();
-    if (n.isEmpty) return 'S';
+    if (n.isEmpty) return 'B';
     return n.characters.first.toUpperCase();
   }
 
   String _firstName(String? name) {
     final n = (name ?? '').trim();
-    if (n.isEmpty) return 'Student';
+    if (n.isEmpty) return 'Bureau';
     final parts = n.split(RegExp(r'\s+'));
     return parts.first;
   }
@@ -143,9 +143,7 @@ class _LeadDetailPageState extends State<LeadDetailsScreen> {
     final gender = _val(['tutor_gender', 'type_of_teacher'], 'Any');
     final note = _val(['remarks', 'remark', 'note'], '—');
     final coins = _val(['coins', 'coins_needed'], '—');
-    final responded = _val(['responded'], '—');
-    final name = _val(['student_name', 'name'], widget.enquiry.studentName);
-    final phone = _val(['mobile', 'phone'], '');
+    final maxTutors = _val(['lead_count'], '—');
 
     final text = '''
 Tuition Lead #$leadNo
@@ -162,11 +160,10 @@ Fee: $fee
 Remark: $note
 
 Coins needed: $coins
-Responded: $responded
+Max tutors: $maxTutors
 
-Contact:
-$name
-$phone
+Apply on the Urban Tutors app:
+https://play.google.com/store/apps/details?id=pro.urbantutors.app
 ''';
 
     Share.share(text, subject: 'Tuition Lead #$leadNo');
@@ -209,8 +206,8 @@ $phone
           final balanceText = balanceNum.toStringAsFixed(0);
 
           // profile
-          final prof = _p.studentprofileData.value;
-          final name = prof?.studentName?.trim();
+          final prof = _p.adminProfileData.value;
+          final name = (prof?.tutorburoName ?? prof?.fullName)?.trim();
           final displayName = _firstName(name);
 
           if (loadingCoins && wallet == null && prof == null) {
@@ -258,17 +255,16 @@ $phone
                 const Text("Remark : ",
                     style: TextStyle(fontWeight: FontWeight.bold)),
                 Text(
-                  _val(['remarks', 'remark', 'note'],
-                      'Required Only Professional Tutor.'),
+                  _val(['remarks', 'remark', 'note'], '—'),
                   style: const TextStyle(color: Colors.blue),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             _buildDetailRow(Icons.credit_card, "Coins needed:",
-                _val(['coins', 'coins_needed'], '300')),
+                _val(['coins', 'coins_needed'], '—')),
             _buildDetailRow(
-                Icons.group, "Responded:", _val(['responded'], '0/3')),
+                Icons.group, "Max tutors:", _val(['lead_count'], '—')),
             const SizedBox(height: 24),
             if (grabId != null)
               SizedBox(
@@ -440,59 +436,13 @@ $phone
                 );
               },
             ),
-            _ActionTile(
-              icon: Icons.delete_rounded,
-              color: Colors.redAccent,
-              label: 'Delete',
-              onTap: () {
-                Navigator.pop(context); // close sheet
-                _confirmDeleteLead();
-              },
-            ),
+            // No delete endpoint exists on the server yet, so there is no
+            // Delete action (it used to close the page without deleting).
             const SizedBox(height: 8),
           ],
         ),
       ),
     );
-  }
-
-  void _confirmDeleteLead() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Delete lead?'),
-        content: const Text('This action cannot be undone.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('CANCEL')),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context); // close dialog
-              await _deleteLead();
-            },
-            child: const Text('DELETE', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _deleteLead() async {
-    try {
-      // Adjust the method name if your controller uses a different one.
-      // await _leads.deleteLead(widget.enquiry.id.toString());
-      // if (!mounted) return;
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   const SnackBar(content: Text('Lead deleted')),
-      // );
-      Navigator.pop(context, true); // go back to list
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete: $e')),
-      );
-    }
   }
 
   void _showContactSheet(BuildContext context) {
@@ -745,7 +695,7 @@ class _Header extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(.18),
+                    color: Colors.white.withValues(alpha: .18),
                     borderRadius: BorderRadius.circular(22),
                     border:
                         Border.all(width: 1, color: AppColors.primaryColor)),
@@ -1013,7 +963,7 @@ class _ActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: color.withOpacity(.12),
+        backgroundColor: color.withValues(alpha: .12),
         child: Icon(icon, color: color),
       ),
       title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),

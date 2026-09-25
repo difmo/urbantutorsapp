@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'package:urbantutorsapp/services/api_exception.dart';
 import 'package:http/http.dart' as http;
 
 class LocationService {
@@ -24,8 +27,7 @@ class LocationService {
 
   /// POST with x-www-form-urlencoded: location=<query>
   Future<List<String>> searchLocations(String query) async {
-    final res = await http.post(
-      Uri.parse(_url),
+    final res = await _httpPost(Uri.parse(_url),
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -34,9 +36,9 @@ class LocationService {
     );
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw Exception('Location API failed: ${res.statusCode}');
+      throw ApiException('Location API failed: ${res.statusCode}');
     }
-    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    final body = _decodeJson(res.body) as Map<String, dynamic>;
     final data = (body['data'] as String?) ?? '';
     return _parseOptions(data);
   }
@@ -51,9 +53,9 @@ class LocationService {
     final res = await http.Response.fromStream(streamed);
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw Exception('Location API failed: ${res.statusCode}');
+      throw ApiException('Location API failed: ${res.statusCode}');
     }
-    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    final body = _decodeJson(res.body) as Map<String, dynamic>;
     final data = (body['data'] as String?) ?? '';
     return _parseOptions(data);
   }
@@ -63,19 +65,19 @@ class LocationService {
   // Future<Position> getCurrentPosition() async {
   //   bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
   //   if (!serviceEnabled) {
-  //     throw Exception('Location services are disabled');
+  //     throw ApiException('Location services are disabled');
   //   }
 
   //   LocationPermission permission = await Geolocator.checkPermission();
   //   if (permission == LocationPermission.denied) {
   //     permission = await Geolocator.requestPermission();
   //     if (permission == LocationPermission.denied) {
-  //       throw Exception('Location permissions are denied');
+  //       throw ApiException('Location permissions are denied');
   //     }
   //   }
 
   //   if (permission == LocationPermission.deniedForever) {
-  //     throw Exception('Location permissions are permanently denied');
+  //     throw ApiException('Location permissions are permanently denied');
   //   }
 
   //   return await Geolocator.getCurrentPosition(
@@ -98,4 +100,30 @@ class LocationService {
   //     'formatted_address': formattedAddress,
   //   };
   // }
+}
+
+/// POST with a timeout; maps network failures to readable [ApiException]s.
+Future<http.Response> _httpPost(Uri uri,
+    {Map<String, String>? headers, Object? body}) async {
+  try {
+    return await http
+        .post(uri, headers: headers, body: body)
+        .timeout(const Duration(seconds: 20));
+  } on TimeoutException {
+    throw const ApiException(
+        'The server is taking too long to respond. Please try again.');
+  } on SocketException {
+    throw const ApiException(
+        'No internet connection. Please check your network and try again.');
+  }
+}
+
+/// Decodes a JSON body, or throws a readable [ApiException].
+dynamic _decodeJson(String body) {
+  try {
+    return jsonDecode(body);
+  } on FormatException {
+    throw const ApiException(
+        'Unexpected response from server. Please try again later.');
+  }
 }

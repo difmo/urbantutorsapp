@@ -176,6 +176,11 @@ class ViewInfo {
       final type = (d['type'] ?? d['Type'] ?? '').toString();
       return ViewInfo(url: url, type: type);
     }
+    // Some responses carry the file path directly as a string; on failure
+    // that string is an error message instead, so only trust it on success.
+    if (d is String && json['success'] == true) {
+      return ViewInfo(url: d, type: '');
+    }
     return ViewInfo(url: '', type: '');
   }
 

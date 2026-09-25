@@ -1,18 +1,15 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:urbantutorsapp/widgets/AdminDrawer.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/controllers/transaction_controller.dart';
 import 'package:urbantutorsapp/models/transaction_models.dart';
-import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
-import 'package:urbantutorsapp/utils/storage_helper.dart';
-import 'package:urbantutorsapp/widgets/TutorDrawer.dart';
 
 class TransactionAdmin extends StatefulWidget {
   const TransactionAdmin({super.key});
@@ -52,7 +49,7 @@ class _TransactionsTutorState extends State<TransactionAdmin> {
     // ✅ Defer reactive work to avoid setState/markNeedsBuild during build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _c.refreshAll();
-      _p.fetchProfileForStudent();
+      _p.fetchProfileForAdmin();
       _t.bootstrap();
     });
   }
@@ -66,31 +63,7 @@ class _TransactionsTutorState extends State<TransactionAdmin> {
       backgroundColor: Colors.white,
       key: _scaffoldKey,
       extendBodyBehindAppBar: true,
-      endDrawer: Tutordrawer(onMenuTap: (label) async {
-        if (label == 'Logout') {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isLoggedIn', false);
-          await prefs.remove('user_name');
-          await prefs.remove('user_phone');
-          await prefs.remove('user_role');
-          await StorageService.clearTokenAndRole();
-          await StorageService.clear();
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Logged out successfully')),
-          );
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const SplashScreen()),
-            (route) => false,
-          );
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Navigating to $label')),
-          );
-        }
-      }),
+      endDrawer: Admindrawer(),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -116,8 +89,8 @@ class _TransactionsTutorState extends State<TransactionAdmin> {
           final balanceNum = _toNum(wallet?.available);
           final balanceText = balanceNum.toStringAsFixed(0);
 
-          final prof = _p.studentprofileData.value;
-          final name = prof?.studentName?.trim() ?? '';
+          final prof = _p.adminProfileData.value;
+          final name = (prof?.tutorburoName ?? prof?.fullName)?.trim() ?? '';
           final displayName =
               name.isEmpty ? 'Tutor' : name.split(RegExp(r'\s+')).first;
 
@@ -278,7 +251,7 @@ class _Header extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(.18),
+                  color: Colors.white.withValues(alpha: .18),
                   borderRadius: BorderRadius.circular(22),
                   border: Border.all(width: 1, color: AppColors.primaryColor),
                 ),
@@ -327,7 +300,7 @@ class _SummaryCard extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade300),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -355,9 +328,9 @@ class _SummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(.08),
+        color: color.withValues(alpha: .08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(.3)),
+        border: Border.all(color: color.withValues(alpha: .3)),
       ),
       child: Row(
         children: [
@@ -395,7 +368,7 @@ class _TxnTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(.03),
+            color: Colors.black.withValues(alpha: .03),
             blurRadius: 6,
             offset: const Offset(0, 2),
           )
@@ -407,7 +380,7 @@ class _TxnTile extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 20,
-            backgroundColor: color.withOpacity(.12),
+            backgroundColor: color.withValues(alpha: .12),
             child: Icon(icon, color: color),
           ),
           const SizedBox(width: 12),
@@ -427,7 +400,7 @@ class _TxnTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(.08),
+                  color: color.withValues(alpha: .08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -506,9 +479,9 @@ class _TxnTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: c.withOpacity(.08),
+        color: c.withValues(alpha: .08),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: c.withOpacity(.25)),
+        border: Border.all(color: c.withValues(alpha: .25)),
       ),
       child: Text(
         text,

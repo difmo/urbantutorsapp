@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
@@ -44,31 +45,33 @@ class _DashboardHomeTabState extends State<DashboardHomeTab>
     _p = Get.isRegistered<ProfileUpdateController>()
         ? Get.find<ProfileUpdateController>()
         : Get.put(ProfileUpdateController());
-    // Try to ensure profile is present
-    _p.fetchProfileForStudent();
+    // Tutor location is needed for distance filtering.
+    if (_p.tutorprofileData.value == null) _p.fetchProfileForTutor();
   }
 
-  bool _isGrabbed(TutorLead e) =>
-      _leads.grabbedLeads.any((g) => g.grabLeadId == e.id);
+  bool _isGrabbed(TutorLead e) => _leads.grabbedFor(e.id) != null;
 
-  Future<void> _grabThisLead(TutorLead e) async {
-    final msg = await _leads.grabLead(e.id.toString());
-    if (!mounted) return;
-    if (msg != null) {
-      Get.snackbar(
-        'Success',
-        msg,
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 2),
-      );
-    } else if (_leads.error.isNotEmpty) {
-      Get.snackbar(
-        'Error',
-        _leads.error.value,
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 2),
-      );
+  /// Distance in km from the tutor's saved location to the lead, or null
+  /// when either side has no coordinates.
+  double? _distanceKm(TutorLead e) {
+    final t = _p.tutorprofileData.value;
+    final lat = double.tryParse(e.latitude.trim());
+    final lng = double.tryParse(e.longitude.trim());
+    if (t?.latitude == null || t?.longitude == null || lat == null || lng == null) {
+      return null;
     }
+    return Geolocator.distanceBetween(t!.latitude!, t.longitude!, lat, lng) /
+        1000;
+  }
+
+  bool _isOffline(TutorLead e) => e.mode.trim().toLowerCase() == 'offline';
+
+  /// Offline leads must lie within [range]; online leads are location-free.
+  /// Leads without coordinates are kept (distance unknown).
+  bool _inRange(TutorLead e, RangeValues range) {
+    if (!_isOffline(e)) return true;
+    final d = _distanceKm(e);
+    return d == null || (d >= range.start - 1 && d <= range.end);
   }
 
   @override
@@ -99,7 +102,7 @@ class _DashboardHomeTabState extends State<DashboardHomeTab>
                         Divider(
                           height: 1,
                           thickness: 1,
-                          color: Colors.white.withOpacity(0.25),
+                          color: Colors.white.withValues(alpha: 0.25),
                         ),
                         TabBar(
                           controller: _tab, // <—
@@ -273,6 +276,7 @@ class _DashboardHomeTabState extends State<DashboardHomeTab>
                     );
                   }
                   return TabBarView(
+                    controller: _tab, // same controller as the TabBar
                     children: [
                       _nearbyTab(context),
                       _enquiryTab(context),
@@ -291,7 +295,9 @@ class _DashboardHomeTabState extends State<DashboardHomeTab>
   // -------------------- Tabs --------------------
 
   Widget _nearbyTab(BuildContext context) {
-    final items = _leads.nearby; // offline only
+    final items = _leads.leads
+        .where((e) => _isOffline(e) && _inRange(e, _nearbyRange))
+        .toList();
     return RefreshIndicator(
       onRefresh: _leads.loadAvailable,
       child: ListView(
@@ -302,7 +308,7 @@ class _DashboardHomeTabState extends State<DashboardHomeTab>
               padding: EdgeInsets.all(24),
               child: Center(
                   child: Text(
-                      'No Nearby (Offline/Online) Leads Found. Kindly, Wait!')),
+                      'No offline enquiries in this range yet. Try a wider range.')),
             ), 
           ...items.map(
             (e) => GestureDetector(
@@ -310,7 +316,7 @@ class _DashboardHomeTabState extends State<DashboardHomeTab>
               child: _LeadCard(
                 lead: e,
                 isContacted: _isGrabbed(e),
-                onContactToggle: _isGrabbed(e) ? null : () => _grabThisLead(e),
+                distanceKm: _distanceKm(e),
                 onReadMore: () => _openDetails(e),
               ),
             ),
@@ -321,11 +327,12 @@ class _DashboardHomeTabState extends State<DashboardHomeTab>
   }
 
   Widget _enquiryTab(BuildContext context) {
-    final items = _leads.declinedLeads;
+    final items =
+        _leads.leads.where((e) => _inRange(e, _allRange)).toList();
     return RefreshIndicator(
-      onRefresh: _leads.loadDeclined,
+      onRefresh: _leads.refreshAll,
       child: items.isEmpty
-          ? const Center(child: Text('No leads yet'))
+          ? const Center(child: Text('No enquiries in this range yet'))
           : ListView.builder(
               itemCount: items.length,
               padding: const EdgeInsets.symmetric(vertical: 8),
@@ -337,7 +344,7 @@ class _DashboardHomeTabState extends State<DashboardHomeTab>
                   child: _LeadCard(
                     lead: e,
                     isContacted: grabbed,
-                    onContactToggle: grabbed ? null : () => _grabThisLead(e),
+                    distanceKm: _distanceKm(e),
                     onReadMore: () => _openDetails(e),
                   ),
                 );
@@ -430,14 +437,14 @@ class _LeadCard extends StatelessWidget {
   const _LeadCard({
     required this.lead,
     required this.isContacted,
-    required this.onContactToggle,
     required this.onReadMore,
+    this.distanceKm,
   });
 
   final TutorLead lead;
   final bool isContacted;
-  final VoidCallback? onContactToggle; // null => disabled
   final VoidCallback onReadMore;
+  final double? distanceKm;
 
   @override
   Widget build(BuildContext context) {
@@ -482,19 +489,24 @@ class _LeadCard extends StatelessWidget {
             const SizedBox(height: 4),
             _kv(Icons.book, 'Subject', lead.subjectName),
             const SizedBox(height: 4),
-            _kv(Icons.location_on, 'Location',
-                "${lead.location},${lead.state}"),
+            _kv(
+                Icons.location_on,
+                'Location',
+                "${lead.location},${lead.state}"
+                    "${distanceKm != null ? ' (${distanceKm!.toStringAsFixed(1)} km away)' : ''}"),
             const SizedBox(height: 6),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Row 1: Mode + 0/3 pill
+                // Row 1: Mode + max tutors (lead_count)
                 LeadMetaRow(
                   icon: Icons.switch_video, // pick any icon you prefer
                   label: 'Mode',
                   value: lead.mode,
                   iconColor: AppColors.accentColor,
-                  trailing: leadCountPill('0/3'),
+                  trailing: (int.tryParse(lead.leadCount) ?? 0) > 0
+                      ? leadCountPill('Max ${lead.leadCount}')
+                      : null,
                 ),
                 const SizedBox(height: 6),
 
@@ -505,14 +517,16 @@ class _LeadCard extends StatelessWidget {
                   value: "₹${lead.price}/Hr",
                   iconColor: AppColors.accentColor,
                   inlineLinkText: '(Read more)',
-                  onInlineLinkTap: onContactToggle,
-                  trailing: const Text(
-                    'Responded',
-                    style: TextStyle(
-                      color: AppColors.textColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  onInlineLinkTap: onReadMore,
+                  trailing: isContacted
+                      ? const Text(
+                          'Contacted',
+                          style: TextStyle(
+                            color: Colors.green,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        )
+                      : null,
                 ),
               ],
             ),

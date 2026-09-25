@@ -59,7 +59,7 @@ class _TutorDashboardState extends State<TutorDashboard> {
     _p = Get.isRegistered<ProfileUpdateController>()
         ? Get.find<ProfileUpdateController>()
         : Get.put(ProfileUpdateController());
-    _p.fetchProfileForStudent();
+    _p.fetchProfileForTutor();
   }
 
   num _toNum(dynamic v) {
@@ -70,13 +70,13 @@ class _TutorDashboardState extends State<TutorDashboard> {
 
   String _initial(String? name) {
     final n = (name ?? '').trim();
-    if (n.isEmpty) return 'S';
+    if (n.isEmpty) return 'T';
     return n.characters.first.toUpperCase();
   }
 
   String _firstName(String? name) {
     final n = (name ?? '').trim();
-    if (n.isEmpty) return 'Student';
+    if (n.isEmpty) return 'Tutor';
     final parts = n.split(RegExp(r'\s+'));
     return parts.first;
   }
@@ -140,7 +140,7 @@ class _TutorDashboardState extends State<TutorDashboard> {
     final accent = AppColors.accentColor;
 
     return Scaffold(
-      endDrawer: Tutordrawer(onMenuTap: _handleMenuTap), // <- ensure class name
+      endDrawer: Tutordrawer(), // <- ensure class name
       appBar: AppBar(
         elevation: 3,
         backgroundColor: Colors.transparent,
@@ -265,7 +265,7 @@ class _TutorDashboardState extends State<TutorDashboard> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.18),
+                      color: Colors.white.withValues(alpha: 0.18),
                       borderRadius: BorderRadius.circular(20),
                       border:
                           Border.all(width: 2, color: AppColors.primaryColor),

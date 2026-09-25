@@ -40,7 +40,7 @@ class NotificationService {
     final res = await ApiService.post('/notifications_read', form);
     final data = res.data as Map<String, dynamic>;
     if (data['success'] != true) {
-      throw Exception(data['message']?.toString() ?? 'Failed to mark read');
+      throw ApiException(data['message']?.toString() ?? 'Failed to mark read');
     }
   }
 }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
-import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
+import 'package:urbantutorsapp/utils/home_router.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class TeacherPendingScreen extends StatelessWidget {
@@ -11,13 +11,21 @@ class TeacherPendingScreen extends StatelessWidget {
     final controller = Get.find<ProfileUpdateController>();
     await controller.fetchProfileForTutor();
     final status = controller.tutorprofileData.value?.profileStatus;
-    if (status != null && status == 2) {
+    if (status != null && status != 1) {
+      // Approved (2) → dashboard; sent back / not submitted (0) → form.
       await StorageService.saveIsProfileStatus(status);
+      if (!context.mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => TutorDashboard()),
+        MaterialPageRoute(builder: (_) => homeScreenFor(Roles.tutor, status)),
       );
+      if (status == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Your profile was not submitted. Please complete it again.'),
+        ));
+      }
     } else {
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Your profile is still under verification."),
@@ -68,7 +76,7 @@ class TeacherPendingScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
-                  color: AppColors.textColor.withOpacity(0.7),
+                  color: AppColors.textColor.withValues(alpha: 0.7),
                   height: 1.5,
                 ),
               ),

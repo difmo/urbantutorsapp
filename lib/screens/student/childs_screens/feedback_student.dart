@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:urbantutorsapp/utils/support_contact.dart';
 import 'package:flutter/services.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 
@@ -21,16 +22,22 @@ class _FeedbackStudentState extends State<FeedbackStudent> {
     super.dispose();
   }
 
-  void _submitFeedback() {
+  Future<void> _submitFeedback() async {
     if (!_formKey.currentState!.validate()) return;
-
-    // TODO: call your API here with _titleCtrl.text and _descCtrl.text
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Feedback submitted")),
+    final sent = await SupportContact.compose(
+      subject: 'Feedback: ${_titleCtrl.text.trim()}',
+      body: _descCtrl.text.trim(),
     );
-    _titleCtrl.clear();
-    _descCtrl.clear();
+    if (!mounted) return;
+    if (sent) {
+      _titleCtrl.clear();
+      _descCtrl.clear();
+    }
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(sent
+          ? 'Your email app is open. Tap Send to deliver your feedback.'
+          : 'No email app found. Please write to ${SupportContact.email}.'),
+    ));
   }
 
   InputDecoration _dec({

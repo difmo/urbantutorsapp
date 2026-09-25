@@ -7,7 +7,6 @@ import 'package:urbantutorsapp/models/profile_modals/tutor_response_modal.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_modal.dart';
 import 'package:urbantutorsapp/services/ApiService.dart';
 import 'package:urbantutorsapp/utils/api_constants.dart';
-import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class ProfileUpdateService {
   Future<MasterData> getMaterData() async {
@@ -135,7 +134,7 @@ class ProfileUpdateService {
       final response = await ApiService.postt(
           "/teacher_profile_update", updateData,
           isJson: true);
-      print("✅ Response from updateProfileb: ${response}");
+      print("✅ Response from updateProfileb: $response");
       return TutorProfileResponse.fromJson(response.data);
     } catch (e) {
       print("❌ Error in updateTutorProfile");
@@ -183,8 +182,8 @@ class ProfileUpdateService {
 
       print("updateAdminProfile: success=$success message=$message");
 
-      // Return message regardless of success (controller can decide). Return null if no message present.
-      return message ?? (success ? 'Updated successfully' : 'Update failed');
+      if (!success) throw ApiException(message ?? 'Update failed');
+      return message ?? 'Updated successfully';
     } catch (e, st) {
       print(
           "❌ Error in updateAdminProfile (from ProfileUpdateService): $e\n$st");

@@ -3,12 +3,12 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:urbantutorsapp/widgets/AdminDrawer.dart';
 import 'package:flutter/services.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/pay_course_controller.dart';
@@ -16,11 +16,9 @@ import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/location_controller.dart';
-import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
-import 'package:urbantutorsapp/widgets/StudentDrawer.dart';
 
 class AdminProfileScreen extends StatefulWidget {
   const AdminProfileScreen({super.key});
@@ -113,6 +111,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           ? Get.find<PayCourseController>()
           : Get.put(PayCourseController());
 
+  final List<Worker> _workers = [];
+
   @override
   void initState() {
     super.initState();
@@ -133,15 +133,18 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     });
 
     // Re-hydrate whenever profile changes
-    ever(_p.adminProfileData, (_) {
+    _workers.add(ever(_p.adminProfileData, (_) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         await _hydrate();
       });
-    });
+    }));
   }
 
   @override
   void dispose() {
+    for (final w in _workers) {
+      w.dispose();
+    }
     _fullNameCtrl.dispose();
     _agencyNameCtrl.dispose();
     _phoneCtrl.dispose();
@@ -281,7 +284,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   // -------------------- Image pickers --------------------
 
   Future<void> _pickImage(ImageSource source, {required bool isAgency}) async {
-    final picked = await _picker.pickImage(source: source, imageQuality: 80);
+    final picked = await _picker.pickImage(
+        source: source, maxWidth: 1280, maxHeight: 1280, imageQuality: 80);
     if (picked != null) {
       setState(() {
         if (isAgency) {
@@ -414,6 +418,13 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    // The server rejects profiles without coordinates.
+    if ((_latitude ?? '').isEmpty || (_longitude ?? '').isEmpty) {
+      Get.snackbar('Location needed',
+          'Tap the location button to set your current location, then save.',
+          snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
 
     setState(() => _saving = true);
     try {
@@ -533,31 +544,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       backgroundColor: Colors.white,
       key: _scaffoldKey,
       extendBodyBehindAppBar: true,
-      endDrawer: StudentDrawer(onMenuTap: (label) async {
-        if (label == 'Logout') {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isLoggedIn', false);
-          await prefs.remove('user_name');
-          await prefs.remove('user_phone');
-          await prefs.remove('user_role');
-          await StorageService.clearTokenAndRole();
-          await StorageService.clear();
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Logged out successfully')),
-          );
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const SplashScreen()),
-            (route) => false,
-          );
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Navigating to $label')),
-          );
-        }
-      }),
+      endDrawer: Admindrawer(),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -1162,7 +1149,7 @@ class _Header extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(.18),
+                    color: Colors.white.withValues(alpha: .18),
                     borderRadius: BorderRadius.circular(22),
                     border:
                         Border.all(width: 1, color: AppColors.primaryColor)),

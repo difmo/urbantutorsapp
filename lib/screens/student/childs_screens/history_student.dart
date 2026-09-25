@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:urbantutorsapp/widgets/student_history_view.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
@@ -149,7 +150,7 @@ class _NotificationStudentState extends State<HistoryStudent> {
           );
         }),
       ),
-      body: Container(),
+      body: const StudentHistoryView(),
     );
   }
 }
@@ -221,7 +222,7 @@ class _Header extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(.18),
+                    color: Colors.white.withValues(alpha: .18),
                     borderRadius: BorderRadius.circular(22),
                     border:
                         Border.all(width: 1, color: AppColors.primaryColor)),

@@ -47,7 +47,7 @@ class _TutorCoursesScreenState extends State<TutorCoursesScreen> {
     // Defer Rx actions to next frame (avoid setState during build)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _c.refreshAll();
-      _p.fetchProfileForStudent();
+      _p.fetchProfileForTutor();
       _pay.load(); // already called in onInit, but safe here too
     });
   }
@@ -303,7 +303,7 @@ class _Header extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(.18),
+                  color: Colors.white.withValues(alpha: .18),
                   borderRadius: BorderRadius.circular(22),
                   border: Border.all(width: 1, color: AppColors.primaryColor),
                 ),

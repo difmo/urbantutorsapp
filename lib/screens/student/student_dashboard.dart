@@ -3,11 +3,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
-import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/ChatUserListScreen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/HistoryScreen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/HomeScreen.dart';
@@ -17,7 +15,6 @@ import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart
 import 'package:urbantutorsapp/screens/student/notes_screen.dart';
 import 'package:urbantutorsapp/screens/student/pdf_courses_screen.dart';
 import 'package:urbantutorsapp/screens/student/search_tutor_screen.dart';
-import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/widgets/CustomStudentNavBar.dart';
 import 'package:urbantutorsapp/widgets/StudentDrawer.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -94,31 +91,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     return Scaffold(
       key: _scaffoldKey,
       extendBodyBehindAppBar: true,
-      endDrawer: StudentDrawer(onMenuTap: (label) async {
-        if (label == 'Logout') {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isLoggedIn', false);
-          await prefs.remove('user_name');
-          await prefs.remove('user_phone');
-          await prefs.remove('user_role');
-          await StorageService.clearTokenAndRole();
-          await StorageService.clear();
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Logged out successfully')),
-          );
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const SplashScreen()),
-            (route) => false,
-          );
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Navigating to $label')),
-          );
-        }
-      }),
+      endDrawer: StudentDrawer(),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -238,7 +211,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       height: 90, // reduced height
                       icon: Icons.note_alt_outlined,
                       gradient: LinearGradient(
-                        colors: [accent.withOpacity(.18), Colors.white],
+                        colors: [accent.withValues(alpha: .18), Colors.white],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -255,7 +228,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       height: 90, // reduced height
                       icon: Icons.assignment_turned_in_outlined,
                       gradient: LinearGradient(
-                        colors: [accent.withOpacity(.18), Colors.white],
+                        colors: [accent.withValues(alpha: .18), Colors.white],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -276,7 +249,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       'Kindly Purchase the most Valuable and Popular PDF Courses.',
                   icon: Icon(Icons.picture_as_pdf),
                   gradient: LinearGradient(
-                    colors: [accent.withOpacity(.18), Colors.white],
+                    colors: [accent.withValues(alpha: .18), Colors.white],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -295,7 +268,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       'Find  Expert Private Tutor (Online/Offline) for any Subject withhin few Minutes.',
                   icon: Icon(Icons.search_rounded),
                   gradient: LinearGradient(
-                    colors: [accent.withOpacity(.18), Colors.white],
+                    colors: [accent.withValues(alpha: .18), Colors.white],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -321,7 +294,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     ),
                   ),
                   gradient: LinearGradient(
-                    colors: [accent.withOpacity(.18), Colors.white],
+                    colors: [accent.withValues(alpha: .18), Colors.white],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -347,7 +320,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     ),
                   ),
                   gradient: LinearGradient(
-                    colors: [accent.withOpacity(.18), Colors.white],
+                    colors: [accent.withValues(alpha: .18), Colors.white],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -479,7 +452,7 @@ class _Header extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(.18),
+                    color: Colors.white.withValues(alpha: .18),
                     borderRadius: BorderRadius.circular(22),
                     border:
                         Border.all(width: 1, color: AppColors.primaryColor)),
@@ -596,8 +569,8 @@ class _BigActionCard extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
                   colors: [
-                    Colors.black.withOpacity(.06),
-                    Colors.white.withOpacity(.5)
+                    Colors.black.withValues(alpha: .06),
+                    Colors.white.withValues(alpha: .5)
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,

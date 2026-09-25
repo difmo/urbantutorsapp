@@ -4,8 +4,6 @@ import 'package:urbantutorsapp/utils/api_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class LeadCreateService {
-  final Dio _dio = Dio();
-
   Future<Response> createOrUpdateLead({
     required String name,
     required String mobile,
@@ -21,44 +19,36 @@ class LeadCreateService {
       required String pincode, 
       required String latitude,
        required String longitude,
+    // Optional lead settings; keys match the fields the API returns on leads.
+    String? leadCount,
+    String? coins,
+    String? remark,
+    String? state,
   }) async {
-    try {
-      final token = await StorageService.getToken();
-      final userId = await StorageService.getUserId();
-      print("📤 Sending lead with:");
-      print("📦 class_id: $classId (${classId.runtimeType})");
-      FormData formData = FormData.fromMap({
-        'name': name,
-        'mobile': mobile,
-        'board_id': boardId,
-        'class_id': classId, // ✅ make sure it's a string
-        'location': location,
-        'mode': mode,
-        'fee': fee,
-        'lead_id': leadId, // Uncomment if needed
-        'subject_id': subjectId,
-        'user_id': userId,
-        'place_id':place_id,
-        'latitude':latitude,
-        'longitude':longitude,
-        'pincode':pincode
-      });
-      final res = await ApiService.post(ApiConstants.LEAD_CREATE_URL, formData,
-          token: token);
-      return res;
-    } on DioException catch (e) {
-      // 🔴 Handle error response
-      if (e.response != null) {
-        print("❌ API Error Response:");
-        print(e.response!.data);
-        return e.response!;
-      } else {
-        print("❌ Network error: ${e.message}");
-        throw Exception('Network error: ${e.message}');
-      }
-    }
-
-    
+    final token = await StorageService.getToken();
+    final storedUserId = await StorageService.getUserId();
+    final formData = FormData.fromMap({
+      'name': name,
+      'mobile': mobile,
+      'board_id': boardId,
+      'class_id': classId,
+      'location': location,
+      'mode': mode,
+      'fee': fee,
+      'lead_id': leadId,
+      'subject_id': subjectId,
+      'user_id': storedUserId ?? userId,
+      'place_id': place_id,
+      'latitude': latitude,
+      'longitude': longitude,
+      'pincode': pincode,
+      if (leadCount != null && leadCount.isNotEmpty) 'lead_count': leadCount,
+      if (coins != null && coins.isNotEmpty) 'coins': coins,
+      if (remark != null && remark.isNotEmpty) 'remark': remark,
+      if (state != null && state.isNotEmpty) 'state': state,
+    });
+    return ApiService.post(ApiConstants.LEAD_CREATE_URL, formData,
+        token: token);
   }
   
 }

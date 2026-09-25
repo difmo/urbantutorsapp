@@ -315,7 +315,7 @@ class _PackTile extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [BoxShadow(color: Colors.grey.shade200, blurRadius: 6)],
-          border: Border.all(color: accent.withOpacity(0.3)),
+          border: Border.all(color: accent.withValues(alpha: 0.3)),
         ),
         child: DefaultTextStyle(
           style: const TextStyle(fontSize: 13, color: Colors.black87),

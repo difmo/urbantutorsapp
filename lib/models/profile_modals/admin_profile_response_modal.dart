@@ -12,7 +12,7 @@ class AdminProfileResponseModel {
   factory AdminProfileResponseModel.fromJson(Map<String, dynamic> json) {
     return AdminProfileResponseModel(
       success: json['success'] == true || json['success'] == 1,
-      data: json['data'] != null
+      data: json['data'] is Map
           ? AdminProfileData.fromJson(Map<String, dynamic>.from(json['data']))
           : null,
       message: json['message']?.toString() ?? '',
@@ -312,7 +312,6 @@ class AdminProfileData {
       'account_number': accountNumber,
       'ifsc_code': ifscCode,
       'place_id': placeId,
-      'latitude': latitude,
       'latitude': latitude,
       'longitude': longitude,
       'pincode': pincode,

@@ -78,7 +78,13 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
   final List<int> minOptions = [for (int v = 100; v <= 1000; v += 100) v];
   final List<int> maxOptionsBase = [for (int v = 300; v <= 3000; v += 100) v];
-  static const _modes = <String>['Online', 'Offline', 'Any'];
+
+  /// [v] if it is one of [options], otherwise null. Dropdowns throw when
+  /// their value is not among their items, so server values must be checked.
+  T? _oneOf<T>(T? v, List<T> options) =>
+      (v != null && options.contains(v)) ? v : null;
+  // Values accepted by the server (it rejects 'Any').
+  static const _modes = <String>['Online', 'Offline', 'Both'];
   String? modeVal;
 
   final ImagePicker _picker = ImagePicker();
@@ -110,7 +116,6 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
     _getCurrentLocation();
     // initial fetches
     _p.fetchProfileForTutor();
-    _p.fetchProfileForStudent();
     _master.fetchMasterData();
 
     // react to tutor profile changes
@@ -123,10 +128,15 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
       pinCodeController.text = teacher.pincode ?? '';
 
       priceController.text = teacher.minAmount?.toString() ?? '';
-      selectedFeeMin = teacher.minAmount?.toInt() ?? 300;
-      selectedFeeMax = teacher.maxAmount?.toInt() ?? 500;
-      selectedIdType = teacher.idType;
-      selectedIdMode = teacher.mode ?? '';
+      selectedFeeMin = _oneOf(teacher.minAmount?.toInt() ?? 300, minOptions);
+      selectedFeeMax = _oneOf(teacher.maxAmount?.toInt() ?? 500, maxOptionsBase);
+      selectedIdType =
+          _oneOf(teacher.idType, const ['Aadhar', 'Voter ID', 'Passport']);
+      // Only use a value the dropdown offers (null → "please select").
+      final serverMode = (teacher.mode ?? '').trim().toLowerCase();
+      selectedIdMode = serverMode == 'any'
+          ? 'Both'
+          : _modes.firstWhereOrNull((m) => m.toLowerCase() == serverMode);
 
       setState(() {});
     });
@@ -252,8 +262,8 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      selectedFeeMin = p.minAmount?.toInt() ?? 0;
-      selectedFeeMax = p.maxAmount?.toInt() ?? 0;
+      selectedFeeMin = _oneOf(p.minAmount?.toInt() ?? 0, minOptions);
+      selectedFeeMax = _oneOf(p.maxAmount?.toInt() ?? 0, maxOptionsBase);
 
       nameController.text = (p.teacherName ?? '').toString().trim();
       emailController.text = (p.email ?? '').toString().trim();
@@ -269,8 +279,8 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
           normalizedMode = 'Online';
         } else if (low == 'offline') {
           normalizedMode = 'Offline';
-        } else if (low == 'any') {
-          normalizedMode = 'Any';
+        } else if (low == 'any' || low == 'both') {
+          normalizedMode = 'Both';
         } else {
           // Try to match case-insensitive
           final match = _modes.firstWhere((m) => m.toLowerCase() == low,
@@ -318,7 +328,14 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
   // === Helpers ===
   Future<void> _pickImage(ImageSource source, String type) async {
-    final picked = await _picker.pickImage(source: source);
+    final picked = await _picker.pickImage(
+      source: source,
+      // ID photos are sent as base64 text; keep them small enough for the
+      // server's upload limits.
+      maxWidth: 1280,
+      maxHeight: 1280,
+      imageQuality: 70,
+    );
     if (!mounted) return;
     if (picked != null) {
       setState(() {
@@ -624,12 +641,12 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                                   border: Border.all(
                                     color: _profileImageError
                                         ? Colors.red.shade400
-                                        : primary.withOpacity(0.3),
+                                        : primary.withValues(alpha: 0.3),
                                     width: 3,
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: primary.withOpacity(0.2),
+                                      color: primary.withValues(alpha: 0.2),
                                       blurRadius: 12,
                                       offset: const Offset(0, 4),
                                     ),
@@ -663,7 +680,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: primary.withOpacity(0.4),
+                                          color: primary.withValues(alpha: 0.4),
                                           blurRadius: 8,
                                           offset: const Offset(0, 2),
                                         ),
@@ -1007,6 +1024,8 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                                       ))
                                   .toList();
 
+                              if (!context.mounted) return;
+
                               final picked = await _showMultiSelect(
                                 context,
                                 title: 'Select Boards',
@@ -1083,6 +1102,8 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                               final options = _leadMeta.classes
                                   .map((c) => OptionInt(c.classId, c.className))
                                   .toList();
+
+                              if (!context.mounted) return;
 
                               final picked = await _showMultiSelect(
                                 context,
@@ -1170,6 +1191,8 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                                       ))
                                   .toList();
 
+                              if (!context.mounted) return;
+
                               final picked = await _showMultiSelect(
                                 context,
                                 title: 'Select Subjects',
@@ -1256,7 +1279,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                           borderSide: BorderSide(color: primary, width: 2),
                         ),
                       ),
-                      value: selectedIdExperienceInYears,
+                      initialValue: selectedIdExperienceInYears,
                       items: const [
                         "Fresher",
                         "1",
@@ -1306,7 +1329,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                           borderSide: BorderSide(color: primary, width: 2),
                         ),
                       ),
-                      value: selectedIdMode,
+                      initialValue: selectedIdMode,
                       items: _modes
                           .map((id) =>
                               DropdownMenuItem(value: id, child: Text(id)))
@@ -1356,7 +1379,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                                     BorderSide(color: primary, width: 2),
                               ),
                             ),
-                            value: selectedFeeMin,
+                            initialValue: selectedFeeMin,
                             isExpanded: true,
                             items: minOptions
                                 .map((v) => DropdownMenuItem(
@@ -1402,7 +1425,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                                     BorderSide(color: primary, width: 2),
                               ),
                             ),
-                            value: selectedFeeMax,
+                            initialValue: selectedFeeMax,
                             isExpanded: true,
                             items: maxOptionsBase
                                 .where((v) =>
@@ -1464,7 +1487,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                           borderSide: BorderSide(color: primary, width: 2),
                         ),
                       ),
-                      value: selectedIdType,
+                      initialValue: selectedIdType,
                       items: const ["Aadhar", "Voter ID", "Passport"]
                           .map((id) =>
                               DropdownMenuItem(value: id, child: Text(id)))
@@ -1516,7 +1539,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                           backgroundColor: primary,
                           foregroundColor: Colors.white,
                           elevation: 2,
-                          shadowColor: primary.withOpacity(0.4),
+                          shadowColor: primary.withValues(alpha: 0.4),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -1531,7 +1554,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
           ),
           if (_overlayLoading)
             Container(
-              color: Colors.black.withOpacity(0.25),
+              color: Colors.black.withValues(alpha: 0.25),
               alignment: Alignment.center,
               child: const CircularProgressIndicator(),
             ),
@@ -1572,7 +1595,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                       strokeAlign: BorderSide.strokeAlignInside,
                     )
                   : Border.all(
-                      color: primary.withOpacity(0.3),
+                      color: primary.withValues(alpha: 0.3),
                       width: 2,
                     ),
               borderRadius: BorderRadius.circular(12),
@@ -1610,7 +1633,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.6),
+                            color: Colors.black.withValues(alpha: 0.6),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
@@ -1660,7 +1683,7 @@ class _SectionHeader extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: primary.withOpacity(0.1),
+            color: primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: primary, size: 20),
@@ -1760,10 +1783,10 @@ class _MultiSelectTile extends StatelessWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: primary.withOpacity(0.1),
+                            color: primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: primary.withOpacity(0.3),
+                              color: primary.withValues(alpha: 0.3),
                             ),
                           ),
                           child: Text(

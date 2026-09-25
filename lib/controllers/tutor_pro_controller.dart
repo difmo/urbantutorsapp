@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:urbantutorsapp/services/api_exception.dart';
 import 'package:urbantutorsapp/models/nearby_student.dart';
 import 'package:urbantutorsapp/services/pro_membership_service.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
@@ -25,7 +26,7 @@ class TutorProController extends GetxController {
     try {
       final uidStr = await StorageService.getUserId();
       _userId = int.tryParse(uidStr ?? '') ?? 0;
-      if (_userId <= 0) throw Exception('No user id found');
+      if (_userId <= 0) throw ApiException('No user id found');
 
       hasPro.value = await _svc.hasActivePro(_userId);
 

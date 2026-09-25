@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:urbantutorsapp/utils/support_contact.dart';
 
 import 'package:urbantutorsapp/controllers/tutor_leads_controller.dart';
 import 'package:urbantutorsapp/models/grabbed_lead_model.dart';
@@ -31,9 +32,8 @@ Fee: ${_nz(enquiry.price)}
 
 Coins needed: ${_nz(enquiry.coins)}
 
-Student:
-${_nz(enquiry.studentName)}
-${_nz(enquiry.studentMobile)}
+Apply on the Urban Tutors app:
+https://play.google.com/store/apps/details?id=pro.urbantutors.app
 ''';
     Share.share(text, subject: 'Tuition Lead #${enquiry.leadId}');
   }
@@ -259,28 +259,19 @@ ${_nz(enquiry.studentMobile)}
     );
   }
 
-  void _showVipSheet(BuildContext context) {
-    const vipName = 'VIP Tutors Bureau';
-    const vipPhone = '+919876543210';
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          _grabber(),
-          const SizedBox(height: 6),
-          const Text('VIP Contact',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 12),
-          _contactTile(Icons.person, 'Name', vipName),
-          _contactTile(Icons.phone, 'Phone', vipPhone),
-          const SizedBox(height: 8),
-        ]),
-      ),
+  /// Asks the support team to connect a VIP bureau for this lead.
+  /// (There is no VIP bureau contact in the app data yet.)
+  Future<void> _showVipSheet(BuildContext context) async {
+    final sent = await SupportContact.compose(
+      subject: 'VIP Tutors Bureau request – Lead #${enquiry.leadId}',
+      body: 'Please connect me with a VIP Tutors Bureau for lead '
+          '#${enquiry.leadId} (${_nz(enquiry.courseName)}, '
+          '${_nz(enquiry.subjectName)}, ${_nz(enquiry.location)}).',
     );
+    if (!sent && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Please email ${SupportContact.email}')));
+    }
   }
 
   // ---- UI helpers
