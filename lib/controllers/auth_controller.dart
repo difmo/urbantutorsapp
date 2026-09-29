@@ -59,7 +59,7 @@ class AuthController extends GetxController {
       String roleId, String fbToken) async {
     isLoading.value = true;
     try {
-      final otpToSend = (lastOtp.value.isNotEmpty) ? lastOtp.value : otp;
+      final otpToSend = otp.trim();
 
       LoginResponse? res;
       try {

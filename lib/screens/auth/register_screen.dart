@@ -59,7 +59,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           phone: phone,
           roleId: widget.roleId,
           name: name,
-          otp: auth.lastOtp.value,
+          otp: '',
         ),
       ),
     );

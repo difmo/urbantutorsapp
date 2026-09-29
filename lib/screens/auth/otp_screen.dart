@@ -41,11 +41,7 @@ class _OTPScreenState extends State<OTPScreen> {
   @override
   void initState() {
     super.initState();
-    final initialOtp = widget.otp.isNotEmpty ? widget.otp : auth.lastOtp.value;
-    if (initialOtp.isNotEmpty) {
-      _otpController.text = initialOtp;
-      otp = initialOtp;
-    }
+    // Do not auto-fill OTP: user must enter OTP manually
   }
 
   @override
@@ -62,9 +58,8 @@ class _OTPScreenState extends State<OTPScreen> {
       final name = widget.name.trim().isNotEmpty ? widget.name.trim() : 'User';
       const firebaseToken = 'dummy_token';
 
-      // If user typed any random OTP, use the actual server OTP if available
-      final otpToSend =
-          (auth.lastOtp.value.isNotEmpty) ? auth.lastOtp.value : otp;
+      // Send the OTP entered manually by the user
+      final otpToSend = otp.trim();
 
       final LoginResponse loginResponse = await auth.verifyOtp(
           widget.phone, otpToSend, name, widget.roleId.toString(), firebaseToken);

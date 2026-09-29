@@ -106,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
           phone: phone,
           role: widget.role,
           roleId: widget.roleId,
-          otp: auth.lastOtp.value,
+          otp: '',
           name: '',
         ),
       ),
