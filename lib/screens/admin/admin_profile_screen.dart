@@ -508,12 +508,21 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
     TextCapitalization? textCapitalization,
+    int? maxLength,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: TextFormField(
         controller: c,
         keyboardType: keyboardType,
+        maxLength: maxLength,
+        buildCounter: maxLength != null
+            ? (_,
+                    {required int currentLength,
+                    required bool isFocused,
+                    required int? maxLength}) =>
+                null
+            : null,
         inputFormatters: [
           if (inputFormatters != null) ...inputFormatters,
         ],
@@ -523,7 +532,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                     keyboardType == TextInputType.emailAddress
                 ? TextCapitalization.none
                 : TextCapitalization.words),
-        decoration: _dec(label, icon: icon, hint: hint),
+        decoration: _dec(label, icon: icon, hint: hint)
+            .copyWith(counterText: maxLength != null ? '' : null),
         validator: validator ??
             (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
       ),
@@ -752,7 +762,11 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                       icon: Icons.call,
                       hint: 'Phone',
                       keyboardType: TextInputType.phone,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      maxLength: 10,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(10),
+                      ],
                       validator: (v) =>
                           (v == null || !RegExp(r'^\d{10}$').hasMatch(v.trim()))
                               ? 'Enter 10-digit number'
@@ -907,11 +921,13 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                             _zipcodeCtrl,
                             icon: Icons.pin_drop_outlined,
                             keyboardType: TextInputType.number,
+                            maxLength: 6,
                             inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(6),
                             ],
                             validator: (v) =>
-                                (v != null && v.isNotEmpty && v.length < 6)
+                                (v != null && v.isNotEmpty && v.length != 6)
                                     ? 'Invalid Zipcode'
                                     : null,
                           ),

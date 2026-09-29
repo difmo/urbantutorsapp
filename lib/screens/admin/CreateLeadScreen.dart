@@ -755,7 +755,12 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                   controller: _zipcodeCtrl,
                   icon: Icons.pin_drop_outlined,
                   keyboardType: TextInputType.number,
-                  validator: (v) => (v?.length ?? 0) < 6 ? 'Invalid' : null,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(6),
+                  ],
+                  validator: (v) =>
+                      (v?.trim().length ?? 0) != 6 ? 'Invalid' : null,
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(

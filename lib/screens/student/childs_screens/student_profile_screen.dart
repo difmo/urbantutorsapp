@@ -665,10 +665,20 @@ _getCurrentLocation();
                       _textField('Mobile', _mobileCtrl,
                           icon: Icons.phone,
                           hint: 'Your phone',
-                          keyboardType: TextInputType.number,
+                          keyboardType: TextInputType.phone,
+                          maxLength: 10,
                           inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly
-                          ]),
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(10),
+                          ],
+                          validator: (v) {
+                            final s = (v ?? '').trim();
+                            if (s.isEmpty) return 'Mobile number is required';
+                            if (s.length != 10) {
+                              return 'Enter valid 10-digit mobile number';
+                            }
+                            return null;
+                          }),
                     ],
                   ),
 
@@ -835,8 +845,19 @@ _getCurrentLocation();
                           child: TextFormField(
                             controller: pinCodeController,
                             keyboardType: TextInputType.number,
+                            maxLength: 6,
+                            buildCounter: (_,
+                                    {required int currentLength,
+                                    required bool isFocused,
+                                    required int? maxLength}) =>
+                                null,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(6),
+                            ],
                             decoration: InputDecoration(
                               labelText: "Zipcode",
+                              counterText: '',
                               prefixIcon: const Icon(Icons.pin_drop_outlined),
                               filled: true,
                               fillColor: Colors.grey.shade50,
@@ -859,7 +880,7 @@ _getCurrentLocation();
                               if (v == null || v.trim().isEmpty) {
                                 return 'Zipcode is required';
                               }
-                              if (v.trim().length < 6) {
+                              if (v.trim().length != 6) {
                                 return 'Invalid Zipcode';
                               }
                               return null;
@@ -921,12 +942,22 @@ _getCurrentLocation();
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
     TextCapitalization? textCapitalization,
+    int? maxLength,
+    String? Function(String?)? validator,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: TextFormField(
         controller: c,
         keyboardType: keyboardType,
+        maxLength: maxLength,
+        buildCounter: maxLength != null
+            ? (_,
+                    {required int currentLength,
+                    required bool isFocused,
+                    required int? maxLength}) =>
+                null
+            : null,
         inputFormatters: inputFormatters,
         textCapitalization: textCapitalization ??
             (keyboardType == TextInputType.phone ||
@@ -934,8 +965,10 @@ _getCurrentLocation();
                     keyboardType == TextInputType.emailAddress
                 ? TextCapitalization.none
                 : TextCapitalization.words),
-        decoration: _dec(label, icon: icon, hint: hint),
-        validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+        decoration: _dec(label, icon: icon, hint: hint)
+            .copyWith(counterText: maxLength != null ? '' : null),
+        validator: validator ??
+            (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
       ),
     );
   }

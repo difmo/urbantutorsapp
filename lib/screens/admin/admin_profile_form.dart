@@ -403,9 +403,20 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
                   TextField(
                     controller: phoneController,
                     keyboardType: TextInputType.phone,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration:
-                        const InputDecoration(labelText: "Phone Number"),
+                    maxLength: 10,
+                    buildCounter: (_,
+                            {required int currentLength,
+                            required bool isFocused,
+                            required int? maxLength}) =>
+                        null,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(10),
+                    ],
+                    decoration: const InputDecoration(
+                      labelText: "Phone Number",
+                      counterText: '',
+                    ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
