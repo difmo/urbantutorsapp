@@ -211,7 +211,7 @@ class _NotificationStudentState extends State<AdminSupportScreen> {
             padding: const EdgeInsets.all(16),
             children: [
               const Text(
-                "Need Assistance? We're here to help!",
+                "Need Assistance ? We're here to help!",
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
@@ -264,10 +264,10 @@ class _NotificationStudentState extends State<AdminSupportScreen> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              _faqItem("How can I upgrade my plan?"),
-              _faqItem("Where can I access my courses?"),
-              _faqItem("How do I connect with a private tutor?"),
-              _faqItem("What payment methods are accepted?"),
+              _faqItem("How can I upgrade my plan ?"),
+              _faqItem("Where can I access my courses ?"),
+              _faqItem("How do I connect with a private tutor ?"),
+              _faqItem("What payment methods are accepted ?"),
 
               const SizedBox(height: 30),
               const Divider(),

@@ -16,7 +16,7 @@ class SupportTutor extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           children: [
             const Text(
-              "Need Assistance? We're here to help!",
+              "Need Assistance ? We're here to help!",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
@@ -70,11 +70,11 @@ class SupportTutor extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            _faqItem("How can I upgrade my plan?",
+            _faqItem("How can I upgrade my plan ?",
                 "Go to Upgrade, choose a plan and recharge."),
-            _faqItem("Where can I access my purchased courses?",
+            _faqItem("Where can I access my purchased courses ?",
                 "Select My Courses in the drawer section."),
-            _faqItem("How do I connect with a student?",
+            _faqItem("How do I connect with a student ?",
                 "Get a Pro Membership to connect directly, or grab suitable leads using coins."),
 
             const SizedBox(height: 30),
