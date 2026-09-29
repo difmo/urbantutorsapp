@@ -7,7 +7,7 @@ import 'package:urbantutorsapp/utils/api_constants.dart';
 
 class AuthService {
   Future<Response> sendOtp(String mobile, {required String name, required int roleId}) async {
-    return await ApiService.post('send_otp', FormData.fromMap({
+    return await ApiService.post(ApiConstants.SEND_OTP, FormData.fromMap({
       'mobile': mobile,
       'name': name,
       'role_id': roleId,

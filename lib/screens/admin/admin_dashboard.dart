@@ -35,7 +35,7 @@ class _AdminDashboardState extends State<AdminDashboard>
   // Tab labels
   final List<String> _tabs = const [
     'All Posted Leads',
-    'Grabed Leads',
+    'Grabbed Leads',
     'Declined Leads',
   ];
 
@@ -348,7 +348,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                       Text(
                         tabIndex == 0
                             ? 'No Leads Created'
-                            : 'No Leads ${tabLabel.replaceAll("Leads", "").trim()} yet',
+                            : 'No Leads ${tabLabel.replaceAll("Leads", "").trim()} Yet',
                         style: const TextStyle(
                           fontSize: 15,
                           color: Colors.black54,
@@ -357,7 +357,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                       ),
                       const SizedBox(height: 2),
                       const Text(
-                        "[ Caution : Only Put Genuine  Leads ]",
+                        "[ Caution : Only Put Genuine Leads ]",
                         style: TextStyle(
                           fontSize: 16,
                           color: AppColors.primaryColor,
@@ -449,7 +449,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 Expanded(
                   child: _NavItem(
                     icon: FontAwesomeIcons.share.data,
-                    label: 'Promot',
+                    label: 'Promote',
                     selected: _selectedIndex == 3,
                     onTap: () {
                       HapticFeedback.selectionClick();

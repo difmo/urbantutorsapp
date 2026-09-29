@@ -5,15 +5,16 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:urbantutorsapp/models/notes_models.dart.dart';
 import 'package:urbantutorsapp/services/api_exception.dart';
+import 'package:urbantutorsapp/utils/api_config.dart';
 
 // Define BASE_URL for image URL construction
-const String BASE_URL = 'https://urbantutors.pro';
+String get BASE_URL => ApiConfig.serverHost;
 
 class NotesService {
-  static const _classesUrl = 'https://urbantutors.pro/api/getclasses';
-  static const _subjectsUrl = 'https://urbantutors.pro/api/getsubjects';
-  static const _chaptersUrl = 'https://urbantutors.pro/api/getchapter';
-  static const _detailUrl = 'https://urbantutors.pro/api/getchapter_details';
+  static String get _classesUrl => ApiConfig.fullGetClassesNotesUrl;
+  static String get _subjectsUrl => ApiConfig.fullGetSubjectsUrl;
+  static String get _chaptersUrl => ApiConfig.fullGetChapterUrl;
+  static String get _detailUrl => ApiConfig.fullGetChapterDetailsUrl;
 
   final String? token; // optional bearer
   NotesService({this.token});

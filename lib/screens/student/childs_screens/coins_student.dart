@@ -198,7 +198,7 @@ class _CoinsStudentScreenState extends State<CoinsStudentScreen> {
                       ),
                     )
                   else if (packs.isEmpty)
-                    const Center(child: Text('No coin packs available'))
+                    const Center(child: Text('No Coin Packs Available'))
                   else if (!isWide)
                     GridView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -275,7 +275,7 @@ class _CoinsStudentScreenState extends State<CoinsStudentScreen> {
                   // ---------- Transactions ----------
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('Transactions :',
+                    child: Text('Transactions:',
                         style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
@@ -298,7 +298,7 @@ class _CoinsStudentScreenState extends State<CoinsStudentScreen> {
                     const Center(
                       child: Padding(
                         padding: EdgeInsets.only(top: 32),
-                        child: Text('No transactions available',
+                        child: Text('No Transactions Available',
                             style: TextStyle(color: Colors.black54)),
                       ),
                     )

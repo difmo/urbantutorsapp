@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:urbantutorsapp/utils/geo_helper.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
@@ -198,18 +199,12 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      String? postalCode;
-      try {
-        List<Placemark> placemarks = await placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-        if (placemarks.isNotEmpty) {
-          postalCode = placemarks.first.postalCode;
-        }
-      } catch (e) {
-        debugPrint('Failed to get postal code: $e');
-      }
+      // Get address from coordinates with resilient HTTP fallback
+      final geo = await GeoHelper.getAddressFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+      final postalCode = geo?.postalCode;
 
       if (mounted) {
         setState(() {
@@ -520,7 +515,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
             key: _formKey,
             child: Column(
               children: [
-                _sectionTitle('Student Details : '),
+                _sectionTitle('Student Details: '),
 
                 _buildTextField(
                   label: 'Student/Parent Name',
@@ -630,7 +625,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                 }),
                 const SizedBox(height: 24),
 
-                _sectionTitle('Lead Info : '),
+                _sectionTitle('Lead Info: '),
 
                 // BOARD
                 Obx(() {
@@ -775,7 +770,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                   onChanged: (v) => setState(() => maxHits = v),
                 ),
                 const SizedBox(height: 16),
-                _sectionTitle('Session Info : '),
+                _sectionTitle('Session Info: '),
 
                 const SizedBox(height: 16),
 

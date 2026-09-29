@@ -337,7 +337,7 @@ class _ReportBodyState extends State<_ReportBody> {
                   padding: EdgeInsets.only(top: 80),
                   child: Center(child: CircularProgressIndicator()),
                 ),
-              _section('Coin wallet'),
+              _section('Coin Wallet'),
               Row(children: [
                 _stat('Available', _fmt(wallet?.available)),
                 _stat('Spent', _fmt(wallet?.spent)),
@@ -350,19 +350,19 @@ class _ReportBodyState extends State<_ReportBody> {
                       style: const TextStyle(color: Colors.red)),
                 ),
               const SizedBox(height: 20),
-              _section('Posted leads'),
+              _section('Posted Leads'),
               Row(children: [
                 _stat('Total', '${leads.length}'),
-                _stat('This month', '$thisMonth'),
+                _stat('This Month', '$thisMonth'),
                 _stat('Online', '$online'),
                 _stat('Offline', '${leads.length - online}'),
               ]),
               const SizedBox(height: 20),
-              _section('Recent coin activity'),
+              _section('Recent Coin Activity'),
               if (txns.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text('No coin purchases yet.',
+                  child: Text('No Coin Purchases Yet',
                       style: TextStyle(color: Colors.black54)),
                 )
               else

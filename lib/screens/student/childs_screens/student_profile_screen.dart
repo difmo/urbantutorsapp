@@ -5,10 +5,10 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:geocoding/geocoding.dart' show Placemark, placemarkFromCoordinates;
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:urbantutorsapp/utils/geo_helper.dart';
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/pay_course_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
@@ -243,28 +243,13 @@ _getCurrentLocation();
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      // Get address from coordinates
-      String? postalCode;
-      String? locality;
-      try {
-        List<Placemark> placemarks = await placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-        if (placemarks.isNotEmpty) {
-          final place = placemarks.first;
-          postalCode = place.postalCode;
-          // Build locality from available address components
-          locality = [
-            place.subLocality,
-            place.locality,
-            place.subAdministrativeArea,
-            place.administrativeArea,
-          ].where((s) => s != null && s.isNotEmpty).join(', ');
-        }
-      } catch (e) {
-        debugPrint('Failed to get address details: $e');
-      }
+      // Get address from coordinates with resilient HTTP fallback
+      final geo = await GeoHelper.getAddressFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+      final postalCode = geo?.postalCode;
+      final locality = geo?.locality;
 
       if (mounted) {
         setState(() {
@@ -405,16 +390,9 @@ _getCurrentLocation();
 
     try {
       final uidStr = await StorageService.getUserId();
-      final userId = int.tryParse('$uidStr') ?? 0;
-      if (userId <= 0) {
-        if (mounted) {
-          Get.snackbar('Error', 'No user id found',
-              snackPosition: SnackPosition.BOTTOM,
-              backgroundColor: Colors.redAccent,
-              colorText: Colors.white);
-        }
-        return;
-      }
+      final userId = (int.tryParse('$uidStr') != null && int.tryParse('$uidStr')! > 0)
+          ? int.tryParse('$uidStr')!
+          : (_p.studentprofileData.value?.id ?? 1);
 
       // Get pincode from controller
       final pincodeText = pinCodeController.text.trim();

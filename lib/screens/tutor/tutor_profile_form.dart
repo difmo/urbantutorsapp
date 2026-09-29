@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:urbantutorsapp/utils/geo_helper.dart';
 
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/models/profile_modals/tutor_response_modal.dart';
@@ -434,19 +435,12 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      // Get address from coordinates
-      String? postalCode;
-      try {
-        List<Placemark> placemarks = await placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-        if (placemarks.isNotEmpty) {
-          postalCode = placemarks.first.postalCode;
-        }
-      } catch (e) {
-        AppLog.e('Failed to get postal code: $e');
-      }
+      // Get address from coordinates with resilient HTTP fallback
+      final geo = await GeoHelper.getAddressFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+      final postalCode = geo?.postalCode;
 
       if (mounted) {
         setState(() {
@@ -525,7 +519,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
       final userId = int.tryParse('$uidStr') ?? 0;
       print(userId);
       if (userId <= 0) {
-        Get.snackbar('Error', 'No user id found',
+        Get.snackbar('Error', 'No User ID Found',
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.redAccent,
             colorText: Colors.white);

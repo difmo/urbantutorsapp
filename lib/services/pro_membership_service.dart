@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:urbantutorsapp/models/nearby_student.dart';
 import 'package:urbantutorsapp/services/ApiService.dart';
+import 'package:urbantutorsapp/utils/api_config.dart';
 
 class ProStatus {
   final bool active;
@@ -29,7 +30,7 @@ class ProMembershipService {
   /// Returns full details + computed "active".
   Future<ProStatus> view(int userId) async {
     final res = await ApiService.post(
-      '/get_pro_membership_view',
+      ApiConfig.getProMembershipView,
       FormData.fromMap({'user_id': userId.toString()}),
     );
 
@@ -53,7 +54,7 @@ class ProMembershipService {
     required int subscriptionPlanId,
   }) async {
     final res = await ApiService.post(
-      '/get_pro_membership',
+      ApiConfig.getProMembership,
       FormData.fromMap({
         'user_id': userId.toString(),
         'subscription_plan_id': subscriptionPlanId.toString(),
@@ -79,7 +80,7 @@ class ProMembershipService {
     required int radiusKm,
   }) async {
     final res = await ApiService.post(
-      '/getNearbystudent',
+      ApiConfig.getNearbyStudent,
       FormData.fromMap({
         'latitude': latitude.toString(),
         'longitude': longitude.toString(),

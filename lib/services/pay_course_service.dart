@@ -1,11 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:urbantutorsapp/models/pay_course_models.dart';
 import 'package:urbantutorsapp/services/ApiService.dart';
+import 'package:urbantutorsapp/utils/api_config.dart';
 
 class PayCourseService {
   /// POST /getpaycourse  (no params)
   Future<PayCoursesPayload> fetchCourses() async {
-    final res = await ApiService.post('/getpaycourse', FormData.fromMap({}));
+    final res = await ApiService.post(ApiConfig.getPayCourse, FormData.fromMap({}));
     print(res);
     return PayCoursesPayload.fromJson(res.data);
   }
@@ -20,13 +21,13 @@ class PayCourseService {
       'course_id': courseId.toString(),
     });
 
-    final res = await ApiService.post('/purchagecourse', form);
+    final res = await ApiService.post(ApiConfig.purchaseCourse, form);
     return PurchaseResponse.fromJson(res.data as Map<String, dynamic>);
   }
 
   /// GET /viewpdf/{course_id}   (returns type + file/url)
   Future<ViewCourseResponse> getViewInfo(int courseId) async {
-    final res = await ApiService.get('/viewpdf/$courseId');
+    final res = await ApiService.get(ApiConfig.viewPdf(courseId));
     return ViewCourseResponse.fromJson(res.data as Map<String, dynamic>);
   }
 }

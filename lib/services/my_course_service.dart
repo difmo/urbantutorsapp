@@ -3,12 +3,13 @@
 import 'package:dio/dio.dart';
 import 'package:urbantutorsapp/models/my_course_models.dart';
 import 'package:urbantutorsapp/services/ApiService.dart';
+import 'package:urbantutorsapp/utils/api_config.dart';
 
 class MyCourseService {
   /// POST /mycourse
   Future<MyCoursePayload> fetchMyCourses(int userId) async {
     final res = await ApiService.post(
-      '/mycourse',
+      ApiConfig.myCourse,
       FormData.fromMap({'user_id': userId.toString()}),
     );
     // res.data expected to be Map<String, dynamic>
@@ -22,7 +23,7 @@ class MyCourseService {
 
   /// GET /viewpdf/{course_id} → returns type + url
   Future<ViewInfo> getViewInfo(int courseId) async {
-    final res = await ApiService.get('/viewpdf/$courseId');
+    final res = await ApiService.get(ApiConfig.viewPdf(courseId));
     final data = res.data;
     if (data is Map<String, dynamic>) {
       return ViewInfo.fromJson(data);

@@ -46,7 +46,7 @@ class _ChatUserListScreenState extends State<ChatUserListScreen> {
           final teachers = _master.masterData.value?.data.teachers ?? [];
 
           if (teachers.isEmpty) {
-            return const Center(child: Text("No teachers available"));
+            return const Center(child: Text("No Teachers Available"));
           }
 
           return ListView.separated(

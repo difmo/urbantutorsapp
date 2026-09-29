@@ -3,9 +3,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:urbantutorsapp/services/api_exception.dart';
 import 'package:http/http.dart' as http;
+import 'package:urbantutorsapp/utils/api_config.dart';
 
 class LocationService {
-  static const _url = 'https://urbantutors.pro/api/getlocation';
+  static String get _url => ApiConfig.fullGetLocationUrl;
 
   String _unescape(String s) => s
       .replaceAll('&amp;', '&')

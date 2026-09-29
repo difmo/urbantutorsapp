@@ -10,7 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:urbantutorsapp/models/profile_modals/tutor_response_modal.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
+import 'package:urbantutorsapp/utils/geo_helper.dart';
 
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
@@ -362,18 +362,11 @@ class _TutorProfileState extends State<TutorProfile> {
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      String? postalCode;
-      try {
-        List<Placemark> placemarks = await placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-        if (placemarks.isNotEmpty) {
-          postalCode = placemarks.first.postalCode;
-        }
-      } catch (e) {
-        debugPrint('Failed to get postal code: $e');
-      }
+      final geo = await GeoHelper.getAddressFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+      final postalCode = geo?.postalCode;
 
       if (mounted) {
         setState(() {
@@ -436,7 +429,7 @@ class _TutorProfileState extends State<TutorProfile> {
       final uidStr = await StorageService.getUserId();
       final userId = int.tryParse('$uidStr') ?? 0;
       if (userId <= 0) {
-        Get.snackbar('Error', 'No user id found',
+        Get.snackbar('Error', 'No User ID Found',
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.redAccent,
             colorText: Colors.white);

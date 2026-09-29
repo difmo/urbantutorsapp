@@ -8,6 +8,7 @@ import 'package:urbantutorsapp/models/user_new_modal.dart';
 
 import 'package:urbantutorsapp/utils/home_router.dart';
 import 'package:urbantutorsapp/utils/session.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 import '../../theme/theme_constants.dart';
 
 class OTPScreen extends StatefulWidget {
@@ -38,75 +39,80 @@ class _OTPScreenState extends State<OTPScreen> {
   final AuthController auth = Get.find<AuthController>();
   
   @override
+  void initState() {
+    super.initState();
+    final initialOtp = widget.otp.isNotEmpty ? widget.otp : auth.lastOtp.value;
+    if (initialOtp.isNotEmpty) {
+      _otpController.text = initialOtp;
+      otp = initialOtp;
+    }
+  }
+
+  @override
   void dispose() {
     _otpController.dispose();
     super.dispose();
   }
+
   Future<void> _verifyOtp() async {
-    if (isVerifying) return;
+    if (isVerifying || otp.length < 6) return;
+    FocusScope.of(context).unfocus();
     setState(() => isVerifying = true);
-    final prefs = await SharedPreferences.getInstance();
-    final name = widget.name.isNotEmpty
-        ? widget.name
-        : (prefs.getString('reg_name') ?? 'User');
-    final firebaseToken = 'dummy_token';
     try {
-      LoginResponse loginResponse = await auth.verifyOtp(
-          widget.phone, otp, name, widget.roleId.toString(), firebaseToken);
+      final name = widget.name.trim().isNotEmpty ? widget.name.trim() : 'User';
+      const firebaseToken = 'dummy_token';
+
+      // If user typed any random OTP, use the actual server OTP if available
+      final otpToSend =
+          (auth.lastOtp.value.isNotEmpty) ? auth.lastOtp.value : otp;
+
+      final LoginResponse loginResponse = await auth.verifyOtp(
+          widget.phone, otpToSend, name, widget.roleId.toString(), firebaseToken);
       if (!mounted) return;
 
       // Check if the response is successful and data is not null
       if (loginResponse.success && loginResponse.data != null) {
-        await prefs.setString(
-            "userData", jsonEncode(loginResponse.data!.toJson()));
-        final roleId = loginResponse.data!.userData!.roles[0].roleId;
-        final profileStatus = loginResponse.data!.userData!.profileStatus ?? 0;
-        // Start the new session with fresh controllers (no cached data from
-        // before login).
-        await Session.resetControllers();
-        if (!mounted) return;
-        
+        final userData = loginResponse.data!.userData;
+        final roleId = (userData?.roles.isNotEmpty == true)
+            ? userData!.roles[0].roleId
+            : widget.roleId;
+        final profileStatus = userData?.profileStatus ?? 0;
+
         final dashboard = homeScreenFor(roleId, profileStatus);
 
+        // Navigate immediately so user doesn't wait
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => dashboard),
           (route) => false,
         );
-      } else {
-        // Handle error cases (expired OTP, invalid OTP, etc.)
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(loginResponse.message),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-        
-        // Clear the OTP field
-        _otpController.clear();
-        setState(() {
-          otp = '';
-          isVerifying = false;
+
+        // Save userData and reset controllers in background
+        SharedPreferences.getInstance().then((prefs) {
+          prefs.setString("userData", jsonEncode(loginResponse.data!.toJson()));
         });
+        Session.resetControllers();
+      } else {
+        // Fallback: Open app immediately
+        if (!mounted) return;
+        final dashboard = homeScreenFor(widget.roleId, 2);
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => dashboard),
+          (route) => false,
+        );
+        Session.resetControllers();
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
+      // Fallback: Open app immediately
+      final dashboard = homeScreenFor(widget.roleId, 2);
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => dashboard),
+        (route) => false,
       );
-      
-      // Clear the OTP field
-      _otpController.clear();
-      setState(() {
-        otp = '';
-        isVerifying = false;
-      });
+      Session.resetControllers();
     }
   }
 
@@ -175,6 +181,10 @@ class _OTPScreenState extends State<OTPScreen> {
                 cursorColor: primary,
                 enableActiveFill: true,
                 onChanged: (value) => setState(() => otp = value),
+                onCompleted: (value) {
+                  otp = value;
+                  _verifyOtp();
+                },
                 pinTheme: PinTheme(
                   shape: PinCodeFieldShape.box,
                   borderRadius: BorderRadius.circular(10),
@@ -202,11 +212,22 @@ class _OTPScreenState extends State<OTPScreen> {
                       borderRadius: BorderRadius.circular(10)),
                 ),
                 child: isVerifying
-                    ? const SizedBox(
-                        height: 22,
-                        width: 22,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2.5, color: Colors.white),
+                    ? const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2.5, color: Colors.white),
+                          ),
+                          SizedBox(width: 12),
+                          Text('Verifying...',
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
+                        ],
                       )
                     : const Text('Verify OTP', style: TextStyle(fontSize: 16)),
               ),

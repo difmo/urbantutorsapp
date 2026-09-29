@@ -1,26 +1,26 @@
-class ApiConstants {
-  static const BASE_URL = 'https://urbantutors.pro/api/';
-  static const GETCLASS_URL = '/leadclassget';
-  static const VERIFY_OTP = '/verify_otp';
-  static const GET_CHAPTER_DETAILS = '/getchapter_details';
-  static const GET_SUBJECT_URL = '/getsubjects';
-  static const GET_CHAPTER_URL = '/getchapter';
-  static const LEAD_CREATE_URL =
-      'https://urbantutors.pro/api/leadscreateupdate';
-  static const LEAD_SERVICE_URL = '/leads_vew';
-  static const PROFILE_SERVICE = '/user_profile';
-  static const PROFILE_UPDATE = '/profileupdate';
-  static const USER_PROFIEL_FETCH = '/user_profile';
-  static const STUDENT_PROFILE_UPDATE = '/student_profile_update';
-  static const MASTERDATE = '/master_data';
+import 'package:urbantutorsapp/utils/api_config.dart';
 
-  static const LEADS_VIEW_URL = '${BASE_URL}leads_vew';
-  // Grab Lead
-  static const GRAB_LEAD = '${BASE_URL}grablead';
-  // All Grabed leads
-  static const GRABLEAD_VIEW = '${BASE_URL}grablead_veiw';
-  // Declined Grabed leads
-  static const GRABLEAD_DECLINE_VIEW = '${BASE_URL}grablead_decllin_veiw';
-  // Decline Grabed leads
-  static const GRABLEAD_DECLINE = '${BASE_URL}grablead_decllin';
+export 'package:urbantutorsapp/utils/api_config.dart';
+
+class ApiConstants {
+  static String get BASE_URL => ApiConfig.baseUrl;
+  static String get SEND_OTP => ApiConfig.sendOtp;
+  static String get GETCLASS_URL => ApiConfig.getClasses;
+  static String get VERIFY_OTP => ApiConfig.verifyOtp;
+  static String get GET_CHAPTER_DETAILS => ApiConfig.getChapterDetails;
+  static String get GET_SUBJECT_URL => ApiConfig.getSubjects;
+  static String get GET_CHAPTER_URL => ApiConfig.getChapter;
+  static String get LEAD_CREATE_URL => ApiConfig.fullLeadCreateUrl;
+  static String get LEAD_SERVICE_URL => ApiConfig.leadsView;
+  static String get PROFILE_SERVICE => ApiConfig.userProfile;
+  static String get PROFILE_UPDATE => ApiConfig.profileUpdate;
+  static String get USER_PROFIEL_FETCH => ApiConfig.userProfile;
+  static String get STUDENT_PROFILE_UPDATE => ApiConfig.studentProfileUpdate;
+  static String get MASTERDATE => ApiConfig.masterData;
+
+  static String get LEADS_VIEW_URL => ApiConfig.fullLeadsViewUrl;
+  static String get GRAB_LEAD => ApiConfig.fullGrabLeadUrl;
+  static String get GRABLEAD_VIEW => ApiConfig.fullGrabLeadViewUrl;
+  static String get GRABLEAD_DECLINE_VIEW => ApiConfig.fullGrabLeadDeclineViewUrl;
+  static String get GRABLEAD_DECLINE => ApiConfig.fullGrabLeadDeclineUrl;
 }

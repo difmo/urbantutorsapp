@@ -84,7 +84,7 @@ class _TutorCoursesScreenState extends State<TutorCoursesScreen> {
           );
         }
         if (_pay.courses.isEmpty) {
-          return const Center(child: Text('No courses available'));
+          return const Center(child: Text('No Courses Available'));
         }
 
         return RefreshIndicator(
@@ -205,7 +205,7 @@ class _TutorCoursesScreenState extends State<TutorCoursesScreen> {
                                         ),
                                       )
                                     : const Icon(Icons.shopping_cart_checkout),
-                                label: Text(buying ? 'Processing...' : 'Buy now'),
+                                label: Text(buying ? 'Processing...' : 'Buy Now'),
                                 onPressed: buying ? null : () => _pay.buy(item),
                               ),
                             ),

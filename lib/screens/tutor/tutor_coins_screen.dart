@@ -94,7 +94,7 @@ class _TutorCoinsScreenState extends State<TutorCoinsScreen> {
                     ),
                   )
                 else if (packs.isEmpty)
-                  const Center(child: Text('No coin packs available'))
+                  const Center(child: Text('No Coin Packs Available'))
                 else if (width < 700)
                   SizedBox(
                     height: 130,
@@ -158,7 +158,7 @@ class _TutorCoinsScreenState extends State<TutorCoinsScreen> {
                 const SizedBox(height: 12),
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Text('Transactions :',
+                  child: Text('Transactions:',
                       style:
                           TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 ),
@@ -180,7 +180,7 @@ class _TutorCoinsScreenState extends State<TutorCoinsScreen> {
                   const Center(
                     child: Padding(
                       padding: EdgeInsets.only(top: 32),
-                      child: Text('No transactions available',
+                      child: Text('No Transactions Available',
                           style: TextStyle(color: Colors.black54)),
                     ),
                   )

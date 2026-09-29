@@ -29,7 +29,7 @@ Future<int?> pickProPlan(BuildContext context) async {
         children: [
           const Padding(
             padding: EdgeInsets.only(bottom: 8),
-            child: Text('Choose a Pro plan',
+            child: Text('Choose a Pro Plan',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
           ),
           ...plans.map((p) => ListTile(

@@ -10,31 +10,27 @@ class LoginResponse {
   });
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
-    // Try to parse LoginData, but it might fail if data contains error info
     LoginData? loginData;
-    String message = json['message'] ?? 'Unknown error';
-    
+    String message = (json['message'] ?? 'Unknown error').toString();
+
     try {
-      if (json['data'] != null) {
-        final dataMap = json['data'] as Map<String, dynamic>;
-        
-        // Check if data contains error message (e.g., block_status)
-        if (dataMap.containsKey('message')) {
-          message = dataMap['message'] as String;
+      if (json['data'] != null && json['data'] is Map) {
+        final dataMap = Map<String, dynamic>.from(json['data']);
+        if (dataMap.containsKey('message') && dataMap['message'] != null) {
+          message = dataMap['message'].toString();
         }
-        
-        // Only parse as LoginData if it has the expected structure
         if (dataMap.containsKey('token') || dataMap.containsKey('user_data')) {
           loginData = LoginData.fromJson(dataMap);
         }
+      } else if (json['token'] != null) {
+        loginData = LoginData.fromJson(json);
       }
-    } catch (e) {
-      // If parsing fails, loginData remains null
+    } catch (_) {
       loginData = null;
     }
-    
+
     return LoginResponse(
-      success: json['success'] ?? false,
+      success: json['success'] == true,
       message: message,
       data: loginData,
     );
@@ -67,9 +63,11 @@ class LoginData {
 
   factory LoginData.fromJson(Map<String, dynamic> json) {
     return LoginData(
-      token: json['token'] as String?,
-      fairbasetoken: json['fairbasetoken'] as String?,
-      userData: json['user_data'] != null ? UserData.fromJson(json['user_data']) : null,
+      token: json['token']?.toString(),
+      fairbasetoken: (json['fairbasetoken'] ?? json['firebase_token'])?.toString(),
+      userData: json['user_data'] != null && json['user_data'] is Map
+          ? UserData.fromJson(Map<String, dynamic>.from(json['user_data']))
+          : null,
     );
   }
 
@@ -107,17 +105,23 @@ class UserData {
   });
 
   factory UserData.fromJson(Map<String, dynamic> json) {
-    var rolesList = (json['roles'] as List)
-        .map((roleJson) => Role.fromJson(roleJson))
-        .toList();
+    final rolesRaw = json['roles'];
+    final List<Role> rolesList = (rolesRaw is List)
+        ? rolesRaw
+            .whereType<Map>()
+            .map((r) => Role.fromJson(Map<String, dynamic>.from(r)))
+            .toList()
+        : [];
 
     return UserData(
-      id: json['id'],
-      profileStatus: json['profile_status'],
-      name: json['name'],
-      mobile: json['mobile'],
-      createdAt: json['created_at'],
-      updatedAt: json['updated_at'],
+      id: int.tryParse('${json['id']}') ?? 0,
+      profileStatus: json['profile_status'] != null
+          ? int.tryParse('${json['profile_status']}')
+          : null,
+      name: (json['name'] ?? '').toString(),
+      mobile: (json['mobile'] ?? '').toString(),
+      createdAt: (json['created_at'] ?? '').toString(),
+      updatedAt: (json['updated_at'] ?? '').toString(),
       roles: rolesList,
     );
   }
@@ -151,8 +155,8 @@ class Role {
 
   factory Role.fromJson(Map<String, dynamic> json) {
     return Role(
-      roleId: json['role_id'],
-      roleName: json['role_name'],
+      roleId: int.tryParse('${json['role_id']}') ?? 0,
+      roleName: (json['role_name'] ?? '').toString(),
     );
   }
 

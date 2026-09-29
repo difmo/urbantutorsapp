@@ -59,7 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Open Terms & Conditions URL
   Future<void> _openTerms() async {
-    final Uri url = Uri.parse('https://urbantutors.pro/privacy-policy');
+    final Uri url = Uri.parse('https://www.urbantutors.pro/terms-and-conditions');
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
@@ -106,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
           phone: phone,
           role: widget.role,
           roleId: widget.roleId,
-          otp: '',
+          otp: auth.lastOtp.value,
           name: '',
         ),
       ),

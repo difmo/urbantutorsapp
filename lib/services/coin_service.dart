@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:urbantutorsapp/models/coin_package.dart';
 import 'package:urbantutorsapp/models/my_coins.dart';
 import 'package:urbantutorsapp/services/ApiService.dart';
+import 'package:urbantutorsapp/utils/api_config.dart';
 import 'dart:developer' as developer;
 
 class QuinceOrder {
@@ -29,13 +30,13 @@ class QuinceOrder {
 }
 
 class CoinService {
-  static const String rzpKeyId = 'rzp_test_G8C4fq7TzDzwgm';
-  static const String rzpKeySecret = 'jx32K2TTW84b1Gj53IWAfFVf';
+  static String get rzpKeyId => ApiConfig.razorpayKeyId;
+  static String get rzpKeySecret => ApiConfig.razorpayKeySecret;
 
   /// Packs
   Future<List<CoinPackage>> fetchPackages({required String token}) async {
     developer.log("Fetching coin packages", name: 'CoinService');
-    final res = await ApiService.get('https://urbantutors.pro/api/get_coins',
+    final res = await ApiService.get(ApiConfig.fullGetCoinsUrl,
         token: token);
     developer.log("get_coins → ${res.data}", name: 'CoinService');
 
@@ -55,7 +56,7 @@ class CoinService {
   }) async {
     final form = FormData.fromMap({'user_id': userId});
     final res = await ApiService.post(
-        'https://urbantutors.pro/api/my_coins', form,
+        ApiConfig.fullMyCoinsUrl, form,
         token: token);
     developer.log("my_coins → ${res.data}", name: 'CoinService');
 
@@ -82,7 +83,7 @@ class CoinService {
     };
 
     final res = await ApiService.post(
-        'https://urbantutors.pro/api/purchagecoins', payload,
+        ApiConfig.fullPurchaseCoinsUrl, payload,
         token: token);
     developer.log("purchasecoins(quince-init) → ${res.data}",
         name: 'CoinService');
@@ -154,7 +155,7 @@ class CoinService {
     });
 
     final res = await ApiService.post(
-      'https://urbantutors.pro/api/create_order',
+      ApiConfig.fullRegisterOrderUrl,
       form,
       token: token,
     );
@@ -184,7 +185,7 @@ class CoinService {
     });
 
     final res = await ApiService.post(
-        'https://urbantutors.pro/api/purchagecoins', form,
+        ApiConfig.fullPurchaseCoinsUrl, form,
         token: token);
         print("Response from purchasecoins(razorpay-verify) → ${res.data}");
 

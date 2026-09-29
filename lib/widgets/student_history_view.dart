@@ -98,7 +98,7 @@ class _StudentHistoryViewState extends State<StudentHistoryView> {
               Icon(Icons.history, size: 56, color: Colors.black26),
               SizedBox(height: 8),
               Center(
-                child: Text('No activity yet',
+                child: Text('No Activity Yet',
                     style: TextStyle(color: Colors.black54, fontSize: 16)),
               ),
             ],

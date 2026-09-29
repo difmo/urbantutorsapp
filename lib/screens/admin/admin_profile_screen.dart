@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:urbantutorsapp/widgets/AdminDrawer.dart';
 import 'package:flutter/services.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:urbantutorsapp/utils/geo_helper.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -249,18 +250,12 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      String? postalCode;
-      try {
-        List<Placemark> placemarks = await placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-        if (placemarks.isNotEmpty) {
-          postalCode = placemarks.first.postalCode;
-        }
-      } catch (e) {
-        debugPrint('Failed to get postal code: $e');
-      }
+      // Get address from coordinates with resilient HTTP fallback
+      final geo = await GeoHelper.getAddressFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+      final postalCode = geo?.postalCode;
 
       if (mounted) {
         setState(() {
@@ -420,7 +415,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     if (!_formKey.currentState!.validate()) return;
     // The server rejects profiles without coordinates.
     if ((_latitude ?? '').isEmpty || (_longitude ?? '').isEmpty) {
-      Get.snackbar('Location needed',
+      Get.snackbar('Location Needed',
           'Tap the location button to set your current location, then save.',
           snackPosition: SnackPosition.BOTTOM);
       return;
@@ -431,7 +426,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       final uidStr = await StorageService.getUserId();
       final userId = int.tryParse('$uidStr') ?? 0;
       if (userId <= 0) {
-        Get.snackbar('Error', 'No user id found',
+        Get.snackbar('Error', 'No User ID Found',
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.redAccent,
             colorText: Colors.white);
@@ -810,7 +805,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                       'Whatsapp Community / Group Link',
                       _teleLinkCtrl,
                       icon: Icons.telegram,
-                      hint: 'Whatsapp  Link',
+                      hint: 'Whatsapp Link',
                     ),
                   ],
                 ),
@@ -951,7 +946,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
 
                 // ======= Professional (example extra field) =======
                 _sectionCard(
-                  title: 'Bank Account Details : ',
+                  title: 'Bank Account Details: ',
                   children: [
                     _textField(
                       'Account Holder Name',

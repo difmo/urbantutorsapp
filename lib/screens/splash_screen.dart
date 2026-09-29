@@ -68,36 +68,53 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _navigateAfterDelay() async {
-    await Future.delayed(const Duration(seconds: 2));
-    final token = await StorageService.getToken();
-    final roleId = await StorageService.getRoleId();
-    if (!mounted) return;
-    // Refresh the profile status from the server before routing, so a
-    // profile approved since the last launch opens the right screen. If the
-    // server is slow or unreachable, fall back to the stored status.
-    if (token != null) {
-      final refresh = switch (roleId) {
-        3 => _initStudentProfile(),
-        2 => _initTeacherProfile(),
-        5 => _initAdminProfile(),
-        _ => Future<void>.value(),
-      };
-      try {
-        await refresh.timeout(const Duration(seconds: 8));
-      } catch (e) {
-        debugPrint('Splash profile refresh failed: $e');
-      }
+    try {
+      await Future.delayed(const Duration(seconds: 2));
       if (!mounted) return;
+
+      final token = await StorageService.getToken();
+      final roleId = await StorageService.getRoleId();
+      if (!mounted) return;
+
+      // Refresh the profile status from the server before routing, so a
+      // profile approved since the last launch opens the right screen. If the
+      // server is slow or unreachable, fall back to the stored status.
+      if (token != null &&
+          token.trim().isNotEmpty &&
+          (roleId == 2 || roleId == 3 || roleId == 5)) {
+        final refresh = switch (roleId) {
+          3 => _initStudentProfile(),
+          2 => _initTeacherProfile(),
+          5 => _initAdminProfile(),
+          _ => Future<void>.value(),
+        };
+        try {
+          await refresh.timeout(const Duration(seconds: 3));
+        } catch (e) {
+          debugPrint('Splash profile refresh failed: $e');
+        }
+        if (!mounted) return;
+      }
+
+      final profileStatus = await StorageService.getIsProfileStatus();
+      if (!mounted) return;
+
+      final currentToken = await StorageService.getToken();
+      final Widget dashboard = (currentToken != null &&
+              currentToken.trim().isNotEmpty &&
+              roleId != null)
+          ? homeScreenFor(roleId, profileStatus)
+          : const WelcomeScreen();
+
+      Navigator.pushReplacement(
+          context, MaterialPageRoute(builder: (_) => dashboard));
+    } catch (e, st) {
+      debugPrint('Error in splash navigation: $e\n$st');
+      if (mounted) {
+        Navigator.pushReplacement(
+            context, MaterialPageRoute(builder: (_) => const WelcomeScreen()));
+      }
     }
-
-    final profileStatus = await StorageService.getIsProfileStatus();
-    if (!mounted) return;
-
-    final Widget dashboard = token != null
-        ? homeScreenFor(roleId, profileStatus)
-        : const WelcomeScreen();
-    Navigator.pushReplacement(
-        context, MaterialPageRoute(builder: (_) => dashboard));
   }
 
   @override

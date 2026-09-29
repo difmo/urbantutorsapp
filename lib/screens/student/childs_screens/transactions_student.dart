@@ -168,7 +168,7 @@ class _TransactionsTutorState extends State<TransactionsStudent> {
           physics: const AlwaysScrollableScrollPhysics(),
           children: const [
             SizedBox(height: 120),
-            Center(child: Text('No transactions yet')),
+            Center(child: Text('No Transactions Yet')),
           ],
         ),
       );

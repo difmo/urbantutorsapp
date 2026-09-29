@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:urbantutorsapp/services/api_exception.dart';
 import 'package:urbantutorsapp/utils/api_constants.dart';
+import 'package:urbantutorsapp/utils/dio_logger_interceptor.dart';
 import 'package:urbantutorsapp/utils/session.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
@@ -19,7 +20,7 @@ class ApiService {
       // Let 4xx still return to us for message parsing
       validateStatus: (code) => code != null && code < 500,
     ),
-  );
+  )..interceptors.add(DioLoggerInterceptor());
 
   /// The underlying client; exposed so tests can install a fake adapter.
   @visibleForTesting
@@ -82,15 +83,20 @@ class ApiService {
       if (isJson) 'Content-Type': 'application/json',
     };
 
+    // Resolve relative paths so leading slashes don't wipe out the '/api/' prefix of baseUrl
+    final resolvedPath = (path.startsWith('http://') || path.startsWith('https://'))
+        ? path
+        : (path.startsWith('/') ? path.substring(1) : path);
+
     final Response res;
     try {
       res = await _dio.request(
-        path,
+        resolvedPath,
         data: data,
         options: Options(method: method, headers: headers),
       );
     } on DioException catch (e) {
-      debugPrint('[API] $method $path failed: ${e.type} ${e.message}');
+      print('\x1B[91m[API ERROR] $method $resolvedPath failed: ${e.type} ${e.message}\x1B[0m');
       throw ApiException(_messageFor(e), statusCode: e.response?.statusCode);
     }
 

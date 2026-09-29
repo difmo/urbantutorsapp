@@ -308,7 +308,7 @@ class _DashboardHomeTabState extends State<DashboardHomeTab>
               padding: EdgeInsets.all(24),
               child: Center(
                   child: Text(
-                      'No offline enquiries in this range yet. Try a wider range.')),
+                      'No Offline Enquiries in This Range Yet. Try a wider range.')),
             ), 
           ...items.map(
             (e) => GestureDetector(
@@ -332,7 +332,7 @@ class _DashboardHomeTabState extends State<DashboardHomeTab>
     return RefreshIndicator(
       onRefresh: _leads.refreshAll,
       child: items.isEmpty
-          ? const Center(child: Text('No enquiries in this range yet'))
+          ? const Center(child: Text('No Enquiries in This Range Yet'))
           : ListView.builder(
               itemCount: items.length,
               padding: const EdgeInsets.symmetric(vertical: 8),
@@ -359,7 +359,7 @@ class _DashboardHomeTabState extends State<DashboardHomeTab>
     return RefreshIndicator(
       onRefresh: _leads.loadGrabbed,
       child: items.isEmpty
-          ? const Center(child: Text('No contacted (grabbed) leads yet'))
+          ? const Center(child: Text('No Contacted (Grabbed) Leads Yet'))
           : ListView.builder(
               itemCount: items.length,
               padding: const EdgeInsets.symmetric(vertical: 8),

@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:urbantutorsapp/utils/geo_helper.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:urbantutorsapp/controllers/coins_controller.dart';
@@ -155,19 +156,12 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      String? postalCode;
-      try {
-        List<Placemark> placemarks = await placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-        if (placemarks.isNotEmpty) {
-          postalCode = placemarks.first.postalCode;
-          
-        }
-      } catch (e) {
-        debugPrint('Failed to get postal code: $e');
-      }
+      // Get address from coordinates with resilient HTTP fallback
+      final geo = await GeoHelper.getAddressFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+      final postalCode = geo?.postalCode;
 
       if (mounted) {
         setState(() {
@@ -463,7 +457,7 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Thank You...",
+                            "Thank You",
                             style: TextStyle(
                               fontWeight: FontWeight.w800,
                               color: Colors.red,
@@ -472,7 +466,7 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                           ),
                           SizedBox(height: 8),
                           Text(
-                            "Kindly, wait your request is submitted. Tutors will connect you soon. Untill you can  explore our App features.",
+                            "Please wait, your request has been submitted. Tutors will connect with you soon. In the meantime, you can explore our app features.",
                             style: TextStyle(color: Color(0xFF6B7280)),
                           ),
                         ],
@@ -512,7 +506,7 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                               text: 'TUTOR ',
                               style: TextStyle(color: Color(0xFFFF8C00)),
                             ),
-                            TextSpan(text: 'Now :'),
+                            TextSpan(text: 'Now:'),
                           ],
                         ),
                       ),
@@ -825,7 +819,7 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Choose Per Hour Fees :',
+                              'Choose Per Hour Fees:',
                               style: TextStyle(
                                   fontWeight: FontWeight.w700,
                                   color: Color(0xFF4B5563)),

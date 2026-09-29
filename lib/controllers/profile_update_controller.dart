@@ -22,9 +22,13 @@ class ProfileUpdateController extends GetxController {
   var tutorprofileData = Rxn<TutorProfileData>();
 
   Future<void> fetchProfileForAdmin() async {
+    final token = await StorageService.getToken();
+    if (token == null || token.trim().isEmpty) return;
+
     isLoading.value = true;
     try {
-      final response = await _profileUpdateService.getProfileForAdmin();
+      final response =
+          await _profileUpdateService.getProfileForAdmin(token: token);
       if (response.data == null) {
         setAdminProfile(null);
       } else {
@@ -60,9 +64,13 @@ class ProfileUpdateController extends GetxController {
   }
 
   Future<void> fetchProfileForStudent() async {
+    final token = await StorageService.getToken();
+    if (token == null || token.trim().isEmpty) return;
+
     isLoading.value = true;
     try {
-      final response = await _profileUpdateService.getProfileForStudent();
+      final response =
+          await _profileUpdateService.getProfileForStudent(token: token);
       if (response.data == null) {
         setProfile(null);
       } else {
@@ -86,9 +94,13 @@ class ProfileUpdateController extends GetxController {
   }
 
   Future<void> fetchProfileForTutor() async {
+    final token = await StorageService.getToken();
+    if (token == null || token.trim().isEmpty) return;
+
     isLoading.value = true;
     try {
-      final response = await _profileUpdateService.getProfileForTutor();
+      final response =
+          await _profileUpdateService.getProfileForTutor(token: token);
       tutorprofileData.value = response.data;
       if (tutorprofileData.value?.profileStatus != null) {
         StorageService.saveIsProfileStatus(
@@ -99,13 +111,6 @@ class ProfileUpdateController extends GetxController {
       debugPrint("✅ Profile fetched successfully:");
     } catch (e) {
       debugPrint("❌ Error in fetchProfileUpdate: $e");
-      // Get.snackbar(
-      //   'Error',
-      //   e.toString(),
-      //   snackPosition: SnackPosition.BOTTOM,
-      //   backgroundColor: Colors.redAccent,
-      //   colorText: Colors.white,
-      // );
     } finally {
       isLoading.value = false;
     }

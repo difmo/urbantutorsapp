@@ -182,7 +182,7 @@ class _TutorChatScreenState extends State<TutorChatScreen> {
                       Icon(Icons.people_outline,
                           size: 64, color: Colors.black26),
                       SizedBox(height: 10),
-                      Text('No students found nearby',
+                      Text('No Students Found Nearby',
                           style: TextStyle(color: Colors.black54)),
                     ],
                   ),

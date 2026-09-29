@@ -16,12 +16,12 @@ class SupportScreen extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           children: [
             const Text(
-              "Need Assistance, We're here to help !",
+              "Need Assistance? We're here to help!",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             const Text(
-              " Connect us through  below options below ...",
+              "Connect with us through the options below:",
               style: TextStyle(color: Colors.black54),
             ),
             const SizedBox(height: 20),
@@ -32,7 +32,7 @@ class SupportScreen extends StatelessWidget {
                   child: _contactOption(
                     icon: Icons.chat,
                     title: "Live Chat",
-                    subtitle: "Get instant support",
+                    subtitle: "Get Instant Support",
                     onTap: () {
                       // TODO: open your in-app chat screen
                     },
@@ -66,7 +66,7 @@ class SupportScreen extends StatelessWidget {
 
             // FAQ Section
             const Text(
-              "Frequently Asked Questions...",
+              "Frequently Asked Questions",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
@@ -81,7 +81,7 @@ class SupportScreen extends StatelessWidget {
 
             // Submit a Query
             const Text(
-              "Submit Your Queries here...",
+              "Submit Your Queries Here",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),

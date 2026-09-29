@@ -169,12 +169,12 @@ class _FeedbackStudentState extends State<ReviewTutor> {
   // ---------- submit ----------
   Future<void> _postReview() async {
     if (_rating == 0) {
-      Get.snackbar('Missing rating', 'Please rate from 1 to 5 stars',
+      Get.snackbar('Missing Rating', 'Please rate from 1 to 5 stars',
           snackPosition: SnackPosition.BOTTOM);
       return;
     }
     if (_descCtrl.text.trim().length < 10) {
-      Get.snackbar('Add details', 'Please write at least 10 characters',
+      Get.snackbar('Add Details', 'Please write at least 10 characters',
           snackPosition: SnackPosition.BOTTOM);
       return;
     }
@@ -190,12 +190,12 @@ class _FeedbackStudentState extends State<ReviewTutor> {
       if (!mounted) return;
       if (!sent) {
         setState(() => _posting = false);
-        Get.snackbar('No email app',
+        Get.snackbar('No Email App',
             'Please send your review to ${SupportContact.email}.',
             snackPosition: SnackPosition.BOTTOM);
         return;
       }
-      Get.snackbar('Almost done',
+      Get.snackbar('Almost Done',
           attachments > 0
               ? 'Attach your photos/video in the email, then tap Send.'
               : 'Tap Send in your email app to post your review.',

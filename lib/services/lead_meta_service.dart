@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:urbantutorsapp/services/api_exception.dart';
 import 'package:http/http.dart' as http;
 import 'package:urbantutorsapp/models/notes_models.dart.dart';
+import 'package:urbantutorsapp/utils/api_config.dart';
 
 class LeadClass {
   final int classId;
@@ -180,7 +181,7 @@ class ChapterDetail {
 }
 
 class LeadMetaService {
-  static const _base = 'https://urbantutors.pro/api';
+  static String get _base => ApiConfig.baseUrl.replaceFirst(RegExp(r'/$'), '');
   Future<List<LeadClass>> getClassesByBoard(int boardId) async {
     final uri = Uri.parse('$_base/leadclassget');
     final res = await _httpPost(uri,

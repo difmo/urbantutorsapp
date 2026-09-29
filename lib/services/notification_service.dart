@@ -1,13 +1,14 @@
 import 'package:dio/dio.dart';
 import 'package:urbantutorsapp/models/notification/AppNotification.dart';
 import 'package:urbantutorsapp/services/ApiService.dart';
+import 'package:urbantutorsapp/utils/api_config.dart';
 
 /// Service that talks to the notifications API.
 class NotificationService {
   /// GET /notifications_read_view/{userId}
   Future<NotificationsPayload> fetchNotificationList(int userId) async {
     try {
-      final res = await ApiService.get('/notifications_read_view/$userId');
+      final res = await ApiService.get(ApiConfig.notificationsReadView(userId));
       return NotificationsPayload.fromJson(res.data);
     } catch (e) {
       rethrow;
@@ -18,7 +19,7 @@ class NotificationService {
   /// Returns the numeric unread count from server
   Future<int> fetchCount(int userId) async {
     try {
-      final res = await ApiService.get('/notifications_count/$userId');
+      final res = await ApiService.get(ApiConfig.notificationsCount(userId));
       final payload = NotificationsPayload.fromJson(res.data);
       return payload.notificationCount;
     } catch (e) {
@@ -37,7 +38,7 @@ class NotificationService {
       'notification_id': notificationId.toString(),
     });
 
-    final res = await ApiService.post('/notifications_read', form);
+    final res = await ApiService.post(ApiConfig.notificationsRead, form);
     final data = res.data as Map<String, dynamic>;
     if (data['success'] != true) {
       throw ApiException(data['message']?.toString() ?? 'Failed to mark read');

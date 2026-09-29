@@ -23,7 +23,7 @@ class Tutordrawer extends StatefulWidget {
 }
 
 class _StudentDrawerState extends State<Tutordrawer> {
-  String selectedLabel = 'Term and Conditions';
+  String selectedLabel = '';
   // Reuse if already registered
   final ProfileUpdateController _profile =
       Get.isRegistered<ProfileUpdateController>()
@@ -45,7 +45,6 @@ class _StudentDrawerState extends State<Tutordrawer> {
   }
 
   void handleTap(String label, {VoidCallback? onTap}) {
-    setState(() => selectedLabel = label);
     Navigator.pop(context); // close drawer first
     onTap?.call();
   }
@@ -63,14 +62,11 @@ class _StudentDrawerState extends State<Tutordrawer> {
     Color? color,
     VoidCallback? onTap,
   }) {
-    final bool isSelected = selectedLabel == label;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
       child: Container(
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primaryColor.withValues(alpha: 0.08)
-              : Colors.white,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(12),
         ),
         child: ListTile(
@@ -109,13 +105,25 @@ class _StudentDrawerState extends State<Tutordrawer> {
   }
 
   Future<void> _openTerms() async {
-    final Uri url = Uri.parse('https://urbantutors.pro/privacy-policy');
+    final Uri url = Uri.parse('https://www.urbantutors.pro/terms-and-conditions');
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not open Terms & Conditions')),
+      );
+    }
+  }
+
+  Future<void> _openPrivacyPolicy() async {
+    final Uri url = Uri.parse('https://www.urbantutors.pro/privacy-policy');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open Privacy Policy')),
       );
     }
   }
@@ -323,7 +331,7 @@ class _StudentDrawerState extends State<Tutordrawer> {
 
               _drawerItem(
                 Icons.share,
-                'Share app',
+                'Share App',
                 onTap: _shareApp,
               ),
 
@@ -346,15 +354,20 @@ class _StudentDrawerState extends State<Tutordrawer> {
                 },
               ),
               _drawerItem(
-                Icons.notifications,
+                Icons.support_agent,
                 'Get Support',
                 onTap: () => Get.to(() => const SupportTutor()),
               ),
               // ===== Menu items =====
               _drawerItem(
-                Icons.description,
-                'Term and Conditions',
-                onTap: () => {_openTerms()},
+                Icons.article_outlined,
+                'Terms and Conditions',
+                onTap: _openTerms,
+              ),
+              _drawerItem(
+                Icons.privacy_tip_outlined,
+                'Privacy Policy',
+                onTap: _openPrivacyPolicy,
               ),
               _drawerItem(
                 Icons.logout,

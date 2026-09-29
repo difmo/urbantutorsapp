@@ -5,9 +5,11 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urbantutorsapp/screens/welcome/welcome_screen.dart';
 import 'package:urbantutorsapp/services/ApiService.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 /// Replies to every request with a canned response (or error).
 class _FakeAdapter implements HttpClientAdapter {
@@ -41,7 +43,15 @@ _FakeAdapter _install(_FakeAdapter a) {
 }
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+            const MethodChannel('razorpay_flutter'), (call) async => null);
+    StorageService.resetCache();
+    SharedPreferences.setMockInitialValues({});
+  });
 
   test('returns JSON responses, including 4xx with a server message', () async {
     _install(_FakeAdapter(

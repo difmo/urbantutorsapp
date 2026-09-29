@@ -195,7 +195,7 @@ class _NotificationTutorState extends State<NotificationStudent> {
                       size: 64, color: Colors.black26),
                   const SizedBox(height: 10),
                   const Text(
-                    'No notifications yet',
+                    'No Notifications Yet',
                     style: TextStyle(fontSize: 16, color: Colors.black54),
                   ),
                   const SizedBox(height: 6),

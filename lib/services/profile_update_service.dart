@@ -6,7 +6,10 @@ import 'package:urbantutorsapp/models/profile_modals/tutor_profile_request_modal
 import 'package:urbantutorsapp/models/profile_modals/tutor_response_modal.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_modal.dart';
 import 'package:urbantutorsapp/services/ApiService.dart';
+import 'package:urbantutorsapp/utils/api_config.dart';
 import 'package:urbantutorsapp/utils/api_constants.dart';
+
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class ProfileUpdateService {
   Future<MasterData> getMaterData() async {
@@ -25,11 +28,16 @@ class ProfileUpdateService {
     }
   }
 
-  Future<StudentProfileResponsdModal> getProfileForStudent() async {
+  Future<StudentProfileResponsdModal> getProfileForStudent({String? token}) async {
     try {
+      final authToken = token ?? await StorageService.getToken();
+      if (authToken == null || authToken.trim().isEmpty) {
+        throw const ApiException('Auth token missing. Please log in.');
+      }
       final response = await ApiService.post(
         ApiConstants.USER_PROFIEL_FETCH,
         null,
+        token: authToken.trim(),
       );
       print("✅ Response from getProfileForStudent :: ${response.data}");
       return StudentProfileResponsdModal.fromJson(response.data);
@@ -40,11 +48,16 @@ class ProfileUpdateService {
     }
   }
 
-  Future<AdminProfileResponseModel> getProfileForAdmin() async {
+  Future<AdminProfileResponseModel> getProfileForAdmin({String? token}) async {
     try {
+      final authToken = token ?? await StorageService.getToken();
+      if (authToken == null || authToken.trim().isEmpty) {
+        throw const ApiException('Auth token missing. Please log in.');
+      }
       final response = await ApiService.post(
         ApiConstants.USER_PROFIEL_FETCH,
         null,
+        token: authToken.trim(),
       );
       print("✅ Response from getProfileForAdmin :: ${response.data}");
       return AdminProfileResponseModel.fromJson(response.data);
@@ -55,12 +68,17 @@ class ProfileUpdateService {
     }
   }
 
-  Future<TutorProfileResponse> getProfileForTutor() async {
+  Future<TutorProfileResponse> getProfileForTutor({String? token}) async {
     print("Comes to get profile for tutor");
     try {
+      final authToken = token ?? await StorageService.getToken();
+      if (authToken == null || authToken.trim().isEmpty) {
+        throw const ApiException('Auth token missing. Please log in.');
+      }
       final response = await ApiService.post(
         ApiConstants.USER_PROFIEL_FETCH,
         null,
+        token: authToken.trim(),
       );
 
       print("✅ Response from getProfileUpdate: ${response.data}");
@@ -78,7 +96,7 @@ class ProfileUpdateService {
       StudentProfileUpdateRequest updateData) async {
     try {
       final response = await ApiService.post(
-        "/student_profile_update",
+        ApiConfig.studentProfileUpdate,
         updateData.toJson(),
       );
 
@@ -96,7 +114,7 @@ class ProfileUpdateService {
     print(updateData);
     try {
       final response = await ApiService.post(
-        "/student_profile_update",
+        ApiConfig.studentProfileUpdate,
         updateData,
       );
       print("✅ Response from updateProfiled: ${response.data}");
@@ -113,7 +131,7 @@ class ProfileUpdateService {
     print("update profile called for tutor ");
     try {
       final response = await ApiService.post(
-        "/teacher_profile_update",
+        ApiConfig.teacherProfileUpdate,
         updateData,
       );
 
@@ -132,7 +150,7 @@ class ProfileUpdateService {
     print("update profile called for tutor ");
     try {
       final response = await ApiService.postt(
-          "/teacher_profile_update", updateData,
+          ApiConfig.teacherProfileUpdate, updateData,
           isJson: true);
       print("✅ Response from updateProfileb: $response");
       return TutorProfileResponse.fromJson(response.data);
@@ -149,7 +167,7 @@ class ProfileUpdateService {
     print("update profile called for tutor");
     try {
       final response =
-          await ApiService.post("/tutorburo_profile_update", updateData);
+          await ApiService.post(ApiConfig.tutorburoProfileUpdate, updateData);
 
       // Normalize response object:
       // - If ApiService.post returns a Map already, use it.
@@ -195,7 +213,7 @@ class ProfileUpdateService {
     print("updateAdminProfileVerifiy");
     try {
       final response = await ApiService.post(
-        "/tutorburo_profile_verify",
+        ApiConfig.tutorburoProfileVerify,
         updateData,
       );
       print("✅ Response from updateAdminProfile: ${response.data}");

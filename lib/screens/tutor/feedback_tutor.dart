@@ -197,7 +197,7 @@ class _FeedbackStudentState extends State<FeedbackTutor> {
                 TextFormField(
                   controller: _titleCtrl,
                   style: const TextStyle(color: Colors.black87, fontSize: 16),
-                  decoration: _dec(label: 'Title : ', hint: 'Main heading'),
+                  decoration: _dec(label: 'Title: ', hint: 'Main heading'),
                   maxLength: 100,
                   validator: (v) {
                     final t = (v ?? '').trim();
@@ -211,7 +211,7 @@ class _FeedbackStudentState extends State<FeedbackTutor> {
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    Text("Description :"),
+                    Text("Description:"),
                   ],
                 ),
                 const SizedBox(height: 8),

@@ -59,14 +59,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
           phone: phone,
           roleId: widget.roleId,
           name: name,
-          otp: '',
+          otp: auth.lastOtp.value,
         ),
       ),
     );
   }
 
   Future<void> _openTerms() async {
-    final url = Uri.parse('https://urbantutors.pro/privacy-policy');
+    final url = Uri.parse('https://www.urbantutors.pro/terms-and-conditions');
     final opened = await canLaunchUrl(url) &&
         await launchUrl(url, mode: LaunchMode.externalApplication);
     if (!opened && mounted) {

@@ -185,7 +185,7 @@ class _PDFCoursesScreenState extends State<PDFCoursesScreen> {
           );
         }
         if (_payCourseController.courses.isEmpty) {
-          return const Center(child: Text('No courses available'));
+          return const Center(child: Text('No Courses Available'));
         }
 
         return RefreshIndicator(
@@ -282,7 +282,7 @@ class _PDFCoursesScreenState extends State<PDFCoursesScreen> {
                                       ),
                                       icon: const Icon(
                                           Icons.shopping_cart_checkout),
-                                      label: const Text('Buy now'),
+                                      label: const Text('Buy Now'),
                                       onPressed: () {
                                         _onBuy(item);
                                       },
@@ -330,7 +330,7 @@ class _PDFCoursesScreenState extends State<PDFCoursesScreen> {
                                       ),
                                       icon: const Icon(
                                           Icons.shopping_cart_checkout),
-                                      label: const Text('Buy now'),
+                                      label: const Text('Buy Now'),
                                       onPressed: () => _onBuy(item),
                                     ),
                                   ),

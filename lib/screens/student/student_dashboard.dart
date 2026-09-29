@@ -265,7 +265,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 _BigActionCard(
                   label: 'Search a Private Tutor Now.',
                   subtitle:
-                      'Find  Expert Private Tutor (Online/Offline) for any Subject withhin few Minutes.',
+                      'Find Expert Private Tutor (Online/Offline) for any Subject within a few Minutes.',
                   icon: Icon(Icons.search_rounded),
                   gradient: LinearGradient(
                     colors: [accent.withValues(alpha: .18), Colors.white],
@@ -283,9 +283,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 const SizedBox(height: 8),
 //  Icons.search_rounded
                 _BigActionCard(
-                  label: 'Get Addmision Assistance.',
+                  label: 'Get Admission Assistance.',
                   subtitle:
-                      'Get Support & Guidance at Each and Every Steps of your Life and Career.',
+                      'Get Support & Guidance at Each and Every Step of your Life and Career.',
                   icon: Container(
                     child: Image(
                       image: AssetImage('assets/icons/logogog.jpeg'),

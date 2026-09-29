@@ -201,8 +201,11 @@ class CoinsController extends GetxController {
       loadingCoins.value = true;
       errorMessage.value = '';
       final token = await StorageService.getToken();
-      if (token == null) throw ApiException('Auth token missing');
-      final res = await _service.fetchPackages(token: token);
+      if (token == null || token.trim().isEmpty) {
+        coins.clear();
+        return;
+      }
+      final res = await _service.fetchPackages(token: token.trim());
       coins.assignAll(res);
     } catch (e) {
       errorMessage.value = e.toString();
@@ -217,8 +220,13 @@ class CoinsController extends GetxController {
       myCoinsError.value = '';
       final token = await StorageService.getToken();
       final userId = await StorageService.getUserId();
-      if (token == null || userId == null) throw ApiException('Not logged in');
-      final data = await _service.fetchMyCoins(userId: userId, token: token);
+      if (token == null || token.trim().isEmpty || userId == null) {
+        myCoins.value = null;
+        txns.clear();
+        return;
+      }
+      final data =
+          await _service.fetchMyCoins(userId: userId, token: token.trim());
       myCoins.value = data;
       txns.assignAll(data.details);
     } catch (e) {

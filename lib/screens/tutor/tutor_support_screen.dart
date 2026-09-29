@@ -16,12 +16,12 @@ class SupportTutor extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           children: [
             const Text(
-              "Need Assistance, We're here to help !",
+              "Need Assistance? We're here to help!",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             const Text(
-              " Connect us through  below options below ...",
+              "Connect with us through the options below:",
               style: TextStyle(color: Colors.black54),
             ),
             const SizedBox(height: 20),
@@ -32,7 +32,7 @@ class SupportTutor extends StatelessWidget {
                   child: _contactOption(
                     icon: Icons.chat,
                     title: "Live Chat",
-                    subtitle: "Get instant support",
+                    subtitle: "Get Instant Support",
                     onTap: () {
                       // TODO: open your in-app chat screen
                     },
@@ -66,16 +66,16 @@ class SupportTutor extends StatelessWidget {
 
             // FAQ Section
             const Text(
-              "Frequently Asked Questions...",
+              "Frequently Asked Questions",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            _faqItem("How can I upgrade my plan ?",
-                "Go to upgrade (above), choose plan and recharge."),
-            _faqItem("Where can I access my purchased Courses ?",
-                "Select my Courses in the drawer section. "),
-            _faqItem("How do I connect with a Student ?",
-                "Get a Pro Membership to connect directly or you can grab your suitable leads by purchased coins. "),
+            _faqItem("How can I upgrade my plan?",
+                "Go to Upgrade, choose a plan and recharge."),
+            _faqItem("Where can I access my purchased courses?",
+                "Select My Courses in the drawer section."),
+            _faqItem("How do I connect with a student?",
+                "Get a Pro Membership to connect directly, or grab suitable leads using coins."),
 
             const SizedBox(height: 30),
             const Divider(),
@@ -83,7 +83,7 @@ class SupportTutor extends StatelessWidget {
 
             // Submit a Query
             const Text(
-              "Submit Your Queries here...",
+              "Submit Your Queries Here",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
