@@ -507,7 +507,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
-    TextCapitalization textCapitalization = TextCapitalization.none,
+    TextCapitalization? textCapitalization,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -517,7 +517,12 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         inputFormatters: [
           if (inputFormatters != null) ...inputFormatters,
         ],
-        textCapitalization: textCapitalization,
+        textCapitalization: textCapitalization ??
+            (keyboardType == TextInputType.phone ||
+                    keyboardType == TextInputType.number ||
+                    keyboardType == TextInputType.emailAddress
+                ? TextCapitalization.none
+                : TextCapitalization.words),
         decoration: _dec(label, icon: icon, hint: hint),
         validator: validator ??
             (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
@@ -835,6 +840,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                           return TextFormField(
                             controller: textCtrl,
                             focusNode: focusNode,
+                            textCapitalization: TextCapitalization.words,
                             decoration: _dec(
                               'Locality',
                               icon: Icons.location_on_outlined,

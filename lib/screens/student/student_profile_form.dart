@@ -355,6 +355,7 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
                         return TextField(
                           controller: textCtrl,
                           focusNode: focusNode,
+                          textCapitalization: TextCapitalization.words,
                           decoration: InputDecoration(
                             labelText: 'Locality',
                             hintText: 'Type city/area (e.g., lko)…',
@@ -599,6 +600,7 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
 
                   TextField(
                       controller: remarkController,
+                      textCapitalization: TextCapitalization.sentences,
                       decoration: const InputDecoration(labelText: "Remarks")),
                   const SizedBox(height: 24),
 

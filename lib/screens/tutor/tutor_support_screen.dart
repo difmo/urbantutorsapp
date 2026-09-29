@@ -90,6 +90,7 @@ class SupportTutor extends StatelessWidget {
             TextField(
               controller: textsss,
               maxLines: 4,
+              textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(
                 hintText: "Type your issue or question here...",
                 filled: true,

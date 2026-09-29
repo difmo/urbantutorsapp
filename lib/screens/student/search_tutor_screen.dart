@@ -311,6 +311,7 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
     FocusNode? focusNode,
     Widget? suffix,
     Function(String)? onSubmitted,
+    TextCapitalization? textCapitalization,
   }) {
     return TextFormField(
       controller: controller,
@@ -319,6 +320,12 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
       inputFormatters: inputFormatters,
       validator: validator,
       onFieldSubmitted: onSubmitted,
+      textCapitalization: textCapitalization ??
+          (keyboardType == TextInputType.phone ||
+                  keyboardType == TextInputType.number ||
+                  keyboardType == TextInputType.emailAddress
+              ? TextCapitalization.none
+              : TextCapitalization.words),
       decoration: InputDecoration(
         labelText: label,
         prefixIcon:
@@ -636,6 +643,7 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                               controller: textCtrl,
                               focusNode: focusNode,
                               enabled: !disabled,
+                              textCapitalization: TextCapitalization.words,
                               decoration: _fieldDec('Select Subject').copyWith(
                                 hintText: 'Search subject',
                                 suffixIcon: fetching
@@ -725,6 +733,7 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                               controller: textCtrl,
                               focusNode: focusNode,
                               textInputAction: TextInputAction.next,
+                              textCapitalization: TextCapitalization.words,
                               decoration:
                                   _fieldDec('Enter your Locality').copyWith(
                                 suffixIcon: loading

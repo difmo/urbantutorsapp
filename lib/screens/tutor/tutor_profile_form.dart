@@ -837,6 +837,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                               return TextField(
                                 controller: textCtrl,
                                 focusNode: focusNode,
+                                textCapitalization: TextCapitalization.words,
                                 decoration: InputDecoration(
                                   labelText: 'Locality',
                                   hintText: 'Type city/area…',
@@ -1226,6 +1227,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                     TextFormField(
                       controller: _qualificationCtrl,
                       keyboardType: TextInputType.text,
+                      textCapitalization: TextCapitalization.words,
                       decoration: InputDecoration(
                         labelText: "Qualification",
                         hintText: "e.g., B.Ed, M.Sc, PhD",

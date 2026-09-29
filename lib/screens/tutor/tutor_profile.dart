@@ -1058,6 +1058,7 @@ class _TutorProfileState extends State<TutorProfile> {
     FocusNode? focusNode,
     Widget? suffix,
     Function(String)? onSubmitted,
+    TextCapitalization? textCapitalization,
   }) {
     return TextFormField(
       controller: controller,
@@ -1066,6 +1067,12 @@ class _TutorProfileState extends State<TutorProfile> {
       inputFormatters: inputFormatters,
       validator: validator,
       onFieldSubmitted: onSubmitted,
+      textCapitalization: textCapitalization ??
+          (keyboardType == TextInputType.phone ||
+                  keyboardType == TextInputType.number ||
+                  keyboardType == TextInputType.emailAddress
+              ? TextCapitalization.none
+              : TextCapitalization.words),
       decoration: InputDecoration(
         labelText: label,
         prefixIcon:

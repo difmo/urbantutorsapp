@@ -345,6 +345,7 @@ class _FeedbackStudentState extends State<ReviewTutor> {
                   minLines: 5,
                   maxLines: 10,
                   maxLength: 1000,
+                  textCapitalization: TextCapitalization.sentences,
                   decoration: const InputDecoration(
                     counterText: '',
                     hintText:

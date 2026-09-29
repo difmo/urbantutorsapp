@@ -87,6 +87,7 @@ class SupportTutor extends StatelessWidget {
             const SizedBox(height: 12),
             TextField(
               maxLines: 4,
+              textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(
                 hintText: "Type your issue or question here...",
                 filled: true,

@@ -351,6 +351,7 @@ https://play.google.com/store/apps/details?id=pro.urbantutors.app
         content: TextField(
           controller: txt,
           maxLines: 3,
+          textCapitalization: TextCapitalization.sentences,
           decoration: const InputDecoration(
             hintText: 'Add a short remark (optional)',
             border: OutlineInputBorder(),

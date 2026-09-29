@@ -196,6 +196,7 @@ class _FeedbackStudentState extends State<FeedbackTutor> {
                 //     const SizedBox(height: 8),
                 TextFormField(
                   controller: _titleCtrl,
+                  textCapitalization: TextCapitalization.words,
                   style: const TextStyle(color: Colors.black87, fontSize: 16),
                   decoration: _dec(label: 'Title: ', hint: 'Main heading'),
                   maxLength: 100,
@@ -217,6 +218,7 @@ class _FeedbackStudentState extends State<FeedbackTutor> {
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _descCtrl,
+                  textCapitalization: TextCapitalization.sentences,
                   style: const TextStyle(color: Colors.black87, fontSize: 16),
                   decoration: _dec(label: '', hint: 'Write your feedback'),
                   maxLines: 8,

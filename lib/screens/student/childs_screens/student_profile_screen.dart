@@ -766,6 +766,7 @@ _getCurrentLocation();
                         return TextFormField(
                           controller: textCtrl,
                           focusNode: focusNode,
+                          textCapitalization: TextCapitalization.words,
                           decoration: _dec(
                             'Locality',
                             icon: Icons.location_on_outlined,
@@ -919,6 +920,7 @@ _getCurrentLocation();
     String? hint,
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
+    TextCapitalization? textCapitalization,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -926,6 +928,12 @@ _getCurrentLocation();
         controller: c,
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
+        textCapitalization: textCapitalization ??
+            (keyboardType == TextInputType.phone ||
+                    keyboardType == TextInputType.number ||
+                    keyboardType == TextInputType.emailAddress
+                ? TextCapitalization.none
+                : TextCapitalization.words),
         decoration: _dec(label, icon: icon, hint: hint),
         validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
       ),

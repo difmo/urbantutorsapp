@@ -344,6 +344,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
     FocusNode? focusNode,
     Widget? suffix,
     Function(String)? onSubmitted,
+    TextCapitalization? textCapitalization,
   }) {
     return TextFormField(
       controller: controller,
@@ -352,6 +353,12 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
       inputFormatters: inputFormatters,
       validator: validator,
       onFieldSubmitted: onSubmitted,
+      textCapitalization: textCapitalization ??
+          (keyboardType == TextInputType.phone ||
+                  keyboardType == TextInputType.number ||
+                  keyboardType == TextInputType.emailAddress
+              ? TextCapitalization.none
+              : TextCapitalization.words),
       decoration: _dec(label, icon: icon, suffix: suffix),
     );
   }
@@ -573,6 +580,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                       return TextFormField(
                         controller: textCtrl,
                         focusNode: focusNode,
+                        textCapitalization: TextCapitalization.words,
                         decoration: _dec(
                           'Locality',
                           icon: Icons.map_outlined,
@@ -808,6 +816,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: remarksCtrl,
+                  textCapitalization: TextCapitalization.sentences,
                   textAlign: TextAlign.start, // left-align text
                   textAlignVertical:
                       TextAlignVertical.top, // <-- top align vertically

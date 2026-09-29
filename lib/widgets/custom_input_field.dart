@@ -7,6 +7,7 @@ class CustomInputField extends StatefulWidget {
   final TextInputType keyboardType;
   final String? Function(String?) validator;
   final int? maxLength;
+  final TextCapitalization? textCapitalization;
 
   const CustomInputField({
     super.key,
@@ -15,7 +16,9 @@ class CustomInputField extends StatefulWidget {
     required this.icon,
     this.keyboardType = TextInputType.text,
     required this.validator,
-    this.maxLength, required TextStyle labelStyle,
+    this.maxLength,
+    required TextStyle labelStyle,
+    this.textCapitalization,
   });
 
   @override
@@ -48,6 +51,12 @@ class _CustomInputFieldState extends State<CustomInputField> {
       keyboardType: widget.keyboardType,
       maxLength: widget.maxLength,
       validator: widget.validator,
+      textCapitalization: widget.textCapitalization ??
+          (widget.keyboardType == TextInputType.phone ||
+                  widget.keyboardType == TextInputType.number ||
+                  widget.keyboardType == TextInputType.emailAddress
+              ? TextCapitalization.none
+              : TextCapitalization.words),
       decoration: InputDecoration(
         labelText: widget.label,
         prefixIcon: Icon(widget.icon, color: iconColor, size: 20),
