@@ -250,27 +250,28 @@ class ProfileUpdateController extends GetxController {
         if (studentprofileData.value != null && data is Map) {
           final map = data;
           // Extract values safely
-          final String? newName = map['student_name']?.toString();
-          final String? newMobile = map['mobile']?.toString();
+          final String? newName = (map['student_name'] ?? map['name'])?.toString();
+          final String? newMobile = (map['mobile'] ?? map['phone'])?.toString();
           final String? newPic = map['profile_picture']?.toString();
           final String? newLoc = map['location']?.toString();
           final int? newBoardId = int.tryParse(map['board_id']?.toString() ?? '');
-          final int? newCourseId = int.tryParse(map['course_id']?.toString() ?? '');
+          final int? newCourseId = int.tryParse((map['course_id'] ?? map['class_id'])?.toString() ?? '');
           final int? newPincode = int.tryParse(map['pincode']?.toString() ?? '');
+          final String? newBoardName = map['board_name']?.toString();
+          final String? newCourseName = (map['course_name'] ?? map['class_name'])?.toString();
+          final String? newPrice = map['price']?.toString();
           
           final updated = studentprofileData.value!.copyWith(
-            studentName: newName,
-            mobile: newMobile,
-            // If profile_picture is empty string (no change/no image), don't wipe it unless intended.
-            // But usually base64 is sent if changed. If empty, maybe it means no change?
-            // In StudentProfileScreen, it sends '' if profileBase64 is null.
-            // If it sends '', does it mean delete? Or ignore?
-            // Assuming if it's a base64 string, we update it.
+            studentName: (newName != null && newName.isNotEmpty) ? newName : studentprofileData.value!.studentName,
+            mobile: (newMobile != null && newMobile.isNotEmpty) ? newMobile : studentprofileData.value!.mobile,
             profile_picture: (newPic != null && newPic.isNotEmpty) ? newPic : studentprofileData.value!.profile_picture,
-            location: newLoc,
-            boardId: newBoardId,
-            courseId: newCourseId,
-            pincode: newPincode,
+            location: newLoc ?? studentprofileData.value!.location,
+            boardId: newBoardId ?? studentprofileData.value!.boardId,
+            courseId: newCourseId ?? studentprofileData.value!.courseId,
+            boardName: (newBoardName != null && newBoardName.isNotEmpty) ? newBoardName : studentprofileData.value!.boardName,
+            courseName: (newCourseName != null && newCourseName.isNotEmpty) ? newCourseName : studentprofileData.value!.courseName,
+            pincode: newPincode ?? studentprofileData.value!.pincode,
+            price: newPrice ?? studentprofileData.value!.price,
           );
           studentprofileData.value = updated;
         }

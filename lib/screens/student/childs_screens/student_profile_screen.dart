@@ -144,10 +144,25 @@ _getCurrentLocation();
       return;
     }
 
-    // populate fields
-    _nameCtrl.text = (p.studentName ?? '').trim();
-    _mobileCtrl.text = (p.mobile ?? '').trim();
-    _localityCtrl.text = p.location ?? '';
+    // populate fields safely without wiping user's text with empty or default values
+    final incomingName = (p.studentName ?? '').trim();
+    if (incomingName.isNotEmpty && incomingName.toLowerCase() != 'user') {
+      _nameCtrl.text = incomingName;
+    } else if (_nameCtrl.text.trim().isEmpty) {
+      final cached = StorageService.cachedUserName;
+      if (cached != null && cached.trim().isNotEmpty && cached.trim().toLowerCase() != 'user') {
+        _nameCtrl.text = cached.trim();
+      }
+    }
+
+    final incomingMobile = (p.mobile ?? '').trim();
+    if (incomingMobile.isNotEmpty && incomingMobile != '0000000000') {
+      _mobileCtrl.text = incomingMobile;
+    }
+
+    if ((p.location ?? '').trim().isNotEmpty) {
+      _localityCtrl.text = p.location!.trim();
+    }
     
     // Load pincode
     if (p.pincode != null && p.pincode! > 0) {
@@ -155,22 +170,20 @@ _getCurrentLocation();
     }
     
     // Load location data
-    _latitude = p.latitude;
-    _longitude = p.longitude;
-    _placeId = p.placeId;
+    if ((p.latitude ?? '').isNotEmpty) _latitude = p.latitude;
+    if ((p.longitude ?? '').isNotEmpty) _longitude = p.longitude;
+    if ((p.placeId ?? '').isNotEmpty) _placeId = p.placeId;
     
     // Image from server
-    _profileImageUrl = _resolveImageUrl(p.profile_picture);
+    if ((p.profile_picture ?? '').isNotEmpty) {
+      _profileImageUrl = _resolveImageUrl(p.profile_picture);
+    }
 
-    selectedBoardName = p.boardName;
-    selectedClassName = p.courseName;
-
-    // The profile API returns board/class *names* only, so resolve the ids
-    // from master data (boards) and the board's class list.
-    int? boardId = (p.boardId != null && p.boardId! > 0) ? p.boardId : null;
+    // Resolve Board
+    int? boardId = (p.boardId != null && p.boardId! > 0) ? p.boardId : _boardId;
     final boardName = (p.boardName ?? '').trim().toLowerCase();
+    final boards = _master.masterData.value?.data.boardLead ?? const [];
     if (boardId == null && boardName.isNotEmpty) {
-      final boards = _master.masterData.value?.data.boardLead ?? const [];
       for (final b in boards) {
         if (b.boardLabel.toString().trim().toLowerCase() == boardName) {
           boardId = b.boardId;
@@ -178,9 +191,19 @@ _getCurrentLocation();
         }
       }
     }
+    if (boardId != null) {
+      for (final b in boards) {
+        if (b.boardId == boardId) {
+          selectedBoardName = b.boardLabel;
+          break;
+        }
+      }
+    } else if (p.boardName != null && p.boardName!.isNotEmpty) {
+      selectedBoardName = p.boardName;
+    }
 
     // Load classes for the board first, then set IDs
-    int? classId = (p.courseId != null && p.courseId! > 0) ? p.courseId : null;
+    int? classId = (p.courseId != null && p.courseId! > 0) ? p.courseId : _classId;
     if (boardId != null) {
       await _leadMeta.loadClasses(boardId);
       final className = (p.courseName ?? '').trim().toLowerCase();
@@ -191,6 +214,16 @@ _getCurrentLocation();
             break;
           }
         }
+      }
+      if (classId != null) {
+        for (final c in _leadMeta.classes) {
+          if (c.classId == classId) {
+            selectedClassName = c.className;
+            break;
+          }
+        }
+      } else if (p.courseName != null && p.courseName!.isNotEmpty) {
+        selectedClassName = p.courseName;
       }
     }
 
@@ -406,13 +439,38 @@ _getCurrentLocation();
     
       final profileBase64 = await _fileToBase64(_profileImage);
 
+      final newName = _nameCtrl.text.trim();
+      final newMobile = _mobileCtrl.text.trim();
+      final boards = _master.masterData.value?.data.boardLead ?? const [];
+      String currentBoardName = selectedBoardName ?? '';
+      for (final b in boards) {
+        if (b.boardId == _boardId) {
+          currentBoardName = b.boardLabel ?? '';
+          break;
+        }
+      }
+      String currentClassName = selectedClassName ?? '';
+      for (final c in _leadMeta.classes) {
+        if (c.classId == _classId) {
+          currentClassName = c.className;
+          break;
+        }
+      }
+
       final stored = _p.studentprofileData.value;
       final req = {
         'user_id': userId,
-        'student_name': _nameCtrl.text.trim(),
-        'mobile': _mobileCtrl.text.trim(),
+        'student_name': newName,
+        'name': newName,
+        'full_name': newName,
+        'mobile': newMobile,
+        'phone': newMobile,
         'board_id': _boardId,
+        'board_name': currentBoardName,
         'course_id': _classId,
+        'class_id': _classId,
+        'course_name': currentClassName,
+        'class_name': currentClassName,
         // Server requires 'price' to be at least 300.
         // Preserve user's existing budget if valid, otherwise fallback to 300.
         'price': (() {
@@ -423,6 +481,9 @@ _getCurrentLocation();
         'location': _localityCtrl.text.trim(),
         'pincode': pincode,
         'remark': '', // Can be used for additional notes
+        if (stored?.subjectId != null && stored!.subjectId! > 0)
+          'subject_id': stored!.subjectId,
+        if ((stored?.state ?? '').isNotEmpty) 'state': stored!.state,
         // New photo → base64; otherwise resend the stored path so the
         // existing photo is kept (an empty value could clear it).
         if (profileBase64 != null)
@@ -437,11 +498,24 @@ _getCurrentLocation();
       // The controller shows the server's success/failure message.
       final ok = await _p.updateStudentProfile(req);
       if (ok == true) {
+        if (newName.isNotEmpty) {
+          await StorageService.saveUserName(newName);
+        }
+        if (newMobile.isNotEmpty) {
+          await StorageService.saveUserPhone(newMobile);
+        }
+
         // re-fetch and re-hydrate
         await _p.fetchProfileForStudent();
         await _hydrate();
 
         if (mounted) setState(() => _profileImage = null);
+
+        // Close edit profile screen so user returns to dashboard/drawer
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (mounted && Navigator.canPop(context)) {
+          Navigator.pop(context, true);
+        }
       }
     } catch (e, st) {
       debugPrint('Failed saving profile: $e\n$st');
@@ -695,11 +769,14 @@ _getCurrentLocation();
                       Obx(() {
                         final boards =
                             _master.masterData.value?.data.boardLead ?? [];
+                        final hasBoard =
+                            boards.any((b) => b.boardId == _boardId);
                         return DropdownButtonFormField<int>(
-                          initialValue: _boardId,
+                          key: ValueKey('board_$_boardId'),
+                          value: hasBoard ? _boardId : null,
                           isExpanded: true,
                           decoration:
-                              _dec(selectedBoardName!, icon: Icons.school),
+                              _dec(selectedBoardName ?? 'Board', icon: Icons.school),
                           items: boards
                               .map((b) => DropdownMenuItem<int>(
                                     value: b.boardId,
@@ -710,6 +787,12 @@ _getCurrentLocation();
                             setState(() {
                               _boardId = val;
                               _classId = null;
+                              for (final b in boards) {
+                                if (b.boardId == val) {
+                                  selectedBoardName = b.boardLabel;
+                                  break;
+                                }
+                              }
                             });
                             if (val != null) _leadMeta.loadClasses(val);
                           },
@@ -723,10 +806,13 @@ _getCurrentLocation();
                       Obx(() {
                         final classes = _leadMeta.classes;
                         final busy = _leadMeta.isFetchingClasses.value;
+                        final hasClass =
+                            classes.any((c) => c.classId == _classId);
                         return DropdownButtonFormField<int>(
-                          initialValue: _classId,
+                          key: ValueKey('class_$_classId'),
+                          value: hasClass ? _classId : null,
                           isExpanded: true,
-                          decoration: _dec(selectedClassName!,
+                          decoration: _dec(selectedClassName ?? 'Class',
                               icon: Icons.menu_book,
                               suffixIcon: busy
                                   ? const Padding(
@@ -747,7 +833,17 @@ _getCurrentLocation();
                               .toList(),
                           onChanged: (_boardId == null)
                               ? null
-                              : (val) => setState(() => _classId = val),
+                              : (val) {
+                                  setState(() {
+                                    _classId = val;
+                                    for (final c in classes) {
+                                      if (c.classId == val) {
+                                        selectedClassName = c.className;
+                                        break;
+                                      }
+                                    }
+                                  });
+                                },
                           validator: (v) =>
                               v == null ? 'Please select class' : null,
                         );

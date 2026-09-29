@@ -111,19 +111,26 @@ class StudentProfileDataNew {
       profileId: json['profile_id'],
       profile_picture: json['profile_picture'],
       leadStatus: json['lead_status'],
-      studentName:
-          json['student_name'] ?? json['tutorbureau'] ?? json['name'] ?? "test",
-      mobile: json['mobile'] ?? json['tutorbureau_number'] ?? "0000000000",
-      totalCoins: json['total_coins'] ?? "0",
-      totalSpentCoins: json['total_spent_coins'] ?? "1",
-      totalAvailableCoins: json['total_Available_coins'] ?? "10",
-      boardName: json['board_name'] ?? "",
-      courseName: json['course_name'] ?? "",
+      studentName: json['student_name'] ??
+          json['name'] ??
+          json['full_name'] ??
+          json['tutorbureau'] ??
+          '',
+      mobile: json['mobile'] ??
+          json['phone'] ??
+          json['phone_number'] ??
+          json['tutorbureau_number'] ??
+          '',
+      totalCoins: json['total_coins']?.toString() ?? "0",
+      totalSpentCoins: json['total_spent_coins']?.toString() ?? "0",
+      totalAvailableCoins: json['total_Available_coins']?.toString() ?? "0",
+      boardName: json['board_name'] ?? json['board'] ?? "",
+      courseName: json['course_name'] ?? json['class_name'] ?? json['class'] ?? "",
       subjectName: json['subject_name'] ?? "",
-      price: json['price'] ?? "300",
-      location: json['location'] ?? "Test",
-      state: json['state'] ?? "test",
-      email: json['email'] ?? "test@gmail.com",
+      price: json['price']?.toString() ?? "300",
+      location: json['location'] ?? "",
+      state: json['state'] ?? "",
+      email: json['email'] ?? "",
       idType: json['idtype'],
       frontId: json['frontid'],
       frontBack: json['frontback'],
@@ -131,10 +138,15 @@ class StudentProfileDataNew {
       status: json['status'],
       createdAt: json['created_at'],
       updatedAt: json['updated_at'],
-      boardId: parseInt(json['board_id']),
-      courseId: parseInt(json['course_id']),
-      subjectId: parseInt(json['subject_id']),
-      pincode: parseInt(json['pincode']),
+      boardId: parseInt(json['board_id']) ??
+          parseInt(json['board']) ??
+          parseInt(json['boardId']),
+      courseId: parseInt(json['course_id']) ??
+          parseInt(json['class_id']) ??
+          parseInt(json['class']) ??
+          parseInt(json['courseId']),
+      subjectId: parseInt(json['subject_id']) ?? parseInt(json['subjectId']),
+      pincode: parseInt(json['pincode']) ?? parseInt(json['zipcode']),
       latitude: json['latitude']?.toString(),
       longitude: json['longitude']?.toString(),
       placeId: json['place_id']?.toString(),
