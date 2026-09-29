@@ -228,9 +228,8 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
         boardId: selectedBoardId!,
         courseId: selectedClassId!, // mapping "Class" -> courseId
         subjectId: selectedSubjectId!,
-        price: double.tryParse(priceController.text.trim())
-                ?.clamp(0, double.infinity) ??
-            0.0,
+        price: (double.tryParse(priceController.text.trim()) ?? 300.0)
+                .clamp(300.0, double.infinity),
         location: localityController.text.trim(),
         state: selectedState ?? "",
         idType: selectedIdType ?? "",
@@ -570,7 +569,7 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
                   TextField(
                     controller: priceController,
                     decoration:
-                        const InputDecoration(labelText: "Budget (Price)"),
+                        const InputDecoration(labelText: "Budget (Min ₹300)"),
                     keyboardType: TextInputType.number,
                   ),
                   const SizedBox(height: 16),

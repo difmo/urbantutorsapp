@@ -413,8 +413,13 @@ _getCurrentLocation();
         'mobile': _mobileCtrl.text.trim(),
         'board_id': _boardId,
         'course_id': _classId,
-        // Keep the student's own budget (this screen doesn't edit it).
-        if ((stored?.price ?? '').isNotEmpty) 'price': stored!.price,
+        // Server requires 'price' to be at least 300.
+        // Preserve user's existing budget if valid, otherwise fallback to 300.
+        'price': (() {
+          final rawPrice = (stored?.price ?? '').toString().trim();
+          final parsedPrice = double.tryParse(rawPrice) ?? 0.0;
+          return parsedPrice >= 300 ? parsedPrice.round() : 300;
+        })(),
         'location': _localityCtrl.text.trim(),
         'pincode': pincode,
         'remark': '', // Can be used for additional notes

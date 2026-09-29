@@ -120,7 +120,7 @@ class StudentProfileDataNew {
       boardName: json['board_name'] ?? "",
       courseName: json['course_name'] ?? "",
       subjectName: json['subject_name'] ?? "",
-      price: json['price'] ?? "100",
+      price: json['price'] ?? "300",
       location: json['location'] ?? "Test",
       state: json['state'] ?? "test",
       email: json['email'] ?? "test@gmail.com",
