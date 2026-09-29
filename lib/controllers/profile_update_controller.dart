@@ -154,7 +154,22 @@ class ProfileUpdateController extends GetxController {
       final response =
           await _profileUpdateService.updateTutorProfile(updateData);
       if (response.success) {
-        tutorprofileData.value = response.data;
+        if (response.data != null) {
+          final submittedName = (updateData is Map)
+              ? (updateData['teacher_name'] ?? updateData['name'])?.toString()
+              : null;
+          final respName = response.data!.teacherName;
+          if ((respName == null || respName.isEmpty || respName.toLowerCase() == 'user') &&
+              submittedName != null &&
+              submittedName.trim().isNotEmpty &&
+              submittedName.trim().toLowerCase() != 'user') {
+            final json = response.data!.toJson();
+            json['teacher_name'] = submittedName.trim();
+            tutorprofileData.value = TutorProfileData.fromJson(json);
+          } else {
+            tutorprofileData.value = response.data;
+          }
+        }
         Get.snackbar(
           'Success',
           response.message,

@@ -233,7 +233,33 @@ class _TutorProfileState extends State<TutorProfile> {
       selectedFeeMin = _oneOf(p.minAmount?.toInt() ?? 0, minOptions);
       selectedFeeMax = _oneOf(p.maxAmount?.toInt() ?? 0, maxOptionsBase);
 
-      _nameCtrl.text = (p.teacherName ?? '').toString().trim();
+      final serverName = (p.teacherName ?? '').toString().trim();
+      if (serverName.isNotEmpty && serverName.toLowerCase() != 'user') {
+        _nameCtrl.text = serverName;
+      } else if (_nameCtrl.text.trim().isNotEmpty &&
+          _nameCtrl.text.trim().toLowerCase() != 'user') {
+        // Keep whatever valid name is already in the text controller
+      } else {
+        final cached = StorageService.cachedUserName;
+        if (cached != null &&
+            cached.trim().isNotEmpty &&
+            cached.trim().toLowerCase() != 'user') {
+          _nameCtrl.text = cached.trim();
+        } else {
+          StorageService.getUserName().then((stored) {
+            if (stored != null &&
+                stored.trim().isNotEmpty &&
+                stored.trim().toLowerCase() != 'user' &&
+                mounted) {
+              setState(() {
+                _nameCtrl.text = stored.trim();
+              });
+            } else if (serverName.isNotEmpty) {
+              _nameCtrl.text = serverName;
+            }
+          });
+        }
+      }
       _emailCtrl.text = (p.email ?? '').toString().trim();
       _localityCtrl.text = (p.location ?? '').toString().trim();
       _expCtrl.text = (p.experienceYears?.toString() ?? '').toString();
@@ -444,8 +470,12 @@ class _TutorProfileState extends State<TutorProfile> {
 
       final experienceYears = int.tryParse(_expCtrl.text.trim()) ?? 0;
 
+      final newName = _nameCtrl.text.trim();
       final payload = {
         "user_id": userId,
+        "teacher_name": newName,
+        "name": newName,
+        "full_name": newName,
         "email": _emailCtrl.text.trim(),
         "location": _localityCtrl.text.trim(),
         "pincode": _zipcodeCtrl.text.trim(),
@@ -476,6 +506,9 @@ class _TutorProfileState extends State<TutorProfile> {
       final ok = await _p.updateTutorProfile(payload);
       // The controller already shows the server's success/failure message.
       if (ok == true) {
+        if (newName.isNotEmpty) {
+          await StorageService.saveUserName(newName);
+        }
         await _p.fetchProfileForTutor();
         if (_p.tutorprofileData.value?.profileStatus == 1) {
           Get.offAll(() => const TeacherPendingScreen());

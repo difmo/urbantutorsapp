@@ -540,8 +540,12 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
       print(classIds);
       print(subjectIds);
 
+      final newName = nameController.text.trim();
       final request = {
         "user_id": uidStr,
+        "teacher_name": newName,
+        "name": newName,
+        "full_name": newName,
         "email": emailController.text.trim(),
         "location": localityController.text.trim(),
         "idType": selectedIdType ?? "",
@@ -565,6 +569,9 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
       final ss = await _p.updateTutorProfile(request);
       if (ss) {
+        if (newName.isNotEmpty) {
+          await StorageService.saveUserName(newName);
+        }
         Get.snackbar('Success', 'Profile updated successfully');
         _refreshTutorProfile();
       }

@@ -85,10 +85,30 @@ class AuthController extends GetxController {
             : (int.tryParse(roleId) ?? 2);
         int userId = res.data?.userData?.id ?? 1;
         final profileStatus = res.data?.userData?.profileStatus ?? 0;
-        String userName = (res.data?.userData?.name != null &&
-                res.data!.userData!.name.isNotEmpty)
-            ? res.data!.userData!.name
-            : (name.isNotEmpty ? name : 'Urban User');
+        final serverName = res.data?.userData?.name;
+        String userName;
+        if (serverName != null &&
+            serverName.trim().isNotEmpty &&
+            serverName.trim().toLowerCase() != 'user' &&
+            serverName.trim().toLowerCase() != 'urban user') {
+          userName = serverName.trim();
+        } else if (name.trim().isNotEmpty &&
+            name.trim().toLowerCase() != 'user' &&
+            name.trim().toLowerCase() != 'urban user') {
+          userName = name.trim();
+        } else {
+          final stored = await StorageService.getUserName();
+          if (stored != null &&
+              stored.trim().isNotEmpty &&
+              stored.trim().toLowerCase() != 'user' &&
+              stored.trim().toLowerCase() != 'urban user') {
+            userName = stored.trim();
+          } else {
+            userName = (serverName != null && serverName.trim().isNotEmpty)
+                ? serverName.trim()
+                : 'User';
+          }
+        }
         String phone = (res.data?.userData?.mobile != null &&
                 res.data!.userData!.mobile.isNotEmpty)
             ? res.data!.userData!.mobile

@@ -13,6 +13,7 @@ import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/feedback_student.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/notification_student.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/student_profile_screen.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 import '../theme/theme_constants.dart';
 
 class StudentDrawer extends StatefulWidget {
@@ -181,7 +182,13 @@ class _StudentDrawerState extends State<StudentDrawer> {
                   );
                 }
 
-                final name = _str(p?.studentName, fallback: 'User');
+                final cached = StorageService.cachedUserName;
+                final serverName = _str(p?.studentName);
+                final name = (serverName.isNotEmpty && serverName.toLowerCase() != 'user')
+                    ? serverName
+                    : (cached != null && cached.trim().isNotEmpty && cached.trim().toLowerCase() != 'user')
+                        ? cached.trim()
+                        : (serverName.isNotEmpty ? serverName : 'User');
                 final mobile = _str(p?.mobile, fallback: '');
                 final course = _str(p?.courseName, fallback: '');
                 final profileId =

@@ -13,6 +13,7 @@ import 'package:urbantutorsapp/screens/tutor/tutor_profile.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 import '../theme/theme_constants.dart';
 
 class Tutordrawer extends StatefulWidget {
@@ -184,7 +185,13 @@ class _StudentDrawerState extends State<Tutordrawer> {
                   );
                 }
 
-                final name = _str(p?.teacherName, fallback: 'User');
+                final cached = StorageService.cachedUserName;
+                final serverName = _str(p?.teacherName);
+                final name = (serverName.isNotEmpty && serverName.toLowerCase() != 'user')
+                    ? serverName
+                    : (cached != null && cached.trim().isNotEmpty && cached.trim().toLowerCase() != 'user')
+                        ? cached.trim()
+                        : (serverName.isNotEmpty ? serverName : 'User');
                 final mobile = _str(p?.mobile, fallback: '');
                 final course = _str(p?.teacherName, fallback: '');
                 final profileImage = p?.profilePicture;

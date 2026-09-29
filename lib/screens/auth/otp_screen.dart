@@ -55,7 +55,15 @@ class _OTPScreenState extends State<OTPScreen> {
     FocusScope.of(context).unfocus();
     setState(() => isVerifying = true);
     try {
-      final name = widget.name.trim().isNotEmpty ? widget.name.trim() : 'User';
+      final storedName = await StorageService.getUserName();
+      final hasStored = storedName != null &&
+          storedName.trim().isNotEmpty &&
+          storedName.trim().toLowerCase() != 'user' &&
+          storedName.trim().toLowerCase() != 'urban user';
+
+      final name = widget.name.trim().isNotEmpty
+          ? widget.name.trim()
+          : (hasStored ? storedName.trim() : '');
       const firebaseToken = 'dummy_token';
 
       // Send the OTP entered manually by the user

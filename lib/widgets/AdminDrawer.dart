@@ -11,6 +11,7 @@ import 'package:urbantutorsapp/screens/admin/transaction_admin.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 import '../theme/theme_constants.dart';
 
 class Admindrawer extends StatefulWidget {
@@ -210,7 +211,13 @@ class _StudentDrawerState extends State<Admindrawer> {
                   );
                 }
 
-                final name = _str(p?.tutorburoName, fallback: 'User');
+                final cached = StorageService.cachedUserName;
+                final serverName = _str(p?.tutorburoName);
+                final name = (serverName.isNotEmpty && serverName.toLowerCase() != 'user')
+                    ? serverName
+                    : (cached != null && cached.trim().isNotEmpty && cached.trim().toLowerCase() != 'user')
+                        ? cached.trim()
+                        : (serverName.isNotEmpty ? serverName : 'User');
                 final mobile = _str(p?.phone, fallback: '');
                 final profileId = _str('B00000${p?.tutorburoProfileId}',
                     fallback: ''); // if present in model

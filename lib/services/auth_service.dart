@@ -21,15 +21,20 @@ Future<LoginResponse> verifyOtp({
   required String firebaseToken,
 }) async {
   try {
+    final Map<String, dynamic> data = {
+      'mobile': mobile,
+      'otp': otp,
+      'role_id': roleId,
+      'firebase_token': "STATIC_FB_TOKEN_ABC123",
+    };
+    if (name.trim().isNotEmpty &&
+        name.trim().toLowerCase() != 'user' &&
+        name.trim().toLowerCase() != 'urban user') {
+      data['name'] = name.trim();
+    }
     final response = await ApiService.post(
       ApiConstants.VERIFY_OTP,
-      FormData.fromMap({
-        'mobile': mobile,           
-        'otp': otp,              
-        'name': name,              
-        'role_id': roleId,                   
-        'firebase_token': "STATIC_FB_TOKEN_ABC123", 
-      }),
+      FormData.fromMap(data),
     );
     return LoginResponse.fromJson(response.data);
   } catch (e) {

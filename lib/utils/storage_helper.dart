@@ -26,6 +26,9 @@ class StorageService {
   static int? _cachedRoleId;
   static int? _cachedProfileStatus;
 
+  /// Synchronous in-memory access to the current cached user name
+  static String? get cachedUserName => _cachedUserName;
+
   @visibleForTesting
   static void resetCache() {
     _cachedToken = null;
