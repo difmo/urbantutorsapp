@@ -177,8 +177,8 @@ class _OTPScreenState extends State<OTPScreen> {
                 enableActiveFill: true,
                 onChanged: (value) => setState(() => otp = value),
                 onCompleted: (value) {
-                  otp = value;
-                  _verifyOtp();
+                  setState(() => otp = value);
+                  FocusScope.of(context).unfocus();
                 },
                 pinTheme: PinTheme(
                   shape: PinCodeFieldShape.box,
