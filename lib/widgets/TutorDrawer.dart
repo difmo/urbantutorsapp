@@ -187,11 +187,11 @@ class _StudentDrawerState extends State<Tutordrawer> {
 
                 final cached = StorageService.cachedUserName;
                 final serverName = _str(p?.teacherName);
-                final name = (serverName.isNotEmpty && serverName.toLowerCase() != 'user')
+                final name = serverName.isNotEmpty
                     ? serverName
-                    : (cached != null && cached.trim().isNotEmpty && cached.trim().toLowerCase() != 'user')
+                    : (cached != null && cached.trim().isNotEmpty
                         ? cached.trim()
-                        : (serverName.isNotEmpty ? serverName : 'User');
+                        : 'User');
                 final mobile = _str(p?.mobile, fallback: '');
                 final course = _str(p?.teacherName, fallback: '');
                 final profileImage = p?.profilePicture;
@@ -239,11 +239,11 @@ class _StudentDrawerState extends State<Tutordrawer> {
                                     radius: 20,
                                     backgroundColor: Colors.blue,
                                     child: Text(
-                                      displayName,
+                                      _initialFrom(name),
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 11,
+                                        fontSize: 16,
                                       ),
                                     ),
                                   ),
@@ -256,7 +256,7 @@ class _StudentDrawerState extends State<Tutordrawer> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _capFirst(displayName),
+                              name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(

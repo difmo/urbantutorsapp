@@ -13,9 +13,9 @@ class NotesClass {
   factory NotesClass.fromJson(Map<String, dynamic> j) {
     int id(dynamic v) => (v is num) ? v.toInt() : int.tryParse('$v') ?? 0;
     return NotesClass(
-      board_id: id(j['board_id']),
-      class_id: id(j['class_id']),
-      ClassName: (j['ClassName'] ?? j['class_name'] ?? '').toString(),
+      board_id: id(j['board_id'] ?? j['boardId']),
+      class_id: id(j['class_id'] ?? j['classId'] ?? j['id']),
+      ClassName: (j['ClassName'] ?? j['class_name'] ?? j['className'] ?? j['name'] ?? '').toString(),
       type: (j['type'] ?? '').toString(),
     );
   }
@@ -39,10 +39,10 @@ class NotesSubject {
   factory NotesSubject.fromJson(Map<String, dynamic> j) {
     int id(dynamic v) => (v is num) ? v.toInt() : int.tryParse('$v') ?? 0;
     return NotesSubject(
-      boardId: id(j['board_id']),
-      classId: id(j['class_id']),
-      subjectId: id(j['subject_id']),
-      subjectName: (j['subjectName'] ?? j['subject_name'] ?? '').toString(),
+      boardId: id(j['board_id'] ?? j['boardId']),
+      classId: id(j['class_id'] ?? j['classId']),
+      subjectId: id(j['subject_id'] ?? j['subjectId'] ?? j['id']),
+      subjectName: (j['subjectName'] ?? j['subject_name'] ?? j['subjectname'] ?? j['name'] ?? '').toString(),
       type: (j['type'] ?? '').toString(),
     );
   }
@@ -68,11 +68,11 @@ class NotesChapter {
   factory NotesChapter.fromJson(Map<String, dynamic> j) {
     int id(dynamic v) => (v is num) ? v.toInt() : int.tryParse('$v') ?? 0;
     return NotesChapter(
-      boardId: id(j['board_id']),
-      classId: id(j['class_id']),
-      subjectId: id(j['subject_id']),
-      chapterId: id(j['chapter_id']),
-      chapterName: (j['ChapterName'] ?? j['chapter_name'] ?? '').toString(),
+      boardId: id(j['board_id'] ?? j['boardId']),
+      classId: id(j['class_id'] ?? j['classId']),
+      subjectId: id(j['subject_id'] ?? j['subjectId']),
+      chapterId: id(j['chapter_id'] ?? j['chapterId'] ?? j['id']),
+      chapterName: (j['ChapterName'] ?? j['chapter_name'] ?? j['chapterName'] ?? j['name'] ?? '').toString(),
       type: (j['type'] ?? '').toString(),
     );
   }

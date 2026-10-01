@@ -7,6 +7,7 @@ import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/controllers/tutor_leads_controller.dart';
 import 'package:urbantutorsapp/models/tutor_lead.dart';
+import 'package:urbantutorsapp/models/profile_modals/tutor_response_modal.dart';
 
 import 'package:urbantutorsapp/screens/splash_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/DashboardHomeTab.dart';
@@ -35,6 +36,7 @@ class _TutorDashboardState extends State<TutorDashboard> {
 
   late final CoinsController _coins;
   late final ProfileUpdateController _p;
+  String _storedUserName = '';
 
   // Bottom nav
   int _currentIndex = 0;
@@ -51,6 +53,8 @@ class _TutorDashboardState extends State<TutorDashboard> {
   void initState() {
     super.initState();
 
+    _loadUserName();
+
     _coins = Get.isRegistered<CoinsController>()
         ? Get.find<CoinsController>()
         : Get.put(CoinsController());
@@ -60,6 +64,40 @@ class _TutorDashboardState extends State<TutorDashboard> {
         ? Get.find<ProfileUpdateController>()
         : Get.put(ProfileUpdateController());
     _p.fetchProfileForTutor();
+
+    ever(_p.tutorprofileData, (prof) {
+      if (prof == null) return;
+      final serverName = prof.teacherName?.trim() ?? '';
+      if (serverName.isNotEmpty) {
+        StorageService.saveUserName(serverName);
+        if (mounted && _storedUserName != serverName) {
+          setState(() => _storedUserName = serverName);
+        }
+      }
+    });
+  }
+
+  Future<void> _loadUserName() async {
+    try {
+      final name = await StorageService.getUserName();
+      if (name != null &&
+          name.trim().isNotEmpty &&
+          name.trim().toLowerCase() != 'user' &&
+          name.trim().toLowerCase() != 'urban user' &&
+          name.trim().toLowerCase() != 'tutor') {
+        if (mounted) setState(() => _storedUserName = name.trim());
+        final prof = _p.tutorprofileData.value;
+        if (prof != null) {
+          final tName = prof.teacherName?.trim() ?? '';
+          if (tName.isEmpty || tName.toLowerCase() == 'user' || tName.toLowerCase() == 'tutor') {
+            final json = prof.toJson();
+            json['teacher_name'] = name.trim();
+            _p.tutorprofileData.value = TutorProfileData.fromJson(json);
+          }
+        }
+        return;
+      }
+    } catch (_) {}
   }
 
   num _toNum(dynamic v) {
@@ -83,9 +121,9 @@ class _TutorDashboardState extends State<TutorDashboard> {
 
   String _greet() {
     final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
+    if (h < 12) return 'Good Morning';
+    if (h < 17) return 'Good Afternoon';
+    return 'Good Evening';
   }
 
   Future<void> _handleMenuTap(String label) async {
@@ -168,9 +206,22 @@ class _TutorDashboardState extends State<TutorDashboard> {
 
           final prof = _p.tutorprofileData.value;
           final profilePicture = prof?.profilePicture?.trim();
-          final name = prof?.teacherName?.trim();
-          final initial = _initial(name);
-          final displayName = _firstName(name);
+          final serverName = prof?.teacherName?.trim() ?? '';
+          final cached = StorageService.cachedUserName?.trim() ?? '';
+
+          String rawName = '';
+          if (serverName.isNotEmpty) {
+            rawName = serverName;
+          } else if (_storedUserName.isNotEmpty) {
+            rawName = _storedUserName;
+          } else if (cached.isNotEmpty) {
+            rawName = cached;
+          } else {
+            rawName = 'User';
+          }
+
+          final initial = _initial(rawName);
+          final displayName = _firstName(rawName);
           final greet = _greet();
 
           if (loading && wallet == null) {

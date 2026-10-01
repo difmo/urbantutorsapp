@@ -104,9 +104,9 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   String _greet() {
     final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
+    if (h < 12) return 'Good Morning';
+    if (h < 17) return 'Good Afternoon';
+    return 'Good Evening';
   }
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -603,12 +603,16 @@ class _LeadCard extends StatelessWidget {
             const SizedBox(height: 6),
             _kv(Icons.person, 'Name', lead.studentName),
             const SizedBox(height: 6),
+            if (lead.boardName.trim().isNotEmpty && lead.boardName.trim() != 'null') ...[
+              _kv(Icons.school, 'Board', lead.boardName.trim()),
+              const SizedBox(height: 4),
+            ],
             _kv(Icons.school, 'Class', lead.courseName),
             const SizedBox(height: 4),
             _kv(Icons.book, 'Subject', lead.subjectName),
             const SizedBox(height: 4),
             _kv(Icons.location_on, 'Location',
-                "${lead.location},${lead.state}"),
+                _cleanLocation(lead.location, lead.state)),
             const SizedBox(height: 6),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -638,6 +642,28 @@ class _LeadCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  static String _cleanLocation(String location, [String? state]) {
+    final parts = <String>[];
+    if (location.trim().isNotEmpty) {
+      for (final seg in location.split(',')) {
+        final s = seg.trim();
+        if (s.isNotEmpty && !parts.any((p) => p.toLowerCase() == s.toLowerCase())) {
+          parts.add(s);
+        }
+      }
+    }
+    if (state != null && state.trim().isNotEmpty) {
+      for (final seg in state.split(',')) {
+        final s = seg.trim();
+        if (s.isNotEmpty && !parts.any((p) => p.toLowerCase() == s.toLowerCase())) {
+          parts.add(s);
+        }
+      }
+    }
+    final result = parts.join(', ').replaceAll(RegExp(r'[\s,]+$'), '').trim();
+    return result.isEmpty ? '—' : result;
   }
 
   static Widget _kv(IconData icon, String label, String text) {

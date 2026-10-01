@@ -100,10 +100,11 @@ class _SplashScreenState extends State<SplashScreen>
       if (!mounted) return;
 
       final currentToken = await StorageService.getToken();
+      final effectiveStatus = (roleId == Roles.student) ? 2 : profileStatus;
       final Widget dashboard = (currentToken != null &&
               currentToken.trim().isNotEmpty &&
               roleId != null)
-          ? homeScreenFor(roleId, profileStatus)
+          ? homeScreenFor(roleId, effectiveStatus)
           : const WelcomeScreen();
 
       Navigator.pushReplacement(

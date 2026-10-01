@@ -4,18 +4,17 @@ import 'package:dio/dio.dart';
 /// ANSI escape codes for coloring terminal output.
 class _AnsiColor {
   static const String reset = '\x1B[0m';
-  static const String red = '\x1B[91m';
-  static const String green = '\x1B[92m';
-  static const String yellow = '\x1B[93m';
-  static const String cyan = '\x1B[96m';
+  static const String red = '\x1B[1;31m';   // Bold Red (Universal ANSI)
+  static const String green = '\x1B[1;32m'; // Bold Green
+  static const String cyan = '\x1B[1;36m';  // Bold Cyan
 }
 
 /// Custom Dio logging interceptor that logs beautiful, color-coded
 /// request, response, and error information directly to the terminal.
 /// - 🚀 Requests: Bright Cyan
 /// - ✅ 2xx Success: Bright Green
-/// - ⚠️ 4xx Warnings: Bright Yellow
-/// - ❌ 5xx & Errors: Bright Red
+/// - ⚠️ Warnings: Bright Yellow
+/// - ❌ API Errors (HTTP >= 400, status/success=false, DioException): Bold Red
 class DioLoggerInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
@@ -62,15 +61,12 @@ class DioLoggerInterceptor extends Interceptor {
         ? ' [${DateTime.now().millisecondsSinceEpoch - startTime} ms]'
         : '';
     final statusCode = response.statusCode ?? 0;
-    final isHttpError = statusCode < 200 || statusCode >= 400;
-    final isBodyError =
-        (response.data is Map && response.data['success'] == false);
-    final isError = isHttpError || isBodyError;
+    final isError = _isErrorResponse(response);
 
-    // Red for ALL errors (HTTP >= 400 or success: false), Green for success
+    // Bold Red for ALL API errors (HTTP >= 400, success/status false, etc.)
     final logColor = isError ? _AnsiColor.red : _AnsiColor.green;
     final icon = isError ? '❌' : '✅';
-    final tag = isError ? 'DIO ERROR' : 'DIO RESPONSE';
+    final tag = isError ? 'DIO API ERROR' : 'DIO RESPONSE';
 
     final buffer = StringBuffer();
     buffer.writeln(
@@ -79,7 +75,7 @@ class DioLoggerInterceptor extends Interceptor {
         '$icon STATUS  : $statusCode ${response.statusMessage ?? ""}$duration');
     buffer.writeln('🚀 METHOD  : ${response.requestOptions.method.toUpperCase()}');
     buffer.writeln('🌐 URL     : ${response.requestOptions.uri}');
-    buffer.writeln('📦 RESPONSE BODY:');
+    buffer.writeln(isError ? '📦 ERROR / RESPONSE BODY:' : '📦 RESPONSE BODY:');
     buffer.writeln(_formatResponseBody(response.data));
     buffer.writeln(
         '╚══════════════════════════════════════════════════════════════════════');
@@ -98,7 +94,7 @@ class DioLoggerInterceptor extends Interceptor {
 
     final buffer = StringBuffer();
     buffer.writeln(
-        '╔═════════════════════════════ [DIO ERROR] ═════════════════════════════');
+        '╔═════════════════════════════ [DIO API ERROR] ═════════════════════════════');
     buffer.writeln(
         '❌ STATUS  : ${err.response?.statusCode ?? "NO STATUS"}$duration');
     buffer.writeln('🚀 METHOD  : ${err.requestOptions.method.toUpperCase()}');
@@ -116,6 +112,60 @@ class DioLoggerInterceptor extends Interceptor {
     _printLog(buffer.toString(), color: _AnsiColor.red);
 
     super.onError(err, handler);
+  }
+
+  bool _isErrorResponse(Response response) {
+    final statusCode = response.statusCode ?? 0;
+    if (statusCode < 200 || statusCode >= 400) return true;
+
+    final data = response.data;
+    if (data is Map) {
+      // 1. Check success flag
+      final success = data['success'];
+      if (success == false ||
+          success == 0 ||
+          success == 'false' ||
+          success == '0') {
+        return true;
+      }
+
+      // 2. Check status flag
+      final status = data['status'];
+      if (status == false ||
+          status == 0 ||
+          status == 'false' ||
+          status == '0' ||
+          status == 'error' ||
+          status == 'failed' ||
+          status == 'failure') {
+        return true;
+      }
+
+      // 3. Check error
+      if (data.containsKey('error') &&
+          data['error'] != null &&
+          data['error'] != false &&
+          data['error'] != '') {
+        return true;
+      }
+
+      // 4. Check errors list/map
+      if (data.containsKey('errors') && data['errors'] != null) {
+        final errors = data['errors'];
+        if (errors is List && errors.isNotEmpty) return true;
+        if (errors is Map && errors.isNotEmpty) return true;
+        if (errors is String && errors.trim().isNotEmpty) return true;
+      }
+
+      // 5. Check code inside response payload
+      final code = data['code'];
+      if (code is int && (code < 200 || code >= 400)) return true;
+      if (code is String) {
+        final parsed = int.tryParse(code);
+        if (parsed != null && (parsed < 200 || parsed >= 400)) return true;
+      }
+    }
+    return false;
   }
 
   String _formatRequestBody(dynamic data) {
@@ -170,16 +220,19 @@ class DioLoggerInterceptor extends Interceptor {
     const int chunkSize = 900;
     final lines = text.split('\n');
     for (final line in lines) {
-      final coloredLine =
-          color.isNotEmpty ? '$color$line${_AnsiColor.reset}' : line;
-      if (coloredLine.length <= chunkSize) {
-        print(coloredLine);
+      if (line.length <= chunkSize) {
+        final colored =
+            color.isNotEmpty ? '$color$line${_AnsiColor.reset}' : line;
+        print(colored);
       } else {
-        for (int i = 0; i < coloredLine.length; i += chunkSize) {
-          final end = (i + chunkSize < coloredLine.length)
+        for (int i = 0; i < line.length; i += chunkSize) {
+          final end = (i + chunkSize < line.length)
               ? i + chunkSize
-              : coloredLine.length;
-          print(coloredLine.substring(i, end));
+              : line.length;
+          final chunk = line.substring(i, end);
+          final colored =
+              color.isNotEmpty ? '$color$chunk${_AnsiColor.reset}' : chunk;
+          print(colored);
         }
       }
     }

@@ -28,6 +28,11 @@ class PayCourseController extends GetxController {
   }
 
   Future<void> load() async {
+    final token = await StorageService.getToken();
+    if (token == null || token.trim().isEmpty) {
+      courses.clear();
+      return;
+    }
     isLoading.value = true;
     error.value = '';
     try {
@@ -41,6 +46,11 @@ class PayCourseController extends GetxController {
   }
 
   Future<void> refreshNow() async {
+    final token = await StorageService.getToken();
+    if (token == null || token.trim().isEmpty) {
+      courses.clear();
+      return;
+    }
     try {
       final payload = await _svc.fetchCourses();
       courses.assignAll(payload.items);

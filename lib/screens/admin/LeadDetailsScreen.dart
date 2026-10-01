@@ -14,6 +14,29 @@ import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/controllers/tutor_leads_controller.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 
+// ---------- Clean location formatter ----------
+String _cleanLocation(String location, [String? state]) {
+  final parts = <String>[];
+  if (location.trim().isNotEmpty) {
+    for (final seg in location.split(',')) {
+      final s = seg.trim();
+      if (s.isNotEmpty && !parts.any((p) => p.toLowerCase() == s.toLowerCase())) {
+        parts.add(s);
+      }
+    }
+  }
+  if (state != null && state.trim().isNotEmpty) {
+    for (final seg in state.split(',')) {
+      final s = seg.trim();
+      if (s.isNotEmpty && !parts.any((p) => p.toLowerCase() == s.toLowerCase())) {
+        parts.add(s);
+      }
+    }
+  }
+  final result = parts.join(', ').replaceAll(RegExp(r'[\s,]+$'), '').trim();
+  return result.isEmpty ? '—' : result;
+}
+
 class LeadDetailsScreen extends StatefulWidget {
   StudentLead enquiry;
   LeadDetailsScreen({super.key, required this.enquiry});
@@ -81,46 +104,113 @@ class _LeadDetailPageState extends State<LeadDetailsScreen> {
 
   // ---------- Flexible map reader for mixed payloads ----------
   String _val(List<String> keys, [String fallback = '']) {
-    try {
-      // Try map first (some APIs send different keys)
-      final raw = widget.enquiry.toMap();
-      // Normalize to string map
-      final m = raw.map((k, v) =>
-          MapEntry(k.toString(), v == null ? '' : v.toString().trim()));
-      for (final k in keys) {
-        final v = m[k] ?? m[k.toLowerCase()] ?? m[k.toUpperCase()];
-        if (v != null && v.isNotEmpty && v != 'null') return v;
-      }
-    } catch (_) {
-      // fall back to typed fields on TutorLead
-      for (final k in keys) {
-        switch (k) {
-          case 'id':
-          case 'lead':
-            return widget.enquiry.id.toString();
-          case 'student_name':
-          case 'name':
-            return widget.enquiry.studentName;
-          case 'class':
-          case 'course_name':
-            return widget.enquiry.courseName;
-          case 'subject':
-          case 'subject_name':
-            return widget.enquiry.subjectName;
-          case 'state':
-          case 'state_name':
-            return widget.enquiry.state;
-          case 'location':
-          case 'locality':
-            return widget.enquiry.location;
-          case 'price':
-          case 'fee':
-            return widget.enquiry.price.toString();
-          case 'mode':
-            return widget.enquiry.mode;
-        }
+    for (final k in keys) {
+      final lk = k.toLowerCase().trim();
+      switch (lk) {
+        case 'id':
+        case 'lead':
+        case 'lead_id':
+          if (widget.enquiry.id != 0) return widget.enquiry.id.toString();
+          break;
+        case 'student_name':
+        case 'name':
+          if (widget.enquiry.studentName.trim().isNotEmpty &&
+              widget.enquiry.studentName.trim() != 'null') {
+            return widget.enquiry.studentName.trim();
+          }
+          break;
+        case 'board':
+        case 'board_name':
+        case 'board_label':
+        case 'board_lable':
+          if (widget.enquiry.boardName.trim().isNotEmpty &&
+              widget.enquiry.boardName.trim() != 'null') {
+            return widget.enquiry.boardName.trim();
+          }
+          break;
+        case 'class':
+        case 'course_name':
+        case 'course':
+          if (widget.enquiry.courseName.trim().isNotEmpty &&
+              widget.enquiry.courseName.trim() != 'null') {
+            return widget.enquiry.courseName.trim();
+          }
+          break;
+        case 'subject':
+        case 'subject_name':
+        case 'subjectname':
+          if (widget.enquiry.subjectName.trim().isNotEmpty &&
+              widget.enquiry.subjectName.trim() != 'null') {
+            return widget.enquiry.subjectName.trim();
+          }
+          break;
+        case 'coins':
+        case 'coins_needed':
+        case 'coin':
+          if (widget.enquiry.coins.trim().isNotEmpty &&
+              widget.enquiry.coins.trim() != 'null') {
+            return widget.enquiry.coins.trim();
+          }
+          break;
+        case 'lead_count':
+        case 'max_tutors':
+        case 'max_tutor':
+        case 'leadcount':
+          if (widget.enquiry.leadCount.trim().isNotEmpty &&
+              widget.enquiry.leadCount.trim() != 'null') {
+            return widget.enquiry.leadCount.trim();
+          }
+          break;
+        case 'remark':
+        case 'remarks':
+        case 'note':
+        case 'notes':
+          if (widget.enquiry.remark.trim().isNotEmpty &&
+              widget.enquiry.remark.trim() != 'null') {
+            return widget.enquiry.remark.trim();
+          }
+          break;
+        case 'state':
+        case 'state_name':
+          if (widget.enquiry.state.trim().isNotEmpty &&
+              widget.enquiry.state.trim() != 'null') {
+            return widget.enquiry.state.trim();
+          }
+          break;
+        case 'location':
+        case 'locality':
+          if (widget.enquiry.location.trim().isNotEmpty &&
+              widget.enquiry.location.trim() != 'null') {
+            return widget.enquiry.location.trim();
+          }
+          break;
+        case 'price':
+        case 'fee':
+          if (widget.enquiry.price.trim().isNotEmpty &&
+              widget.enquiry.price.trim() != 'null') {
+            return widget.enquiry.price.trim();
+          }
+          break;
+        case 'mode':
+          if (widget.enquiry.mode.trim().isNotEmpty &&
+              widget.enquiry.mode.trim() != 'null') {
+            return widget.enquiry.mode.trim();
+          }
+          break;
       }
     }
+
+    try {
+      final raw = widget.enquiry.toMap();
+      final m = raw.map((k, v) =>
+          MapEntry(k.toString().toLowerCase().trim(), v == null ? '' : v.toString().trim()));
+      for (final k in keys) {
+        final lk = k.toLowerCase().trim();
+        final v = m[lk];
+        if (v != null && v.isNotEmpty && v != 'null') return v;
+      }
+    } catch (_) {}
+
     return fallback;
   }
 
@@ -130,29 +220,46 @@ class _LeadDetailPageState extends State<LeadDetailsScreen> {
     return got.isEmpty ? null : got;
   }
 
+  String _resolveMaxTutors() {
+    final direct = widget.enquiry.leadCount.trim();
+    final directNum = int.tryParse(direct);
+    if (directNum != null && directNum > 0) {
+      return directNum.toString();
+    }
+    final fromVal = _val(['lead_count', 'max_tutors', 'max_tutor', 'max_hits', 'leadCount', 'tutor_count', 'hits'], '');
+    final fromValNum = int.tryParse(fromVal);
+    if (fromValNum != null && fromValNum > 0) {
+      return fromValNum.toString();
+    }
+    if (direct.isNotEmpty && direct != 'null' && direct != '0' && direct != '—') {
+      return direct;
+    }
+    return '1';
+  }
+
   void _shareLead(BuildContext context) {
     final leadNo = _val(['lead', 'id'], '—');
     final dateTime = _val(['date', 'created_at'], '—');
+    final board = _val(['board', 'board_name', 'board_label', 'board_lable'], widget.enquiry.boardName);
     final clazz = _val(['class', 'course_name'], widget.enquiry.courseName);
     final subject =
         _val(['subject', 'subject_name'], widget.enquiry.subjectName);
-    final state = _val(['state', 'state_name'], widget.enquiry.state);
-    final locality = _val(['location', 'locality'], widget.enquiry.location);
+    final cleanLoc = _cleanLocation(widget.enquiry.location, widget.enquiry.state);
     final fee = _val(['fee', 'price'], widget.enquiry.price.toString());
     final mode = _val(['mode'], widget.enquiry.mode);
     final gender = _val(['tutor_gender', 'type_of_teacher'], 'Any');
-    final note = _val(['remarks', 'remark', 'note'], '—');
-    final coins = _val(['coins', 'coins_needed'], '—');
-    final maxTutors = _val(['lead_count'], '—');
+    final note = _val(['remarks', 'remark', 'note', 'notes'], '—');
+    final coins = _val(['coins', 'coins_needed', 'coin'], '—');
+    final maxTutors = _resolveMaxTutors();
 
     final text = '''
 Tuition Lead #$leadNo
 Date/Time: $dateTime
 
+Board: $board
 Class: $clazz
 Subject: $subject
-State: $state
-Locality: $locality
+Location: $cleanLoc
 Mode: $mode
 Tutor Gender: $gender
 Fee: $fee
@@ -251,20 +358,23 @@ https://play.google.com/store/apps/details?id=pro.urbantutors.app
               height: 16,
             ),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text("Remark: ",
                     style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(
-                  _val(['remarks', 'remark', 'note'], '—'),
-                  style: const TextStyle(color: Colors.blue),
+                Expanded(
+                  child: Text(
+                    _val(['remarks', 'remark', 'note', 'notes'], '—'),
+                    style: const TextStyle(color: Colors.blue),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             _buildDetailRow(Icons.credit_card, "Coins needed:",
-                _val(['coins', 'coins_needed'], '—')),
+                _val(['coins', 'coins_needed', 'coin'], '—')),
             _buildDetailRow(
-                Icons.group, "Max tutors:", _val(['lead_count'], '—')),
+                Icons.group, "Max tutors:", _resolveMaxTutors()),
             const SizedBox(height: 24),
             if (grabId != null)
               SizedBox(
@@ -407,34 +517,40 @@ https://play.google.com/store/apps/details?id=pro.urbantutors.app
               icon: Icons.edit_rounded,
               color: Colors.teal,
               label: 'Edit',
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context); // close sheet
-                Navigator.of(context).push(
+                final updated = await Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => CreateLeadScreen(
                       lead: widget.enquiry,
-                      edit:true,
+                      edit: true,
                       repost: false,
                     ), // edit
                   ),
                 );
+                if (updated == true && mounted) {
+                  Navigator.pop(context, true); // return to dashboard and refresh
+                }
               },
             ),
             _ActionTile(
               icon: Icons.repeat_rounded,
               color: Colors.indigo,
               label: 'Edit & Repost',
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context); // close sheet
-                Navigator.of(context).push(
+                final reposted = await Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => CreateLeadScreen(
                       lead: widget.enquiry,
-                      edit:false,
+                      edit: false,
                       repost: true, // <-- post as NEW
                     ),
                   ),
                 );
+                if (reposted == true && mounted) {
+                  Navigator.pop(context, true); // return to dashboard and refresh
+                }
               },
             ),
             // No delete endpoint exists on the server yet, so there is no
@@ -778,13 +894,19 @@ class _LeadCard extends StatelessWidget {
 
           _kv(Icons.person, 'Name', lead.studentName),
           const SizedBox(height: 6),
-          _kv(Icons.school, 'Board', lead.boardName),
-          const SizedBox(height: 6),
+          _kv(
+            Icons.school,
+            'Board',
+            (lead.boardName.trim().isNotEmpty && lead.boardName.trim() != 'null')
+                ? lead.boardName.trim()
+                : '—',
+          ),
+          const SizedBox(height: 4),
           _kv(Icons.school, 'Class', lead.courseName),
           const SizedBox(height: 4),
           _kv(Icons.book, 'Subject', lead.subjectName),
           const SizedBox(height: 4),
-          _kv(Icons.location_on, 'Location', "${lead.location}, ${lead.state}"),
+          _kv(Icons.location_on, 'Location', _cleanLocation(lead.location, lead.state)),
           const SizedBox(height: 10),
 
           // Meta rows (like your screenshot)
@@ -793,14 +915,7 @@ class _LeadCard extends StatelessWidget {
             label: 'Mode',
             value: lead.mode,
             iconColor: AppColors.accentColor,
-            trailing: null,
-          ),
-          LeadMetaRow(
-            icon: Icons.countertops,
-            label: 'Max',
-            value: lead.leadCount,
-            iconColor: AppColors.accentColor,
-            trailing: null,
+            trailing: leadCountPill('Max ${_resolveLeadCount(lead)}'),
           ),
           const SizedBox(height: 6),
           LeadMetaRow(
@@ -814,6 +929,40 @@ class _LeadCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  static String _resolveLeadCount(StudentLead lead) {
+    final direct = lead.leadCount.trim();
+    final directNum = int.tryParse(direct);
+    if (directNum != null && directNum > 0) {
+      return directNum.toString();
+    }
+    try {
+      final raw = lead.toMap();
+      final m = raw.map((k, v) =>
+          MapEntry(k.toString().toLowerCase().trim(), v == null ? '' : v.toString().trim()));
+      const possibleKeys = [
+        'max_tutors',
+        'max_tutor',
+        'max_hits',
+        'lead_count',
+        'leadcount',
+        'lead_limit',
+        'tutor_count',
+        'hits',
+      ];
+      for (final k in possibleKeys) {
+        final v = m[k];
+        if (v != null && v.isNotEmpty && v != 'null') {
+          final n = int.tryParse(v);
+          if (n != null && n > 0) return n.toString();
+        }
+      }
+    } catch (_) {}
+    if (direct.isNotEmpty && direct != 'null' && direct != '0' && direct != '—') {
+      return direct;
+    }
+    return '1';
   }
 
   static Widget _kv(IconData icon, String label, String text) {

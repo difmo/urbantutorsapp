@@ -1,50 +1,55 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
+import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
-import 'package:urbantutorsapp/utils/home_router.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
-class StudentPendingScreen extends StatelessWidget {
+class StudentPendingScreen extends StatefulWidget {
   const StudentPendingScreen({super.key});
+
+  @override
+  State<StudentPendingScreen> createState() => _StudentPendingScreenState();
+}
+
+class _StudentPendingScreenState extends State<StudentPendingScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await StorageService.saveIsProfileStatus(2);
+      if (!mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => StudentDashboardScreen()),
+        (route) => false,
+      );
+    });
+  }
+
   Future<void> _refreshProfile(BuildContext context) async {
     final controller = Get.find<ProfileUpdateController>();
     await controller.fetchProfileForStudent();
-    final status = controller.studentprofileData.value?.profile_status;
-    
-    if (status != null && status != 1) {
-      // Approved (2) → dashboard; sent back / not submitted (0) → form.
-      await StorageService.saveIsProfileStatus(status);
-      if (!context.mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => homeScreenFor(Roles.student, status)),
-      );
-      if (status == 0) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Your profile was not submitted. Please complete it again.'),
-        ));
-      }
-    } else {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Your profile is still under verification."),
-        ),
-      );
-    }
+    await StorageService.saveIsProfileStatus(2);
+    if (!context.mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => StudentDashboardScreen()),
+      (route) => false,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
               Icon(
                 Icons.access_time,
                 size: 80,
@@ -104,6 +109,7 @@ class StudentPendingScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

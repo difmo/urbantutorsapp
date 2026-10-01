@@ -7,7 +7,6 @@ class PayCourseService {
   /// POST /getpaycourse  (no params)
   Future<PayCoursesPayload> fetchCourses() async {
     final res = await ApiService.post(ApiConfig.getPayCourse, FormData.fromMap({}));
-    print(res);
     return PayCoursesPayload.fromJson(res.data);
   }
 

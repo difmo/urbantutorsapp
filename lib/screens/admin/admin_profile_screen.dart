@@ -833,62 +833,62 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 _sectionCard(
                   title: 'Location:',
                   children: [
-                    Obx(() {
-                      final searching = _loc.isSearching.value;
-                      final opts = _loc.suggestions;
-                      return RawAutocomplete<String>(
-                        focusNode: _localityFocusNode,
-                        textEditingController: _localityCtrl,
-                        optionsBuilder: (TextEditingValue tev) {
-                          final q = tev.text.trim();
-                          if (q.isEmpty) return const Iterable<String>.empty();
-                          _loc.onQueryChanged(q);
-                          return opts;
-                        },
-                        onSelected: (val) {
-                          _localityCtrl.text = val;
-                          _loc.onQueryChanged('');
-                        },
-                        fieldViewBuilder:
-                            (context, textCtrl, focusNode, onFieldSubmitted) {
-                          return TextFormField(
-                            controller: textCtrl,
-                            focusNode: focusNode,
-                            textCapitalization: TextCapitalization.words,
-                            decoration: _dec(
-                              'Locality',
-                              icon: Icons.location_on_outlined,
-                              suffixIcon: searching
-                                  ? const Padding(
-                                      padding: EdgeInsets.all(10),
-                                      child: SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2),
-                                      ),
-                                    )
-                                  : null,
-                            ),
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? 'Please enter locality'
-                                : null,
-                            onFieldSubmitted: (_) => onFieldSubmitted(),
-                          );
-                        },
-                        optionsViewBuilder: (context, onSelected, options) {
-                          final list = options.toList();
-                          return Align(
-                            alignment: Alignment.topLeft,
-                            child: Material(
-                              elevation: 4,
-                              borderRadius: BorderRadius.circular(12),
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  maxHeight: 280,
-                                  maxWidth: MediaQuery.of(context).size.width - 40,
-                                ),
-                                child: ListView.separated(
+                    RawAutocomplete<String>(
+                      focusNode: _localityFocusNode,
+                      textEditingController: _localityCtrl,
+                      optionsBuilder: (TextEditingValue tev) {
+                        final q = tev.text.trim();
+                        if (q.isEmpty) return const Iterable<String>.empty();
+                        return _loc.suggestions;
+                      },
+                      onSelected: (val) {
+                        _localityCtrl.text = val;
+                        _loc.onQueryChanged('');
+                      },
+                      fieldViewBuilder:
+                          (context, textCtrl, focusNode, onFieldSubmitted) {
+                        return TextFormField(
+                          controller: textCtrl,
+                          focusNode: focusNode,
+                          textCapitalization: TextCapitalization.words,
+                          onChanged: (val) {
+                            _loc.onQueryChanged(val);
+                          },
+                          decoration: _dec(
+                            'Locality',
+                            icon: Icons.location_on_outlined,
+                            suffixIcon: Obx(() => _loc.isSearching.value
+                                ? const Padding(
+                                    padding: EdgeInsets.all(10),
+                                    child: SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
+                                    ),
+                                  )
+                                : const SizedBox.shrink()),
+                          ),
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Please enter locality'
+                              : null,
+                          onFieldSubmitted: (_) => onFieldSubmitted(),
+                        );
+                      },
+                      optionsViewBuilder: (context, onSelected, options) {
+                        return Align(
+                          alignment: Alignment.topLeft,
+                          child: Material(
+                            elevation: 4,
+                            borderRadius: BorderRadius.circular(12),
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxHeight: 280,
+                                maxWidth: MediaQuery.of(context).size.width - 40,
+                              ),
+                              child: Obx(() {
+                                final list = _loc.suggestions.toList();
+                                return ListView.separated(
                                   padding: EdgeInsets.zero,
                                   shrinkWrap: true,
                                   itemCount: list.length,
@@ -904,13 +904,13 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                                       onTap: () => onSelected(item),
                                     );
                                   },
-                                ),
-                              ),
+                                );
+                              }),
                             ),
-                          );
-                        },
-                      );
-                    }),
+                          ),
+                        );
+                      },
+                    ),
                     const SizedBox(height: 12),
                     Row(
                       children: [

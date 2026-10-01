@@ -84,9 +84,53 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
   /// their value is not among their items, so server values must be checked.
   T? _oneOf<T>(T? v, List<T> options) =>
       (v != null && options.contains(v)) ? v : null;
+
+  String? _normalizeIdType(String? raw) {
+    if (raw == null) return null;
+    final clean = raw.trim().toLowerCase();
+    if (clean == 'voterid' || clean == 'voter id' || clean == 'voter') {
+      return 'Voter ID';
+    }
+    if (clean == 'aadhar') return 'Aadhar';
+    if (clean == 'passport') return 'Passport';
+    return _oneOf(raw, const ['Aadhar', 'Voter ID', 'Passport']);
+  }
+
+  String _toApiIdType(String? idType) {
+    if (idType == null || idType.isEmpty) return '';
+    final clean = idType.trim().toLowerCase();
+    if (clean == 'voter id' || clean == 'voterid' || clean == 'voter') {
+      return 'VoterID';
+    }
+    return idType.trim();
+  }
   // Values accepted by the server (it rejects 'Any').
   static const _modes = <String>['Online', 'Offline', 'Both'];
   String? modeVal;
+
+  // Cached name lookups to prevent missing class/subject names
+  final Map<int, String> _knownBoardNames = {};
+  final Map<int, String> _knownClassNames = {};
+  final Map<int, String> _knownSubjectNames = {};
+
+  String _normalizeMode(String? raw) {
+    if (raw == null) return 'Online';
+    final low = raw.trim().toLowerCase();
+    if (low.isEmpty) return 'Online';
+    if ((low.contains('online') && low.contains('offline')) ||
+        low == 'both' ||
+        low == 'any' ||
+        low.contains('both')) {
+      return 'Both';
+    }
+    if (low.contains('offline')) {
+      return 'Offline';
+    }
+    if (low.contains('online')) {
+      return 'Online';
+    }
+    return 'Online';
+  }
 
   final ImagePicker _picker = ImagePicker();
   XFile? _profileImage;
@@ -131,13 +175,10 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
       priceController.text = teacher.minAmount?.toString() ?? '';
       selectedFeeMin = _oneOf(teacher.minAmount?.toInt() ?? 300, minOptions);
       selectedFeeMax = _oneOf(teacher.maxAmount?.toInt() ?? 500, maxOptionsBase);
-      selectedIdType =
-          _oneOf(teacher.idType, const ['Aadhar', 'Voter ID', 'Passport']);
-      // Only use a value the dropdown offers (null → "please select").
-      final serverMode = (teacher.mode ?? '').trim().toLowerCase();
-      selectedIdMode = serverMode == 'any'
-          ? 'Both'
-          : _modes.firstWhereOrNull((m) => m.toLowerCase() == serverMode);
+      selectedIdType = _normalizeIdType(teacher.idType);
+      // Normalize mode cleanly
+      final serverMode = (teacher.mode ?? '').trim();
+      selectedIdMode = _normalizeMode(serverMode);
 
       setState(() {});
     });
@@ -199,9 +240,24 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
       for (final item in teachingDetails) {
         try {
           if (item is TeachingDetails) {
-            if (item.boardId != null) boards.add(item.boardId);
-            if (item.classId != null) classes.add(item.classId);
-            if (item.subjectId != null) subjects.add(item.subjectId);
+            if (item.boardId != null) {
+              boards.add(item.boardId);
+              if (item.boardName != null && item.boardName!.trim().isNotEmpty) {
+                _knownBoardNames[item.boardId!] = item.boardName!.trim();
+              }
+            }
+            if (item.classId != null) {
+              classes.add(item.classId);
+              if (item.className != null && item.className!.trim().isNotEmpty) {
+                _knownClassNames[item.classId!] = item.className!.trim();
+              }
+            }
+            if (item.subjectId != null) {
+              subjects.add(item.subjectId);
+              if (item.subjectName != null && item.subjectName!.trim().isNotEmpty) {
+                _knownSubjectNames[item.subjectId!] = item.subjectName!.trim();
+              }
+            }
             continue;
           }
 
@@ -209,15 +265,36 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
             final b = item['board_id'];
             final c = item['class_id'];
             final s = item['subject_id'];
+            final bName = item['board_name'] ?? item['boardName'] ?? item['board_lable'];
+            final cName = item['class_name'] ?? item['className'] ?? item['ClassName'];
+            final sName = item['subject_name'] ?? item['subjectname'] ?? item['subjectName'] ?? item['name'];
 
             if (b != null) {
-              boards.add(b is int ? b : int.tryParse(b.toString()));
+              final bId = b is int ? b : int.tryParse(b.toString());
+              if (bId != null) {
+                boards.add(bId);
+                if (bName != null && bName.toString().trim().isNotEmpty) {
+                  _knownBoardNames[bId] = bName.toString().trim();
+                }
+              }
             }
             if (c != null) {
-              classes.add(c is int ? c : int.tryParse(c.toString()));
+              final cId = c is int ? c : int.tryParse(c.toString());
+              if (cId != null) {
+                classes.add(cId);
+                if (cName != null && cName.toString().trim().isNotEmpty) {
+                  _knownClassNames[cId] = cName.toString().trim();
+                }
+              }
             }
             if (s != null) {
-              subjects.add(s is int ? s : int.tryParse(s.toString()));
+              final sId = s is int ? s : int.tryParse(s.toString());
+              if (sId != null) {
+                subjects.add(sId);
+                if (sName != null && sName.toString().trim().isNotEmpty) {
+                  _knownSubjectNames[sId] = sName.toString().trim();
+                }
+              }
             }
             continue;
           }
@@ -250,7 +327,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
     if (_selBoardIds.isNotEmpty) {
       try {
-        await _leadMeta.loadClasses(_selBoardIds.first);
+        await _leadMeta.loadClassesForBoards(_selBoardIds);
       } catch (_) {}
     }
 
@@ -273,24 +350,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
           (p.experienceYears?.toString() ?? '').toString();
       _qualificationCtrl.text = (p.remark ?? '').toString();
       String? rawMode = (p.mode ?? '').toString().trim();
-      String? normalizedMode;
-      if (rawMode.isNotEmpty) {
-        final low = rawMode.toLowerCase();
-        if (low == 'online') {
-          normalizedMode = 'Online';
-        } else if (low == 'offline') {
-          normalizedMode = 'Offline';
-        } else if (low == 'any' || low == 'both') {
-          normalizedMode = 'Both';
-        } else {
-          // Try to match case-insensitive
-          final match = _modes.firstWhere((m) => m.toLowerCase() == low,
-              orElse: () => 'Online');
-          normalizedMode = match;
-        }
-      } else {
-        normalizedMode = "Online";
-      }
+      final normalizedMode = _normalizeMode(rawMode);
 
       _profileImageUrl = _resolveImageUrl(p.profilePicture);
 
@@ -541,6 +601,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
       print(subjectIds);
 
       final newName = nameController.text.trim();
+      final apiIdType = _toApiIdType(selectedIdType);
       final request = {
         "user_id": uidStr,
         "teacher_name": newName,
@@ -548,7 +609,8 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
         "full_name": newName,
         "email": emailController.text.trim(),
         "location": localityController.text.trim(),
-        "idType": selectedIdType ?? "",
+        "idType": apiIdType,
+        "idtype": apiIdType,
         "qualification": _qualificationCtrl.text.trim(),
         "profile_picture": profileBase64,
         "min_amount": selectedFeeMin ?? 0,
@@ -1048,7 +1110,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
                                 if (_selBoardIds.isNotEmpty) {
                                   await _leadMeta
-                                      .loadClasses(_selBoardIds.first);
+                                      .loadClassesForBoards(_selBoardIds);
                                 }
                               }
                             },
@@ -1086,6 +1148,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                               _leadMeta.classes
                                   .map((c) => OptionInt(c.classId, c.className))
                                   .toList(),
+                              fallbackNames: _knownClassNames,
                             ),
                             primary: primary,
                             onTap: () async {
@@ -1098,12 +1161,17 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                                 return;
                               }
                               if (_leadMeta.classes.isEmpty) {
-                                await _leadMeta.loadClasses(_selBoardIds.first);
+                                await _leadMeta.loadClassesForBoards(_selBoardIds);
                               }
 
-                              final options = _leadMeta.classes
-                                  .map((c) => OptionInt(c.classId, c.className))
-                                  .toList();
+                              final optionsMap = <int, OptionInt>{};
+                              for (final c in _leadMeta.classes) {
+                                optionsMap[c.classId] = OptionInt(c.classId, c.className);
+                              }
+                              for (final entry in _knownClassNames.entries) {
+                                optionsMap.putIfAbsent(entry.key, () => OptionInt(entry.key, entry.value));
+                              }
+                              final options = optionsMap.values.toList();
 
                               if (!context.mounted) return;
 
@@ -1167,11 +1235,12 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                                         (s.subjectName ?? '').toString(),
                                       ))
                                   .toList(),
+                              fallbackNames: _knownSubjectNames,
                             ),
                             primary: primary,
                             onTap: () async {
                               if (_selBoardIds.isEmpty ||
-                                  _selClassIds.isEmpty) {
+                                   _selClassIds.isEmpty) {
                                 Get.snackbar(
                                   'Select Class',
                                   'Please select Boards and Classes first',
@@ -1186,12 +1255,14 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                                 );
                               }
 
-                              final options = _leadMeta.subjects
-                                  .map((s) => OptionInt(
-                                        s.subjectId ?? 0,
-                                        (s.subjectName ?? '').toString(),
-                                      ))
-                                  .toList();
+                              final optionsMap = <int, OptionInt>{};
+                              for (final s in _leadMeta.subjects) {
+                                optionsMap[s.subjectId] = OptionInt(s.subjectId, s.subjectName);
+                              }
+                              for (final entry in _knownSubjectNames.entries) {
+                                optionsMap.putIfAbsent(entry.key, () => OptionInt(entry.key, entry.value));
+                              }
+                              final options = optionsMap.values.toList();
 
                               if (!context.mounted) return;
 
@@ -1335,7 +1406,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                       initialValue: selectedIdMode,
                       items: _modes
                           .map((id) =>
-                              DropdownMenuItem(value: id, child: Text(id)))
+                              DropdownMenuItem(value: id, child: Text(id == 'Both' ? 'Both (Online & Offline)' : id)))
                           .toList(),
                       onChanged: (val) => setState(() => selectedIdMode = val),
                       validator: (v) {
@@ -1566,9 +1637,13 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
     );
   }
 
-  List<String> _labelsFor(List<int> selectedIds, List<OptionInt> all) {
+  List<String> _labelsFor(List<int> selectedIds, List<OptionInt> all,
+      {Map<int, String>? fallbackNames}) {
     final map = {for (final o in all) o.id: o.label};
-    return selectedIds.map((id) => map[id]).whereType<String>().toList();
+    return selectedIds
+        .map((id) => map[id] ?? fallbackNames?[id] ?? '')
+        .where((s) => s.isNotEmpty)
+        .toList();
   }
 
   Widget _idUploadBox(String label, XFile? file, String type,

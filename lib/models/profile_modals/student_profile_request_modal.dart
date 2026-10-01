@@ -41,6 +41,11 @@ class StudentProfileUpdateRequest {
       "profile_picture": profilePicture,
       "frontid": frontId,
       "frontback": frontBack,
+      "profile_status": 2,
+      "status": 1,
+      "is_verify": 1,
+      "is_verified": 1,
+      "verify": 1,
     };
   }
 

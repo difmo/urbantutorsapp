@@ -17,6 +17,7 @@ import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:urbantutorsapp/models/lead_create_model_request.dart';
+import 'package:urbantutorsapp/services/api_exception.dart';
 import 'package:urbantutorsapp/widgets/AdminDrawer.dart';
 
 class CreateLeadScreen extends StatefulWidget {
@@ -32,8 +33,8 @@ class CreateLeadScreen extends StatefulWidget {
 class _CreateLeadScreenState extends State<CreateLeadScreen> {
   late final CoinsController _c;
   late final ProfileUpdateController _p;
-  bool get _isEditing => widget.lead != null && widget.edit!;
-  bool get _isRepost => widget.lead != null && widget.repost!;
+  bool get _isEditing => widget.lead != null && (widget.edit ?? false);
+  bool get _isRepost => widget.lead != null && (widget.repost ?? false);
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final _zipcodeCtrl = TextEditingController();
   // --- lead/user meta ---
@@ -363,8 +364,16 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
     );
   }
 
-  void _toast(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  void _toast(String msg, {bool isError = false}) {
+    Get.snackbar(
+      isError ? 'Notice' : 'Success',
+      msg,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: isError ? Colors.redAccent : Colors.green.shade600,
+      colorText: Colors.white,
+      margin: const EdgeInsets.all(12),
+      duration: const Duration(seconds: 3),
+    );
   }
 
   // ---------- Submit ----------
@@ -374,26 +383,26 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
 
     if (!_formKey.currentState!.validate()) return;
 
-    if (boardId == null) return _toast('Please select a Board');
-    if (classId == null) return _toast('Please select a Class');
-    if (subjectId == null) return _toast('Please select a Subject');
+    if (boardId == null) return _toast('Please select a Board', isError: true);
+    if (classId == null) return _toast('Please select a Class', isError: true);
+    if (subjectId == null) return _toast('Please select a Subject', isError: true);
 
     final subjectValid = _lead.subjects.any((s) => s.subjectId == subjectId);
     if (!subjectValid) {
-      return _toast('Selected subject is not valid for the chosen Board/Class');
+      return _toast('Selected subject is not valid for the chosen Board/Class', isError: true);
     }
 
     final locText = localityCtrl.text.trim();
-    if (locText.isEmpty) return _toast('Please enter your Locality');
+    if (locText.isEmpty) return _toast('Please enter your Locality', isError: true);
 
-    if (teachingMode == null) return _toast('Please select Teaching Mode');
+    if (teachingMode == null) return _toast('Please select Teaching Mode', isError: true);
     // if (selectedState == null) return _toast('Please select State');
 
     final phoneOk = RegExp(r'^\d{10}$').hasMatch(phoneCtrl.text.trim());
-    if (!phoneOk) return _toast('Enter a valid 10-digit mobile number');
+    if (!phoneOk) return _toast('Enter a valid 10-digit mobile number', isError: true);
 
     final userId = await StorageService.getUserId();
-    if (userId == null) return _toast('User not found. Please login again.');
+    if (userId == null) return _toast('User not found. Please login again.', isError: true);
 
     final req = LeadCreateRequest(
         name: nameCtrl.text.trim(),
@@ -408,7 +417,9 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
         tutorGender: tutorGender ?? 'Any',
         maxHits: maxHits ?? '1',
         supportAgent: selectedSupportAgent ?? '',
-        leadId: _isEditing ? (widget.lead!.id.toString() ?? '') : '',
+        leadId: _isEditing && (widget.lead?.id ?? 0) > 0
+            ? widget.lead!.id.toString()
+            : '',
         pincode: _zipcodeCtrl.text.toString(),
         latitude: _latitude ?? '0.0',
         longitude: _longitude ?? '0.0',
@@ -422,18 +433,15 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
 
     try {
       final res = await _leadCreate.createOrUpdateLead(req);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(res),
-        ),
-      );
-      Navigator.pop(context, true);
+      _toast(res.isNotEmpty ? res : 'Lead saved successfully');
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context, true);
+      }
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      final message = (e is ApiException)
+          ? e.message
+          : e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
+      _toast(message, isError: true);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -490,6 +498,9 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
           return _Header(
             primary: primary,
             accent: accent,
+            title: _isEditing
+                ? 'Edit Lead'
+                : (_isRepost ? 'Repost Lead' : 'Create New Lead'),
             initial: (displayName.isEmpty ? 'S' : displayName[0].toUpperCase()),
             greeting: "Transactions",
             name: displayName,
@@ -907,6 +918,7 @@ class _Header extends StatelessWidget {
     required this.initial, // ⬅️ NEW
     required this.greeting, // ⬅️ NEW
     required this.name, // ⬅️ NEW
+    this.title = 'Create New Lead',
   });
 
   final Color primary;
@@ -917,6 +929,7 @@ class _Header extends StatelessWidget {
   final String initial;
   final String greeting;
   final String name;
+  final String title;
   String _capFirst(String s) {
     final t = s.trim();
     if (t.isEmpty) return '';
@@ -940,7 +953,7 @@ class _Header extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Create New Lead",
+                title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(

@@ -16,7 +16,7 @@ class SupportTutor extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           children: [
             const Text(
-              "Need Assistance ? We're here to help!",
+              "We're here to help !",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),

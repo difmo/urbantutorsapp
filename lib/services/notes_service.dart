@@ -62,56 +62,119 @@ class NotesService {
 
   Future<List<NotesClass>> fetchClasses(
       {required int boardId, String type = 'Note'}) async {
-    _dbg('POST $_classesUrl body={board_id:$boardId,type:$type}');
-    final res = await _post(_classesUrl, {
-      'board_id': '$boardId',
-      'type': type,
-    });
-    _dbg('classes status=${res.statusCode} body=${res.body}');
-    if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw ApiException('Could not load content (${res.statusCode}). Please try again.');
+    _dbg('fetchClasses boardId=$boardId type=$type');
+
+    // 1. First fetch from master leadclassget (returns complete classes for all boards including NIOS)
+    try {
+      final res = await _post(ApiConfig.fullLeadClassGetUrl, {
+        'board_id': '$boardId',
+      });
+      _dbg('leadclassget status=${res.statusCode} body=${res.body}');
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        final map = _decode(res);
+        final list = map['data'] is List ? map['data'] as List<dynamic> : const [];
+        if (list.isNotEmpty) {
+          return list
+              .map((e) => NotesClass.fromJson(e as Map<String, dynamic>))
+              .toList();
+        }
+      }
+    } catch (e) {
+      _dbg('leadclassget error: $e');
     }
-    final map = _decode(res);
-    final list = map['data'] is List ? map['data'] as List<dynamic> : const [];
-    return list
-        .map((e) => NotesClass.fromJson(e as Map<String, dynamic>))
-        .toList();
+
+    // 2. Fallback to getclasses if leadclassget returned empty
+    try {
+      final res = await _post(_classesUrl, {
+        'board_id': '$boardId',
+        'type': type,
+      });
+      _dbg('getclasses status=${res.statusCode} body=${res.body}');
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        final map = _decode(res);
+        final list = map['data'] is List ? map['data'] as List<dynamic> : const [];
+        return list
+            .map((e) => NotesClass.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      _dbg('getclasses error: $e');
+    }
+
+    return [];
   }
 
-  Future<List<NotesSubject>> fetchSubjects(
-      {required int classId, String type = 'Note'}) async {
-    _dbg('POST $_subjectsUrl body={class_id:$classId,type:$type}');
-    final res = await _post(_subjectsUrl, {
-      'class_id': '$classId',
-      'type': type,
-    });
-    _dbg('subjects status=${res.statusCode} body=${res.body}');
-    if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw ApiException('Could not load content (${res.statusCode}). Please try again.');
+  Future<List<NotesSubject>> fetchSubjects({
+    required int boardId,
+    required int classId,
+    String type = 'Note',
+  }) async {
+    _dbg('fetchSubjects boardId=$boardId classId=$classId type=$type');
+
+    // 1. Try leadgetsubjects (reliable endpoint returning all real subjects for board and class)
+    try {
+      final res = await _post(ApiConfig.fullLeadGetSubjectsUrl, {
+        'board_id': '$boardId',
+        'class_id': '$classId',
+      });
+      _dbg('leadgetsubjects status=${res.statusCode} body=${res.body}');
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        final map = _decode(res);
+        final list = map['data'] is List ? map['data'] as List<dynamic> : const [];
+        if (list.isNotEmpty) {
+          return list
+              .map((e) => NotesSubject.fromJson(e as Map<String, dynamic>))
+              .toList();
+        }
+      }
+    } catch (e) {
+      _dbg('leadgetsubjects error: $e');
     }
-    final map = _decode(res);
-    final list = map['data'] is List ? map['data'] as List<dynamic> : const [];
-    return list
-        .map((e) => NotesSubject.fromJson(e as Map<String, dynamic>))
-        .toList();
+
+    // 2. Fallback to legacy getsubjects endpoint
+    try {
+      final res = await _post(_subjectsUrl, {
+        'class_id': '$classId',
+        'type': type,
+      });
+      _dbg('getsubjects status=${res.statusCode} body=${res.body}');
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        final map = _decode(res);
+        final list = map['data'] is List ? map['data'] as List<dynamic> : const [];
+        return list
+            .map((e) => NotesSubject.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      _dbg('getsubjects error: $e');
+    }
+
+    return [];
   }
 
-  Future<List<NotesChapter>> fetchChapters(
-      {required int subjectId, String type = 'Note'}) async {
+  Future<List<NotesChapter>> fetchChapters({
+    required int subjectId,
+    int? boardId,
+    int? classId,
+    String type = 'Note',
+  }) async {
     _dbg('POST $_chaptersUrl body={subject_id:$subjectId,type:$type}');
-    final res = await _post(_chaptersUrl, {
+    final body = <String, String>{
       'subject_id': '$subjectId',
       'type': type,
-    });
+      if (boardId != null) 'board_id': '$boardId',
+      if (classId != null) 'class_id': '$classId',
+    };
+    final res = await _post(_chaptersUrl, body);
     _dbg('chapters status=${res.statusCode} body=${res.body}');
-    if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw ApiException('Could not load content (${res.statusCode}). Please try again.');
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      final map = _decode(res);
+      final list = map['data'] is List ? map['data'] as List<dynamic> : const [];
+      return list
+          .map((e) => NotesChapter.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
-    final map = _decode(res);
-    final list = map['data'] is List ? map['data'] as List<dynamic> : const [];
-    return list
-        .map((e) => NotesChapter.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return [];
   }
 
   Future<ChapterDetails> fetchChapterDetails(

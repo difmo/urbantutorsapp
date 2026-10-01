@@ -27,7 +27,10 @@ class MyCourseController extends GetxController {
     try {
       final uidStr = await StorageService.getUserId();
       final userId = int.tryParse(uidStr ?? '') ?? 0;
-      if (userId <= 0) throw ApiException('No user id found');
+      if (userId <= 0) {
+        courses.clear();
+        return;
+      }
 
       final payload = await _svc.fetchMyCourses(userId);
       courses.assignAll(payload.items);
@@ -51,7 +54,7 @@ class MyCourseController extends GetxController {
     openingCourseId.value = item.courseId;
     try {
       final view = await _svc.getViewInfo(item.courseId);
-      var url = (view.url ?? '').trim();
+      var url = view.url.trim();
       if (url.isEmpty) throw ApiException('No preview available for this course');
 
       if (!url.contains('://')) {

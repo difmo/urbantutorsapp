@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:urbantutorsapp/services/api_exception.dart';
 import 'package:urbantutorsapp/utils/api_constants.dart';
 import 'package:urbantutorsapp/utils/dio_logger_interceptor.dart';
+import 'package:urbantutorsapp/utils/app_logger.dart';
 import 'package:urbantutorsapp/utils/session.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
@@ -76,12 +77,36 @@ class ApiService {
   }) async {
     // Resolve Bearer token (explicit arg wins)
     final authToken = token ?? await StorageService.getToken();
-    final hasToken = authToken != null && authToken.isNotEmpty;
+    final hasToken = authToken != null && authToken.trim().isNotEmpty;
+    final validToken = hasToken ? authToken.trim() : null;
 
     final headers = <String, String>{
-      if (hasToken) 'Authorization': 'Bearer $authToken',
+      if (hasToken) ...{
+        'Authorization': 'Bearer $validToken',
+        'token': validToken!,
+      },
       if (isJson) 'Content-Type': 'application/json',
     };
+
+    // Ensure token is also forwarded in request data if supported (handles servers dropping Authorization header)
+    dynamic requestData = data;
+    if (hasToken) {
+      if (requestData is FormData) {
+        final hasField = requestData.fields.any((entry) => entry.key == 'token');
+        if (!hasField) {
+          requestData.fields.add(MapEntry('token', validToken!));
+        }
+      } else if (requestData is Map) {
+        try {
+          if (!requestData.containsKey('token')) {
+            requestData['token'] = validToken!;
+          }
+        } catch (_) {
+          requestData = Map<String, dynamic>.from(requestData);
+          requestData['token'] = validToken!;
+        }
+      }
+    }
 
     // Resolve relative paths so leading slashes don't wipe out the '/api/' prefix of baseUrl
     final resolvedPath = (path.startsWith('http://') || path.startsWith('https://'))
@@ -92,11 +117,17 @@ class ApiService {
     try {
       res = await _dio.request(
         resolvedPath,
-        data: data,
+        data: requestData,
         options: Options(method: method, headers: headers),
       );
     } on DioException catch (e) {
-      print('\x1B[91m[API ERROR] $method $resolvedPath failed: ${e.type} ${e.message}\x1B[0m');
+      AppLogger.apiError(
+        '${e.type}: ${e.message}',
+        method: method,
+        url: resolvedPath,
+        statusCode: e.response?.statusCode,
+        error: e.response?.data,
+      );
       throw ApiException(_messageFor(e), statusCode: e.response?.statusCode);
     }
 
@@ -105,9 +136,18 @@ class ApiService {
 
     // A logged-in request rejected as unauthorized means the session is gone.
     if (status == 401 && hasToken) {
+      final msg = _serverMessage(body) ??
+          'Your session has expired. Please log in again.';
+      AppLogger.apiError(
+        msg,
+        method: method,
+        url: resolvedPath,
+        statusCode: 401,
+        error: body,
+      );
       await Session.expire();
       throw ApiException(
-        _serverMessage(body) ?? 'Your session has expired. Please log in again.',
+        msg,
         statusCode: status,
       );
     }
@@ -115,10 +155,18 @@ class ApiService {
     // Anything that is not JSON (e.g. an HTML 404 page) can't be parsed by
     // the models, so fail here with a readable message instead of a cast error.
     if (body is! Map && body is! List) {
+      final msg = status >= 400
+          ? 'Server error ($status). Please try again later.'
+          : 'Unexpected response from server. Please try again later.';
+      AppLogger.apiError(
+        msg,
+        method: method,
+        url: resolvedPath,
+        statusCode: status,
+        error: body,
+      );
       throw ApiException(
-        status >= 400
-            ? 'Server error ($status). Please try again later.'
-            : 'Unexpected response from server. Please try again later.',
+        msg,
         statusCode: status,
       );
     }

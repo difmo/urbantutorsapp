@@ -16,13 +16,26 @@ class LeadMetaController extends GetxController {
   final error = ''.obs;
 
   Future<void> loadClasses(int boardId) async {
+    await loadClassesForBoards([boardId]);
+  }
+
+  Future<void> loadClassesForBoards(List<int> boardIds) async {
+    final validIds = boardIds.where((b) => b > 0).toSet().toList();
+    if (validIds.isEmpty) return;
     try {
       error.value = '';
       isFetchingClasses.value = true;
-      classes.clear();
-      subjects.clear();
-      classes.assignAll(await _service.getClassesByBoard(boardId));
-      print('Fetched classes: ${classes.toList()}');
+      final results = await Future.wait(
+        validIds.map((b) => _service.getClassesByBoard(b).catchError((_) => <LeadClass>[])),
+      );
+      final Map<int, LeadClass> merged = {};
+      for (final list in results) {
+        for (final c in list) {
+          merged[c.classId] = c;
+        }
+      }
+      classes.assignAll(merged.values.toList());
+      print('Fetched classes for boards $validIds: ${classes.length}');
     } catch (e) {
       error.value = e.toString();
     } finally {

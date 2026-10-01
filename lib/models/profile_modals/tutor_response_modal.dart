@@ -136,10 +136,21 @@ class TutorProfileData {
   }
 
   factory TutorProfileData.fromJson(Map<String, dynamic> json) {
+    final userObj = json['user'] is Map
+        ? json['user'] as Map
+        : (json['userData'] is Map ? json['userData'] as Map : null);
+    final rawName = (json['teacher_name'] ??
+            json['name'] ??
+            json['user_name'] ??
+            json['full_name'] ??
+            userObj?['name'] ??
+            userObj?['user_name'] ??
+            userObj?['teacher_name'])
+        ?.toString();
+
     return TutorProfileData(
       id: _parseInt(json['id']) ?? 0,
-      teacherName: (json['teacher_name'] ?? json['name'] ?? json['user_name'])
-          ?.toString(),
+      teacherName: rawName,
       profileStatus: _parseInt(json['profile_status']),
       profileId: json['profile_id']?.toString(),
       rating: _parseInt(json['rating']),

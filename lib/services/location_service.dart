@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:urbantutorsapp/services/api_exception.dart';
 import 'package:http/http.dart' as http;
 import 'package:urbantutorsapp/utils/api_config.dart';
+import 'package:urbantutorsapp/utils/app_logger.dart';
 
 class LocationService {
   static String get _url => ApiConfig.fullGetLocationUrl;
@@ -37,6 +38,13 @@ class LocationService {
     );
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
+      AppLogger.apiError(
+        'Location search failed with status ${res.statusCode}',
+        method: 'POST',
+        url: _url,
+        statusCode: res.statusCode,
+        error: res.body,
+      );
       throw ApiException('Location API failed: ${res.statusCode}');
     }
     final body = _decodeJson(res.body) as Map<String, dynamic>;
@@ -54,6 +62,13 @@ class LocationService {
     final res = await http.Response.fromStream(streamed);
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
+      AppLogger.apiError(
+        'Location multipart search failed with status ${res.statusCode}',
+        method: 'POST',
+        url: _url,
+        statusCode: res.statusCode,
+        error: res.body,
+      );
       throw ApiException('Location API failed: ${res.statusCode}');
     }
     final body = _decodeJson(res.body) as Map<String, dynamic>;
@@ -110,10 +125,22 @@ Future<http.Response> _httpPost(Uri uri,
     return await http
         .post(uri, headers: headers, body: body)
         .timeout(const Duration(seconds: 20));
-  } on TimeoutException {
+  } on TimeoutException catch (te) {
+    AppLogger.apiError(
+      'Location API request timeout (20s)',
+      method: 'POST',
+      url: uri.toString(),
+      error: te,
+    );
     throw const ApiException(
         'The server is taking too long to respond. Please try again.');
-  } on SocketException {
+  } on SocketException catch (se) {
+    AppLogger.apiError(
+      'Location API socket error: No internet connection',
+      method: 'POST',
+      url: uri.toString(),
+      error: se,
+    );
     throw const ApiException(
         'No internet connection. Please check your network and try again.');
   }
@@ -123,7 +150,11 @@ Future<http.Response> _httpPost(Uri uri,
 dynamic _decodeJson(String body) {
   try {
     return jsonDecode(body);
-  } on FormatException {
+  } on FormatException catch (fe) {
+    AppLogger.apiError(
+      'Location API returned invalid JSON response',
+      error: fe,
+    );
     throw const ApiException(
         'Unexpected response from server. Please try again later.');
   }

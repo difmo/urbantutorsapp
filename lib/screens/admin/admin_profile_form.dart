@@ -250,7 +250,12 @@ class _TutorProfileFormScreenState extends State<AdminProfileForm> {
         "profile_verify_phone": phoneDigits,
         "location": _capitalizeEach(localityController.text.trim()),
         "state": selectedState ?? "Delhi",
-        "idtype": selectedIdType ?? "Aadhar",
+        "idtype": (selectedIdType == 'Voter ID' || selectedIdType?.toLowerCase() == 'voter id')
+            ? 'VoterID'
+            : (selectedIdType ?? "Aadhar"),
+        "idType": (selectedIdType == 'Voter ID' || selectedIdType?.toLowerCase() == 'voter id')
+            ? 'VoterID'
+            : (selectedIdType ?? "Aadhar"),
         "profile_picture": profileBase64,
         "frontid": frontBase64,
         "backid": backBase64,

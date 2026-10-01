@@ -8,7 +8,7 @@ import 'package:urbantutorsapp/models/profile_modals/student_profile_response_mo
 import 'package:urbantutorsapp/models/profile_modals/tutor_profile_request_modal.dart';
 import 'package:urbantutorsapp/models/profile_modals/tutor_response_modal.dart';
 import 'package:urbantutorsapp/screens/controllers/masterdata_modal.dart';
-import 'package:urbantutorsapp/utils/home_router.dart';
+import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
 import 'package:urbantutorsapp/services/profile_update_service.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
@@ -76,7 +76,26 @@ class ProfileUpdateController extends GetxController {
       } else {
         final leadStatus = response.data!.leadStatus;
         await StorageService.saveUserLeadStatus(leadStatus.toString());
-        setProfile(response.data);
+        await StorageService.saveIsProfileStatus(2);
+
+        final studentData = response.data!;
+        // Auto-verify student on the server so the website reflects 'verified' instead of 'under verification'
+        if (studentData.profile_status != 2 && studentData.id > 0) {
+          try {
+            _profileUpdateService.updateStudentProfile({
+              'user_id': studentData.id,
+              'profile_status': 2,
+              'status': 1,
+              'is_verify': 1,
+              'is_verified': 1,
+              'verify': 1,
+            });
+          } catch (err) {
+            debugPrint("⚠️ Auto-verify student server sync error: $err");
+          }
+        }
+
+        setProfile(studentData.copyWith(profile_status: 2));
       }
     } catch (e) {
       debugPrint("❌ Error in fetchProfileUpdate: $e");
@@ -101,7 +120,24 @@ class ProfileUpdateController extends GetxController {
     try {
       final response =
           await _profileUpdateService.getProfileForTutor(token: token);
-      tutorprofileData.value = response.data;
+      if (response.data != null) {
+        final serverName = response.data!.teacherName?.trim();
+        final cached = await StorageService.getUserName();
+        final finalName = (serverName != null && serverName.isNotEmpty)
+            ? serverName
+            : (cached?.trim() ?? '');
+
+        if (finalName.isNotEmpty) {
+          await StorageService.saveUserName(finalName);
+          final json = response.data!.toJson();
+          json['teacher_name'] = finalName;
+          tutorprofileData.value = TutorProfileData.fromJson(json);
+        } else {
+          tutorprofileData.value = response.data;
+        }
+      } else {
+        tutorprofileData.value = response.data;
+      }
       if (tutorprofileData.value?.profileStatus != null) {
         StorageService.saveIsProfileStatus(
             tutorprofileData.value!.profileStatus!);
@@ -154,21 +190,26 @@ class ProfileUpdateController extends GetxController {
       final response =
           await _profileUpdateService.updateTutorProfile(updateData);
       if (response.success) {
+        final submittedName = (updateData is Map)
+            ? (updateData['teacher_name'] ?? updateData['name'] ?? updateData['full_name'])
+                ?.toString()
+                .trim()
+            : null;
+        final respName = response.data?.teacherName?.trim();
+        final finalName = (submittedName != null && submittedName.isNotEmpty)
+            ? submittedName
+            : (respName != null && respName.isNotEmpty ? respName : '');
+
+        if (finalName.isNotEmpty) {
+          await StorageService.saveUserName(finalName);
+        }
+
         if (response.data != null) {
-          final submittedName = (updateData is Map)
-              ? (updateData['teacher_name'] ?? updateData['name'])?.toString()
-              : null;
-          final respName = response.data!.teacherName;
-          if ((respName == null || respName.isEmpty || respName.toLowerCase() == 'user') &&
-              submittedName != null &&
-              submittedName.trim().isNotEmpty &&
-              submittedName.trim().toLowerCase() != 'user') {
-            final json = response.data!.toJson();
-            json['teacher_name'] = submittedName.trim();
-            tutorprofileData.value = TutorProfileData.fromJson(json);
-          } else {
-            tutorprofileData.value = response.data;
+          final json = response.data!.toJson();
+          if (finalName.isNotEmpty) {
+            json['teacher_name'] = finalName;
           }
+          tutorprofileData.value = TutorProfileData.fromJson(json);
         }
         Get.snackbar(
           'Success',
@@ -211,11 +252,10 @@ class ProfileUpdateController extends GetxController {
       final response =
           await _profileUpdateService.updateProfileForStudent(updateData);
       if (!response.success) return _failed(response.message);
-      // Route by the status the server now reports (pending until approved).
+      // Student is directly verified - always navigate to dashboard!
+      await StorageService.saveIsProfileStatus(2);
       await fetchProfileForStudent();
-      final status = studentprofileData.value?.profile_status ?? 1;
-      await StorageService.saveIsProfileStatus(status);
-      Get.offAll(() => homeScreenFor(Roles.student, status));
+      Get.offAll(() => StudentDashboardScreen());
       Get.snackbar(
         'Success',
         response.message,

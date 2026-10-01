@@ -10,6 +10,7 @@ import 'package:urbantutorsapp/controllers/coins_controller.dart';
 import 'package:urbantutorsapp/controllers/lead_create_controller.dart';
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/models/lead_create_model_request.dart';
+import 'package:urbantutorsapp/services/api_exception.dart';
 
 import 'package:urbantutorsapp/screens/controllers/masterdata_controller.dart';
 import 'package:urbantutorsapp/screens/controllers/lead_meta_controller.dart';
@@ -176,6 +177,7 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
             backgroundColor: Colors.green.shade100);
       }
     } catch (e) {
+      if (!mounted) return;
       Get.snackbar('Error', 'Failed to get location: $e');
     }
   }
@@ -187,6 +189,7 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
     nameCtrl.dispose();
     mobileCtrl.dispose();
     localityCtrl.dispose();
+    _zipcodeCtrl.dispose();
     super.dispose();
   }
 
@@ -226,38 +229,61 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
     );
   }
 
-  Widget _dropdownDec(Widget child) => Theme(
-        data: Theme.of(context).copyWith(
-          canvasColor: Colors.white,
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-        ),
-        child: child,
-      );
+  ThemeData? _themeData;
+  SliderThemeData? _sliderThemeData;
 
-  void _toast(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _themeData = Theme.of(context);
+    _sliderThemeData = SliderTheme.of(context);
+  }
+
+  Widget _dropdownDec(Widget child) {
+    final theme = _themeData ?? ThemeData.light();
+    return Theme(
+      data: theme.copyWith(
+        canvasColor: Colors.white,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+      ),
+      child: child,
+    );
+  }
+
+  void _toast(String msg, {bool isError = false}) {
+    Get.snackbar(
+      isError ? 'Notice' : 'Success',
+      msg,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: isError ? Colors.redAccent : Colors.green.shade600,
+      colorText: Colors.white,
+      margin: const EdgeInsets.all(12),
+      duration: const Duration(seconds: 3),
+    );
   }
 
   Future<void> _onGetOtp() async {
+    if (!mounted) return;
     FocusScope.of(context).unfocus();
 
-    if (boardId == null) return _toast('Please select a Board');
-    if (classId == null) return _toast('Please select a Class');
-    if (subjectId == null) return _toast('Please select a Subject');
+    if (boardId == null) return _toast('Please select a Board', isError: true);
+    if (classId == null) return _toast('Please select a Class', isError: true);
+    if (subjectId == null) return _toast('Please select a Subject', isError: true);
 
     final subjectValid = _lead.subjects.any((s) => s.subjectId == subjectId);
     if (!subjectValid) {
-      return _toast('Selected subject is not valid for the chosen Board/Class');
+      return _toast('Selected subject is not valid for the chosen Board/Class', isError: true);
     }
 
     final locText = localityCtrl.text.trim();
-    if (locText.isEmpty) return _toast('Please enter your Locality');
+    if (locText.isEmpty) return _toast('Please enter your Locality', isError: true);
 
-    if (modeVal == null) return _toast('Please select Teaching Mode');
+    if (modeVal == null) return _toast('Please select Teaching Mode', isError: true);
 
     final userId = await StorageService.getUserId();
-    if (userId == null) return _toast('User not found. Please login again.');
+    if (!mounted) return;
+    if (userId == null) return _toast('User not found. Please login again.', isError: true);
     final req = LeadCreateRequest(
         name: userName ?? "",
         mobile: userPhone ?? "",
@@ -269,7 +295,7 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
         fee: _fee.round().toString(),
         userId: userId,
         tutorGender: 'Any',
-        maxHits: "",
+        maxHits: "1",
         supportAgent: '',
         leadId: '',
         pincode: _zipcodeCtrl.text.toString(),
@@ -280,21 +306,19 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
     if (_submitting) return;
     setState(() => _submitting = true);
     try {
-      await _leadCreate.createOrUpdateLead(req);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lead updated successfully')),
-      );
-      setState(() {
-        leadStatus = "1";
-      });
-
-      // Navigator.pop(context, true);
+      final msg = await _leadCreate.createOrUpdateLead(req);
+      _toast(msg.isNotEmpty ? msg : 'Lead updated successfully');
+      await StorageService.saveUserLeadStatus("1");
+      if (mounted) {
+        setState(() {
+          leadStatus = "1";
+        });
+      }
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      final message = (e is ApiException)
+          ? e.message
+          : e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
+      _toast(message, isError: true);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -446,7 +470,7 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
       // 🔁 BODY switches with leadStatus
       body: hasActiveLead
           ? SafeArea(
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -479,13 +503,6 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                         ],
                       ),
                     ),
-                    // const SizedBox(height: 12),
-                    // TextButton(
-                    //   onPressed: () {
-                    //     // TODO: navigate to your request list screen
-                    //   },
-                    //   child: const Text("View all requests"),
-                    // ),
                   ],
                 ),
               ),
@@ -604,18 +621,8 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                       const SizedBox(height: 10),
 
                       // Subject (Autocomplete)
-                      Obx(() {
-                        final fetching = _lead.isFetchingSubjects.value;
+                      Builder(builder: (context) {
                         final disabled = classId == null || boardId == null;
-
-                        final List<SubjectOption> subjectOptions =
-                            _lead.subjects
-                                .map<SubjectOption>((s) => SubjectOption(
-                                      id: s.subjectId ?? 0,
-                                      name: s.subjectName ?? '',
-                                    ))
-                                .where((o) => o.id != 0 && o.name.isNotEmpty)
-                                .toList();
 
                         return Autocomplete<SubjectOption>(
                           displayStringForOption: (opt) => opt.name,
@@ -623,6 +630,14 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                             if (disabled) {
                               return const Iterable<SubjectOption>.empty();
                             }
+                            final List<SubjectOption> subjectOptions =
+                                _lead.subjects
+                                    .map<SubjectOption>((s) => SubjectOption(
+                                          id: s.subjectId,
+                                          name: s.subjectName,
+                                        ))
+                                    .where((o) => o.id != 0 && o.name.isNotEmpty)
+                                    .toList();
                             final q = tev.text.trim().toLowerCase();
                             if (q.isEmpty) return subjectOptions;
                             return subjectOptions
@@ -633,20 +648,19 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                           },
                           fieldViewBuilder:
                               (context, textCtrl, focusNode, onFieldSubmitted) {
-                            textCtrl.addListener(() {
-                              if (textCtrl.text.isEmpty && subjectId != null) {
-                                setState(() => subjectId = null);
-                              }
-                            });
-
                             return TextFormField(
                               controller: textCtrl,
                               focusNode: focusNode,
                               enabled: !disabled,
                               textCapitalization: TextCapitalization.words,
+                              onChanged: (val) {
+                                if (val.isEmpty && subjectId != null) {
+                                  setState(() => subjectId = null);
+                                }
+                              },
                               decoration: _fieldDec('Select Subject').copyWith(
                                 hintText: 'Search subject',
-                                suffixIcon: fetching
+                                suffixIcon: Obx(() => _lead.isFetchingSubjects.value
                                     ? const Padding(
                                         padding: EdgeInsets.all(10),
                                         child: SizedBox(
@@ -657,7 +671,7 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                                         ),
                                       )
                                     : const Icon(Icons.search,
-                                        color: Color(0xFF9CA3AF)),
+                                        color: Color(0xFF9CA3AF))),
                               ),
                               validator: (_) =>
                                   subjectId == null ? 'Required' : null,
@@ -698,93 +712,82 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                       const SizedBox(height: 10),
 
                       // Locality (Autocomplete + POST)
-                      Obx(() {
-                        final loading = _loc.isSearching.value;
-                        final opts = _loc.suggestions;
-                        return Autocomplete<String>(
-                          optionsBuilder: (TextEditingValue tev) {
-                            final q = tev.text.trim();
-                            if (q.isEmpty) {
-                              return const Iterable<String>.empty();
-                            }
-                            return opts;
-                          },
-                          onSelected: (val) {
-                            AppLog.i('[UI] Locality selected → $val');
-                            localityCtrl.text = val;
-                            _loc.onQueryChanged('');
-                          },
-                          fieldViewBuilder:
-                              (context, textCtrl, focusNode, onFieldSubmitted) {
-                            if (textCtrl.text != localityCtrl.text) {
-                              textCtrl.text = localityCtrl.text;
-                              textCtrl.selection = TextSelection.fromPosition(
-                                TextPosition(offset: textCtrl.text.length),
-                              );
-                            }
-                            textCtrl.addListener(() {
-                              final q = textCtrl.text;
-                              if (localityCtrl.text != q) {
-                                localityCtrl.text = q;
+                      Autocomplete<String>(
+                        initialValue: TextEditingValue(text: localityCtrl.text),
+                        optionsBuilder: (TextEditingValue tev) {
+                          final q = tev.text.trim();
+                          if (q.isEmpty) {
+                            return const Iterable<String>.empty();
+                          }
+                          return _loc.suggestions;
+                        },
+                        onSelected: (val) {
+                          AppLog.i('[UI] Locality selected → $val');
+                          localityCtrl.text = val;
+                          _loc.onQueryChanged('');
+                        },
+                        fieldViewBuilder:
+                            (context, textCtrl, focusNode, onFieldSubmitted) {
+                          return TextFormField(
+                            controller: textCtrl,
+                            focusNode: focusNode,
+                            textInputAction: TextInputAction.next,
+                            textCapitalization: TextCapitalization.words,
+                            onChanged: (val) {
+                              if (localityCtrl.text != val) {
+                                localityCtrl.text = val;
                               }
-                              _loc.onQueryChanged(q); // debounced POST
-                            });
-                            return TextFormField(
-                              controller: textCtrl,
-                              focusNode: focusNode,
-                              textInputAction: TextInputAction.next,
-                              textCapitalization: TextCapitalization.words,
-                              decoration:
-                                  _fieldDec('Enter your Locality').copyWith(
-                                suffixIcon: loading
-                                    ? const Padding(
-                                        padding: EdgeInsets.all(10),
-                                        child: SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(
-                                              strokeWidth: 2),
-                                        ),
-                                      )
-                                    : const Icon(Icons.location_on_outlined,
-                                        color: Color(0xFF9CA3AF)),
-                              ),
-                              validator: (v) => (v == null || v.trim().isEmpty)
-                                  ? 'Required'
-                                  : null,
-                              onFieldSubmitted: (_) => onFieldSubmitted(),
-                            );
-                          },
-                          optionsViewBuilder: (context, onSelected, options) {
-                            final list = options.toList();
-                            return Align(
-                              alignment: Alignment.topLeft,
-                              child: Material(
-                                elevation: 4,
-                                borderRadius: BorderRadius.circular(10),
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    maxHeight: 280,
-                                    maxWidth:
-                                        MediaQuery.of(context).size.width - 48,
-                                  ),
-                                  child: ListView.separated(
-                                    padding: EdgeInsets.zero,
-                                    itemCount: list.length,
-                                    separatorBuilder: (_, __) =>
-                                        const Divider(height: 1),
-                                    itemBuilder: (_, i) => ListTile(
-                                      dense: true,
-                                      title: Text(list[i]),
-                                      onTap: () => onSelected(list[i]),
-                                    ),
+                              _loc.onQueryChanged(val);
+                            },
+                            decoration:
+                                _fieldDec('Enter your Locality').copyWith(
+                              suffixIcon: Obx(() => _loc.isSearching.value
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(10),
+                                      child: SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2),
+                                      ),
+                                    )
+                                  : const Icon(Icons.location_on_outlined,
+                                      color: Color(0xFF9CA3AF))),
+                            ),
+                            validator: (v) => (v == null || v.trim().isEmpty)
+                                ? 'Required'
+                                : null,
+                            onFieldSubmitted: (_) => onFieldSubmitted(),
+                          );
+                        },
+                        optionsViewBuilder: (context, onSelected, options) {
+                          final list = options.toList();
+                          return Align(
+                            alignment: Alignment.topLeft,
+                            child: Material(
+                              elevation: 4,
+                              borderRadius: BorderRadius.circular(10),
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxHeight: 280,
+                                  minWidth: 280,
+                                ),
+                                child: ListView.separated(
+                                  padding: EdgeInsets.zero,
+                                  itemCount: list.length,
+                                  separatorBuilder: (_, __) =>
+                                      const Divider(height: 1),
+                                  itemBuilder: (_, i) => ListTile(
+                                    dense: true,
+                                    title: Text(list[i]),
+                                    onTap: () => onSelected(list[i]),
                                   ),
                                 ),
                               ),
-                            );
-                          },
-                        );
-                      }),
+                            ),
+                          );
+                        },
+                      ),
                       const SizedBox(height: 10),
                       _buildTextField(
                         label: 'Zipcode',
@@ -838,7 +841,9 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                               children: [
                                 Expanded(
                                   child: SliderTheme(
-                                    data: SliderTheme.of(context).copyWith(
+                                    data: (_sliderThemeData ??
+                                            const SliderThemeData())
+                                        .copyWith(
                                       trackHeight: 3,
                                       thumbShape: const RoundSliderThumbShape(
                                           enabledThumbRadius: 10),

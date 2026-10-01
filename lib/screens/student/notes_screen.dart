@@ -175,14 +175,25 @@ class _NotesScreenState extends State<NotesScreen> {
     );
   }
 
-  Widget _dropdownDec(Widget child) => Theme(
-        data: Theme.of(context).copyWith(
-          canvasColor: Colors.white,
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-        ),
-        child: child,
-      );
+  ThemeData? _themeData;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _themeData = Theme.of(context);
+  }
+
+  Widget _dropdownDec(Widget child) {
+    final theme = _themeData ?? ThemeData.light();
+    return Theme(
+      data: theme.copyWith(
+        canvasColor: Colors.white,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+      ),
+      child: child,
+    );
+  }
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   @override
   Widget build(BuildContext context) {
@@ -277,23 +288,26 @@ class _NotesScreenState extends State<NotesScreen> {
 
                   /// Board
                   Obx(() {
-                    final boards = _md.masterData.value?.data.boardLead ?? [];
+                    final noteBoards = _md.masterData.value?.data.boardNotePyq ?? [];
+                    final leadBoards = _md.masterData.value?.data.boardLead ?? [];
+                    final boards = noteBoards.isNotEmpty ? noteBoards : leadBoards;
+                    final selVal = (boardId != null &&
+                            boards.any((b) => b.boardId == boardId))
+                        ? boardId
+                        : null;
                     return _dropdownDec(
                       DropdownButtonFormField<int>(
                         isExpanded: true,
-                        initialValue: boardId,
+                        value: selVal,
                         decoration: _fieldDec('Select Board'),
                         items: boards
                             .map((b) => DropdownMenuItem<int>(
-                                  value: (b.boardId is int)
-                                      ? b.boardId
-                                      : int.tryParse('${b.boardId}'),
-                                  child: Text(b.boardLabel.toString() ?? '',
+                                  value: b.boardId,
+                                  child: Text(b.boardLabel,
                                       overflow: TextOverflow.ellipsis),
                                 ))
                             .toList(),
                         onChanged: (val) {
-                          print(val);
                           AppLog.i('[UI] Board changed → $val');
                           setState(() {
                             boardId = val;
@@ -317,11 +331,18 @@ class _NotesScreenState extends State<NotesScreen> {
                   Obx(() {
                     final classes = _notesController.classes;
                     final fetching = _notesController.loadingClasses.value;
+                    final selVal = (classId != null &&
+                            classes.any((c) => c.class_id == classId))
+                        ? classId
+                        : null;
                     return _dropdownDec(
                       DropdownButtonFormField<int>(
                         isExpanded: true,
-                        initialValue: classId,
-                        decoration: _fieldDec('Select Class').copyWith(
+                        value: selVal,
+                        decoration: _fieldDec(boardId == null
+                                ? 'Select Class'
+                                : (fetching ? 'Loading Classes...' : 'Select Class'))
+                            .copyWith(
                           suffixIcon: fetching
                               ? const Padding(
                                   padding: EdgeInsets.all(10),
@@ -368,11 +389,18 @@ class _NotesScreenState extends State<NotesScreen> {
                   Obx(() {
                     final subjects = _notesController.subjects;
                     final fetching = _notesController.loadingSubjects.value;
+                    final selVal = (subjectId != null &&
+                            subjects.any((s) => s.subjectId == subjectId))
+                        ? subjectId
+                        : null;
                     return _dropdownDec(
                       DropdownButtonFormField<int>(
                         isExpanded: true,
-                        initialValue: subjectId,
-                        decoration: _fieldDec('Select Subject').copyWith(
+                        value: selVal,
+                        decoration: _fieldDec(classId == null
+                                ? 'Select Subject'
+                                : (fetching ? 'Loading Subjects...' : 'Select Subject'))
+                            .copyWith(
                           suffixIcon: fetching
                               ? const Padding(
                                   padding: EdgeInsets.all(10),
@@ -402,7 +430,11 @@ class _NotesScreenState extends State<NotesScreen> {
                                 });
                                 if (val != null) {
                                   _notesController.fetchChapters(
-                                      subjectId: val, type: widget.flags);
+                                    subjectId: val,
+                                    boardId: boardId,
+                                    classId: classId,
+                                    type: widget.flags,
+                                  );
                                 }
                               },
                         validator: (v) => v == null ? 'Required' : null,
@@ -415,53 +447,78 @@ class _NotesScreenState extends State<NotesScreen> {
                   Obx(() {
                     final chapters = _notesController.chapters;
                     final fetching = _notesController.loadingChapters.value;
-                    return _dropdownDec(
-                      DropdownButtonFormField<int>(
-                        isExpanded: true,
-                        initialValue: chapterId,
-                        decoration: _fieldDec('Select Chapter').copyWith(
-                          suffixIcon: fetching
-                              ? const Padding(
-                                  padding: EdgeInsets.all(10),
-                                  child: SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2),
-                                  ),
-                                )
-                              : null,
+                    final selVal = (chapterId != null &&
+                            chapters.any((c) => c.chapterId == chapterId))
+                        ? chapterId
+                        : null;
+                    final hint = subjectId == null
+                        ? 'Select Chapter'
+                        : (fetching
+                            ? 'Loading Chapters...'
+                            : (chapters.isEmpty
+                                ? 'No chapters found for this subject'
+                                : 'Select Chapter'));
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _dropdownDec(
+                          DropdownButtonFormField<int>(
+                            isExpanded: true,
+                            value: selVal,
+                            decoration: _fieldDec(hint).copyWith(
+                              suffixIcon: fetching
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(10),
+                                      child: SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2),
+                                      ),
+                                    )
+                                  : null,
+                            ),
+                            items: chapters
+                                .map((c) => DropdownMenuItem<int>(
+                                      value: c.chapterId,
+                                      child: Text(c.chapterName,
+                                          overflow: TextOverflow.ellipsis),
+                                    ))
+                                .toList(),
+                            onChanged: (subjectId == null || chapters.isEmpty)
+                                ? null
+                                : (val) {
+                                    AppLog.i('[UI] Chapter changed → $val');
+                                    setState(() => chapterId = val);
+
+                                    if (val != null) {
+                                      _notesController.fetchChapterDetails(
+                                          chapterId: val, type: widget.flags);
+
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => ChapterDetailsScreen(
+                                            chapterId: val,
+                                            type: widget.flags,
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
+                            validator: (v) =>
+                                (chapters.isNotEmpty && v == null) ? 'Required' : null,
+                          ),
                         ),
-                        items: chapters
-                            .map((c) => DropdownMenuItem<int>(
-                                  value: c.chapterId,
-                                  child: Text(c.chapterName,
-                                      overflow: TextOverflow.ellipsis),
-                                ))
-                            .toList(),
-                        onChanged: (subjectId == null)
-                            ? null
-                            : (val) {
-                                AppLog.i('[UI] Chapter changed → $val');
-                                setState(() => chapterId = val);
-
-                                if (val != null) {
-                                  _notesController.fetchChapterDetails(
-                                      chapterId: val, type: widget.flags);
-                                }
-
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => ChapterDetailsScreen(
-                                      chapterId: val!,
-                                      type: widget.flags,
-                                    ),
-                                  ),
-                                );
-                              },
-                        validator: (v) => v == null ? 'Required' : null,
-                      ),
+                        if (subjectId != null && !fetching && chapters.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 6, left: 4),
+                            child: Text(
+                              'Chapters will appear as soon as uploaded to backend',
+                              style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                            ),
+                          ),
+                      ],
                     );
                   }),
                   const SizedBox(height: 10),

@@ -493,6 +493,11 @@ _getCurrentLocation();
         'place_id': placeId,
         'latitude': latitude,
         'longitude': longitude,
+        'profile_status': 2,
+        'status': 1,
+        'is_verify': 1,
+        'is_verified': 1,
+        'verify': 1,
       };
 
       // The controller shows the server's success/failure message.
@@ -863,7 +868,6 @@ _getCurrentLocation();
                       if (q.isEmpty) {
                         return const Iterable<String>.empty();
                       }
-                      _loc.onQueryChanged(q);
                       return _loc.suggestions;
                     },
                     onSelected: (val) {
@@ -872,33 +876,33 @@ _getCurrentLocation();
                     },
                     fieldViewBuilder:
                         (context, textCtrl, focusNode, onFieldSubmitted) {
-                      return Obx(() {
-                        final searching = _loc.isSearching.value;
-                        return TextFormField(
-                          controller: textCtrl,
-                          focusNode: focusNode,
-                          textCapitalization: TextCapitalization.words,
-                          decoration: _dec(
-                            'Locality',
-                            icon: Icons.location_on_outlined,
-                            suffixIcon: searching
-                                ? const Padding(
-                                    padding: EdgeInsets.all(10),
-                                    child: SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2),
-                                    ),
-                                  )
-                                : null,
-                          ),
-                          validator: (v) => (v == null || v.trim().isEmpty)
-                              ? 'Please enter locality'
-                              : null,
-                          onFieldSubmitted: (_) => onFieldSubmitted(),
-                        );
-                      });
+                      return TextFormField(
+                        controller: textCtrl,
+                        focusNode: focusNode,
+                        textCapitalization: TextCapitalization.words,
+                        onChanged: (val) {
+                          _loc.onQueryChanged(val);
+                        },
+                        decoration: _dec(
+                          'Locality',
+                          icon: Icons.location_on_outlined,
+                          suffixIcon: Obx(() => _loc.isSearching.value
+                              ? const Padding(
+                                  padding: EdgeInsets.all(10),
+                                  child: SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  ),
+                                )
+                              : const SizedBox.shrink()),
+                        ),
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? 'Please enter locality'
+                            : null,
+                        onFieldSubmitted: (_) => onFieldSubmitted(),
+                      );
                     },
                     optionsViewBuilder: (context, onSelected, options) {
                       return Align(
@@ -907,7 +911,7 @@ _getCurrentLocation();
                           elevation: 4,
                           borderRadius: BorderRadius.circular(8),
                           child: ConstrainedBox(
-                             constraints: BoxConstraints(
+                            constraints: BoxConstraints(
                               maxHeight: 280,
                               maxWidth: MediaQuery.of(context).size.width - 32,
                             ),

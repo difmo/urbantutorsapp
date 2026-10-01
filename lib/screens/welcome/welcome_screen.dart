@@ -2,14 +2,14 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:urbantutorsapp/screens/auth/role_intro_screen.dart';
+import 'package:urbantutorsapp/utils/app_log.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../theme/theme_constants.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
   void navigateToNext(BuildContext context, String role, int roleId) async {
-    print("roll print ho jaa bhai maan bhi jaa bhai$role : $roleId");
+    AppLog.i('Selected Role: $role (ID: $roleId)', name: 'AUTH');
     if (role == "Private Tutor") {
       Navigator.push<bool>(
         context,
@@ -74,9 +74,6 @@ class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = AppColors.primaryColor;
-    final accent = AppColors.accentColor;
-
     return Scaffold(
       body: Stack(
         children: [

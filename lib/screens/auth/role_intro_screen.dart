@@ -38,39 +38,45 @@ class RoleIntroScreen extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo Image
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: Colors.transparent,
-                  backgroundImage: const AssetImage('assets/icons/urban.png'),
-                ),
-                const SizedBox(height: 30),
-
-                // Welcome Text
-                Text(
-                  'Welcome ${formattedRole == "Private Tutor" ? "Sir / Ma'am" : formattedRole}.',
-                  style: const TextStyle(
-                    fontSize: 26,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Logo Image
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundColor: Colors.transparent,
+                    backgroundImage: const AssetImage('assets/icons/urban.png'),
                   ),
-                ),
-                const SizedBox(height: 16),
-                formattedRole == "Private Tutor"
-                    ? Text(
-                        'Continue as a Private Tutor to Explore www.urbantutors.pro',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 16),
-                      )
-                    : Text(
-                        "Continue as $formattedRole to Explore Urban Tutors."),
-                const SizedBox(height: 40),
+                  const SizedBox(height: 30),
+
+                  // Welcome Text
+                  Text(
+                    'Welcome ${formattedRole == "Private Tutor" ? "Sir / Ma'am" : formattedRole}.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 26,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  formattedRole == "Private Tutor"
+                      ? const Text(
+                          'Continue as a Private Tutor to Explore www.urbantutors.pro',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: Colors.white70, fontSize: 16),
+                        )
+                      : Text(
+                          "Continue as $formattedRole to Explore Urban Tutors.",
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 16),
+                        ),
+                  const SizedBox(height: 40),
                 // Login and Register Buttons
                 Row(
                   children: [
@@ -135,6 +141,7 @@ class RoleIntroScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

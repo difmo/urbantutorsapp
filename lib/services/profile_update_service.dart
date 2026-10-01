@@ -8,7 +8,7 @@ import 'package:urbantutorsapp/screens/controllers/masterdata_modal.dart';
 import 'package:urbantutorsapp/services/ApiService.dart';
 import 'package:urbantutorsapp/utils/api_config.dart';
 import 'package:urbantutorsapp/utils/api_constants.dart';
-
+import 'package:urbantutorsapp/utils/app_log.dart';
 import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class ProfileUpdateService {
@@ -17,13 +17,10 @@ class ProfileUpdateService {
       final response = await ApiService.get(
         ApiConstants.MASTERDATE,
       );
-
-      print("✅ Response from get master data: ${response.data}");
-
+      AppLog.s('Master data fetched', name: 'PROFILE');
       return MasterData.fromJson(response.data);
-    } catch (e) {
-      print("❌ Error in getMasterData (from ProfileUpdateService):");
-      print(e.toString());
+    } catch (e, st) {
+      AppLog.e('getMasterData failed', name: 'PROFILE', error: e, st: st);
       rethrow;
     }
   }
@@ -39,11 +36,10 @@ class ProfileUpdateService {
         null,
         token: authToken.trim(),
       );
-      print("✅ Response from getProfileForStudent :: ${response.data}");
+      AppLog.s('Student profile fetched', name: 'PROFILE');
       return StudentProfileResponsdModal.fromJson(response.data);
-    } catch (e) {
-      print("❌ Error in getProfileForStudent :");
-      print(e.toString());
+    } catch (e, st) {
+      AppLog.e('getProfileForStudent failed', name: 'PROFILE', error: e, st: st);
       rethrow;
     }
   }
@@ -59,17 +55,15 @@ class ProfileUpdateService {
         null,
         token: authToken.trim(),
       );
-      print("✅ Response from getProfileForAdmin :: ${response.data}");
+      AppLog.s('Admin profile fetched', name: 'PROFILE');
       return AdminProfileResponseModel.fromJson(response.data);
-    } catch (e) {
-      print("❌ Error in getProfileForAdmin :");
-      print(e.toString());
+    } catch (e, st) {
+      AppLog.e('getProfileForAdmin failed', name: 'PROFILE', error: e, st: st);
       rethrow;
     }
   }
 
   Future<TutorProfileResponse> getProfileForTutor({String? token}) async {
-    print("Comes to get profile for tutor");
     try {
       final authToken = token ?? await StorageService.getToken();
       if (authToken == null || authToken.trim().isEmpty) {
@@ -80,13 +74,10 @@ class ProfileUpdateService {
         null,
         token: authToken.trim(),
       );
-
-      print("✅ Response from getProfileUpdate: ${response.data}");
-
+      AppLog.s('Tutor profile fetched', name: 'PROFILE');
       return TutorProfileResponse.fromJson(response.data);
-    } catch (e) {
-      print("❌ Error in getProfileUpdate (from ProfileUpdateService):");
-      print(e.toString());
+    } catch (e, st) {
+      AppLog.e('getProfileForTutor failed', name: 'PROFILE', error: e, st: st);
       rethrow;
     }
   }
@@ -99,64 +90,52 @@ class ProfileUpdateService {
         ApiConfig.studentProfileUpdate,
         updateData.toJson(),
       );
-
-      print("✅ Response from updateProfiles: ${response.data}");
-
+      AppLog.s('Student profile updated', name: 'PROFILE');
       return StudentUpdateResponse.fromJson(response.data);
-    } catch (e) {
-      print("❌ Error in updateProfile (from ProfileUpdateService):");
-      print(e.toString());
+    } catch (e, st) {
+      AppLog.e('updateProfileForStudent failed', name: 'PROFILE', error: e, st: st);
       rethrow;
     }
   }
 
   Future<StudentUpdateResponse> updateStudentProfile(updateData) async {
-    print(updateData);
     try {
       final response = await ApiService.post(
         ApiConfig.studentProfileUpdate,
         updateData,
       );
-      print("✅ Response from updateProfiled: ${response.data}");
+      AppLog.s('Student profile updated', name: 'PROFILE');
       return StudentUpdateResponse.fromJson(response.data);
-    } catch (e) {
-      print("❌ Error in updateProfile (from ProfileUpdateService):");
-      print(e.toString());
+    } catch (e, st) {
+      AppLog.e('updateStudentProfile failed', name: 'PROFILE', error: e, st: st);
       rethrow;
     }
   }
 
   Future<TutorProfileResponse> updateProfileForTutor(
       TutorProfileUpdateRequest updateData) async {
-    print("update profile called for tutor ");
     try {
       final response = await ApiService.post(
         ApiConfig.teacherProfileUpdate,
         updateData,
       );
-
-      print("✅ Response from updateProfilel: ${response.data}");
-
+      AppLog.s('Tutor profile updated', name: 'PROFILE');
       return TutorProfileResponse.fromJson(response.data);
-    } catch (e) {
-      print("❌ Error in updateProfile For Tutor :");
-      print(e.toString());
+    } catch (e, st) {
+      AppLog.e('updateProfileForTutor failed', name: 'PROFILE', error: e, st: st);
       rethrow;
     }
   }
 
   Future<TutorProfileResponse> updateTutorProfile(updateData) async {
-    print("diineskumar : ${updateData.toString()}");
-    print("update profile called for tutor ");
     try {
       final response = await ApiService.postt(
           ApiConfig.teacherProfileUpdate, updateData,
           isJson: true);
-      print("✅ Response from updateProfileb: $response");
+      AppLog.s('Tutor profile updated', name: 'PROFILE');
       return TutorProfileResponse.fromJson(response.data);
-    } catch (e) {
-      print("❌ Error in updateTutorProfile");
-      print(e.toString());
+    } catch (e, st) {
+      AppLog.e('updateTutorProfile failed', name: 'PROFILE', error: e, st: st);
       rethrow;
     }
   }
@@ -210,17 +189,15 @@ class ProfileUpdateService {
   }
 
   Future<TutorProfileResponse> updateAdminProfileVerifiy(updateData) async {
-    print("updateAdminProfileVerifiy");
     try {
       final response = await ApiService.post(
         ApiConfig.tutorburoProfileVerify,
         updateData,
       );
-      print("✅ Response from updateAdminProfile: ${response.data}");
+      AppLog.s('Admin profile verified', name: 'PROFILE');
       return TutorProfileResponse.fromJson(response.data);
-    } catch (e) {
-      print("❌ Error in updateProfile (from ProfileUpdateService):");
-      print(e.toString());
+    } catch (e, st) {
+      AppLog.e('updateAdminProfileVerifiy failed', name: 'PROFILE', error: e, st: st);
       rethrow;
     }
   }

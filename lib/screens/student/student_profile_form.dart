@@ -103,7 +103,12 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
           selectedClassId = student.courseId;
           selectedSubjectId = student.subjectId;
           selectedState = student.state;
-          selectedIdType = student.idType;
+          final rawId = (student.idType ?? '').trim();
+          if (rawId.toLowerCase() == 'voterid' || rawId.toLowerCase() == 'voter id' || rawId.toLowerCase() == 'voter') {
+            selectedIdType = 'Voter ID';
+          } else {
+            selectedIdType = const ["Aadhar", "PAN", "Voter ID"].contains(rawId) ? rawId : null;
+          }
         });
 
         // Trigger cascade loads
@@ -232,7 +237,9 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
                 .clamp(300.0, double.infinity),
         location: localityController.text.trim(),
         state: selectedState ?? "",
-        idType: selectedIdType ?? "",
+        idType: (selectedIdType == 'Voter ID' || selectedIdType?.toLowerCase() == 'voter id')
+            ? 'VoterID'
+            : (selectedIdType ?? ""),
         remark: remarkController.text.trim(),
         profilePicture: profileBase64,
         frontId: frontBase64,
@@ -339,7 +346,6 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
                     optionsBuilder: (TextEditingValue tev) {
                       final q = tev.text.trim();
                       if (q.isEmpty) return const Iterable<String>.empty();
-                      _locationController.onQueryChanged(q);
                       return _locationController.suggestions;
                     },
                     onSelected: (val) {
@@ -349,29 +355,29 @@ class _StudentProfileFormScreenState extends State<StudentProfileFormScreen> {
                     },
                     fieldViewBuilder:
                         (context, textCtrl, focusNode, onFieldSubmitted) {
-                      return Obx(() {
-                        final loading = _locationController.isSearching.value;
-                        return TextField(
-                          controller: textCtrl,
-                          focusNode: focusNode,
-                          textCapitalization: TextCapitalization.words,
-                          decoration: InputDecoration(
-                            labelText: 'Locality',
-                            hintText: 'Type city/area (e.g., lko)…',
-                            suffixIcon: loading
-                                ? const Padding(
-                                    padding: EdgeInsets.all(10),
-                                    child: SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2)),
-                                  )
-                                : const Icon(Icons.location_on_outlined),
-                          ),
-                          onSubmitted: (_) => onFieldSubmitted(),
-                        );
-                      });
+                      return TextField(
+                        controller: textCtrl,
+                        focusNode: focusNode,
+                        textCapitalization: TextCapitalization.words,
+                        onChanged: (val) {
+                          _locationController.onQueryChanged(val);
+                        },
+                        decoration: InputDecoration(
+                          labelText: 'Locality',
+                          hintText: 'Type city/area (e.g., lko)…',
+                          suffixIcon: Obx(() => _locationController.isSearching.value
+                              ? const Padding(
+                                  padding: EdgeInsets.all(10),
+                                  child: SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2)),
+                                )
+                              : const Icon(Icons.location_on_outlined)),
+                        ),
+                        onSubmitted: (_) => onFieldSubmitted(),
+                      );
                     },
                     optionsViewBuilder: (context, onSelected, options) {
                       // Use Rx suggestions directly

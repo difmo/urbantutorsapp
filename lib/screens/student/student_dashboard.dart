@@ -78,9 +78,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
   String _greet() {
     final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
+    if (h < 12) return 'Good Morning';
+    if (h < 17) return 'Good Afternoon';
+    return 'Good Evening';
   }
 
   @override
@@ -143,10 +143,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             profileImage: prof?.profile_picture,
             balance: balanceText,
             onCoinTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CoinsStudentScreen()),
-              );
+              if (_currentIndex == 2) {
+                // Upgrade screen is already open, do not open again
+                return;
+              }
+              setState(() => _currentIndex = 2);
             },
           );
         }),
@@ -501,8 +502,8 @@ class _FeatureCard extends StatelessWidget {
     return _InkCard(
       onTap: onTap,
       child: Container(
-        height: height, // use height here
-        padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+        constraints: BoxConstraints(minHeight: height),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: gradient,
@@ -548,9 +549,9 @@ class _BigActionCard extends StatelessWidget {
     return _InkCard(
       onTap: onTap,
       child: Container(
-        height: 100,
+        constraints: const BoxConstraints(minHeight: 100),
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: gradient,
@@ -593,6 +594,8 @@ class _BigActionCard extends StatelessWidget {
                               : AppColors.primaryColor)),
                   const SizedBox(height: 6),
                   Text(subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style:
                           const TextStyle(fontSize: 12, color: Colors.black54)),
                 ],

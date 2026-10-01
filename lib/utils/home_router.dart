@@ -4,7 +4,6 @@ import 'package:urbantutorsapp/screens/admin/admin_pending_screen.dart';
 import 'package:urbantutorsapp/screens/admin/admin_profile_form.dart';
 import 'package:urbantutorsapp/screens/student/student_dashboard.dart';
 import 'package:urbantutorsapp/screens/student/student_profile_form.dart';
-import 'package:urbantutorsapp/screens/tutor/student_peding_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/teacher_pending_screen.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_dashboard.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_profile_form.dart';
@@ -24,9 +23,7 @@ Widget homeScreenFor(int? roleId, int? profileStatus) {
     case Roles.student:
       return switch (profileStatus) {
         0 => StudentProfileFormScreen(),
-        1 => const StudentPendingScreen(),
-        2 => StudentDashboardScreen(),
-        _ => const DefaultDashboardScreen(),
+        _ => StudentDashboardScreen(),
       };
     case Roles.tutor:
       return switch (profileStatus) {

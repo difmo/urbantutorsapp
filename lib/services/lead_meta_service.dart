@@ -5,6 +5,7 @@ import 'package:urbantutorsapp/services/api_exception.dart';
 import 'package:http/http.dart' as http;
 import 'package:urbantutorsapp/models/notes_models.dart.dart';
 import 'package:urbantutorsapp/utils/api_config.dart';
+import 'package:urbantutorsapp/utils/app_logger.dart';
 
 class LeadClass {
   final int classId;
@@ -205,7 +206,7 @@ class LeadMetaService {
   Future<List<LeadSubject>> getSubjectsByClassAndBoard1(
       {required List<int> selBoardIds, required List<int> selClassIds}) async {
     final requestBody = {
-      'board_id': 99,
+      'board_id': selBoardIds.isNotEmpty ? selBoardIds.first : 99,
       'class_id': selClassIds,
     };
     final uri = Uri.parse('$_base/leadgetsubjects');
@@ -308,10 +309,22 @@ Future<http.Response> _httpPost(Uri uri,
     return await http
         .post(uri, headers: headers, body: body)
         .timeout(const Duration(seconds: 20));
-  } on TimeoutException {
+  } on TimeoutException catch (te) {
+    AppLogger.apiError(
+      'LeadMeta API request timeout (20s)',
+      method: 'POST',
+      url: uri.toString(),
+      error: te,
+    );
     throw const ApiException(
         'The server is taking too long to respond. Please try again.');
-  } on SocketException {
+  } on SocketException catch (se) {
+    AppLogger.apiError(
+      'LeadMeta API socket error: No internet connection',
+      method: 'POST',
+      url: uri.toString(),
+      error: se,
+    );
     throw const ApiException(
         'No internet connection. Please check your network and try again.');
   }
@@ -321,7 +334,11 @@ Future<http.Response> _httpPost(Uri uri,
 dynamic _decodeJson(String body) {
   try {
     return jsonDecode(body);
-  } on FormatException {
+  } on FormatException catch (fe) {
+    AppLogger.apiError(
+      'LeadMeta API returned invalid JSON response',
+      error: fe,
+    );
     throw const ApiException(
         'Unexpected response from server. Please try again later.');
   }

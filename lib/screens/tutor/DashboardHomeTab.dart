@@ -483,8 +483,12 @@ class _LeadCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 6),
-            _kv(Icons.school, 'Name', lead.studentName),
+            _kv(Icons.person, 'Name', lead.studentName),
             const SizedBox(height: 6),
+            if (lead.boardName.trim().isNotEmpty && lead.boardName.trim() != 'null') ...[
+              _kv(Icons.school, 'Board', lead.boardName.trim()),
+              const SizedBox(height: 4),
+            ],
             _kv(Icons.school, 'Class', lead.courseName),
             const SizedBox(height: 4),
             _kv(Icons.book, 'Subject', lead.subjectName),
@@ -492,7 +496,7 @@ class _LeadCard extends StatelessWidget {
             _kv(
                 Icons.location_on,
                 'Location',
-                "${lead.location},${lead.state}"
+                "${_cleanLocation(lead.location, lead.state)}"
                     "${distanceKm != null ? ' (${distanceKm!.toStringAsFixed(1)} km away)' : ''}"),
             const SizedBox(height: 6),
             Column(
@@ -504,9 +508,7 @@ class _LeadCard extends StatelessWidget {
                   label: 'Mode',
                   value: lead.mode,
                   iconColor: AppColors.accentColor,
-                  trailing: (int.tryParse(lead.leadCount) ?? 0) > 0
-                      ? leadCountPill('Max ${lead.leadCount}')
-                      : null,
+                  trailing: leadCountPill('Max ${_resolveLeadCount(lead)}'),
                 ),
                 const SizedBox(height: 6),
 
@@ -534,6 +536,37 @@ class _LeadCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  static String _cleanLocation(String location, [String? state]) {
+    final parts = <String>[];
+    if (location.trim().isNotEmpty) {
+      for (final seg in location.split(',')) {
+        final s = seg.trim();
+        if (s.isNotEmpty && !parts.any((p) => p.toLowerCase() == s.toLowerCase())) {
+          parts.add(s);
+        }
+      }
+    }
+    if (state != null && state.trim().isNotEmpty) {
+      for (final seg in state.split(',')) {
+        final s = seg.trim();
+        if (s.isNotEmpty && !parts.any((p) => p.toLowerCase() == s.toLowerCase())) {
+          parts.add(s);
+        }
+      }
+    }
+    final result = parts.join(', ').replaceAll(RegExp(r'[\s,]+$'), '').trim();
+    return result.isEmpty ? '—' : result;
+  }
+
+  static String _resolveLeadCount(TutorLead lead) {
+    final direct = lead.leadCount.trim();
+    final directNum = int.tryParse(direct);
+    if (directNum != null && directNum > 0) {
+      return directNum.toString();
+    }
+    return '1';
   }
 
   static Widget _kv(IconData icon, String label, String text) {
@@ -616,13 +649,17 @@ class _GrabbedLeadCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  lead.studentName.isEmpty
-                      ? 'Lead #${lead.leadId}'
-                      : lead.studentName,
-                  style: const TextStyle(
-                    color: AppColors.accentColor,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Text(
+                    lead.studentName.isEmpty
+                        ? 'Lead #${lead.leadId}'
+                        : lead.studentName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.accentColor,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],

@@ -80,6 +80,11 @@ class _TutorProfileState extends State<TutorProfile> {
   final List<int> _selClassIds = [];
   final List<int> _selSubjectIds = [];
 
+  // Cached name lookups from tutor profile to prevent missing names / '#$id'
+  final Map<int, String> _knownBoardNames = {};
+  final Map<int, String> _knownClassNames = {};
+  final Map<int, String> _knownSubjectNames = {};
+
   // Mode & State
   // Values accepted by the server (it rejects 'Any').
   static const _modes = <String>['Online', 'Offline', 'Both'];
@@ -111,16 +116,31 @@ class _TutorProfileState extends State<TutorProfile> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _c.refreshAll());
 
     // fetch master data and profile
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       _master.fetchMasterData();
-      _p.fetchProfileForTutor();
+      await _p.fetchProfileForTutor();
+      if (mounted) await _hydrate();
     });
 
     // Hydrate whenever profile or master data changes
     _workers.add(everAll([_p.tutorprofileData, _master.masterData], (_) async {
-      if (_master.masterData.value != null) {
+      if (_master.masterData.value != null && mounted) {
         await _hydrate();
       }
+    }));
+
+    // React to LeadMetaController classes and subjects updates
+    _workers.add(ever(_leadMeta.classes, (_) {
+      if (mounted) setState(() {});
+    }));
+    _workers.add(ever(_leadMeta.subjects, (_) {
+      if (mounted) setState(() {});
+    }));
+    _workers.add(ever(_leadMeta.isFetchingClasses, (_) {
+      if (mounted) setState(() {});
+    }));
+    _workers.add(ever(_leadMeta.isFetchingSubjects, (_) {
+      if (mounted) setState(() {});
     }));
   }
 
@@ -166,9 +186,24 @@ class _TutorProfileState extends State<TutorProfile> {
       for (final item in teachingDetails) {
         try {
           if (item is TeachingDetails) {
-            if (item.boardId != null) boards.add(item.boardId);
-            if (item.classId != null) classes.add(item.classId);
-            if (item.subjectId != null) subjects.add(item.subjectId);
+            if (item.boardId != null) {
+              boards.add(item.boardId);
+              if (item.boardName != null && item.boardName!.trim().isNotEmpty) {
+                _knownBoardNames[item.boardId!] = item.boardName!.trim();
+              }
+            }
+            if (item.classId != null) {
+              classes.add(item.classId);
+              if (item.className != null && item.className!.trim().isNotEmpty) {
+                _knownClassNames[item.classId!] = item.className!.trim();
+              }
+            }
+            if (item.subjectId != null) {
+              subjects.add(item.subjectId);
+              if (item.subjectName != null && item.subjectName!.trim().isNotEmpty) {
+                _knownSubjectNames[item.subjectId!] = item.subjectName!.trim();
+              }
+            }
             continue;
           }
 
@@ -176,15 +211,36 @@ class _TutorProfileState extends State<TutorProfile> {
             final b = item['board_id'];
             final c = item['class_id'];
             final s = item['subject_id'];
+            final bName = item['board_name'] ?? item['boardName'] ?? item['board_lable'];
+            final cName = item['class_name'] ?? item['className'] ?? item['ClassName'];
+            final sName = item['subject_name'] ?? item['subjectname'] ?? item['subjectName'] ?? item['name'];
 
             if (b != null) {
-              boards.add(b is int ? b : int.tryParse(b.toString()));
+              final bId = b is int ? b : int.tryParse(b.toString());
+              if (bId != null) {
+                boards.add(bId);
+                if (bName != null && bName.toString().trim().isNotEmpty) {
+                  _knownBoardNames[bId] = bName.toString().trim();
+                }
+              }
             }
             if (c != null) {
-              classes.add(c is int ? c : int.tryParse(c.toString()));
+              final cId = c is int ? c : int.tryParse(c.toString());
+              if (cId != null) {
+                classes.add(cId);
+                if (cName != null && cName.toString().trim().isNotEmpty) {
+                  _knownClassNames[cId] = cName.toString().trim();
+                }
+              }
             }
             if (s != null) {
-              subjects.add(s is int ? s : int.tryParse(s.toString()));
+              final sId = s is int ? s : int.tryParse(s.toString());
+              if (sId != null) {
+                subjects.add(sId);
+                if (sName != null && sName.toString().trim().isNotEmpty) {
+                  _knownSubjectNames[sId] = sName.toString().trim();
+                }
+              }
             }
             continue;
           }
@@ -217,7 +273,7 @@ class _TutorProfileState extends State<TutorProfile> {
 
     if (_selBoardIds.isNotEmpty) {
       try {
-        await _leadMeta.loadClasses(_selBoardIds.first);
+        await _leadMeta.loadClassesForBoards(_selBoardIds);
       } catch (_) {}
     }
 
@@ -234,23 +290,15 @@ class _TutorProfileState extends State<TutorProfile> {
       selectedFeeMax = _oneOf(p.maxAmount?.toInt() ?? 0, maxOptionsBase);
 
       final serverName = (p.teacherName ?? '').toString().trim();
-      if (serverName.isNotEmpty && serverName.toLowerCase() != 'user') {
+      if (serverName.isNotEmpty) {
         _nameCtrl.text = serverName;
-      } else if (_nameCtrl.text.trim().isNotEmpty &&
-          _nameCtrl.text.trim().toLowerCase() != 'user') {
-        // Keep whatever valid name is already in the text controller
       } else {
         final cached = StorageService.cachedUserName;
-        if (cached != null &&
-            cached.trim().isNotEmpty &&
-            cached.trim().toLowerCase() != 'user') {
+        if (cached != null && cached.trim().isNotEmpty) {
           _nameCtrl.text = cached.trim();
         } else {
           StorageService.getUserName().then((stored) {
-            if (stored != null &&
-                stored.trim().isNotEmpty &&
-                stored.trim().toLowerCase() != 'user' &&
-                mounted) {
+            if (stored != null && stored.trim().isNotEmpty && mounted) {
               setState(() {
                 _nameCtrl.text = stored.trim();
               });
@@ -270,24 +318,7 @@ class _TutorProfileState extends State<TutorProfile> {
       _zipcodeCtrl.text = (p.pincode ?? '').toString();
 
       String? rawMode = (p.mode ?? '').toString().trim();
-      String? normalizedMode;
-      if (rawMode.isNotEmpty) {
-        final low = rawMode.toLowerCase();
-        if (low == 'online') {
-          normalizedMode = 'Online';
-        } else if (low == 'offline') {
-          normalizedMode = 'Offline';
-        } else if (low == 'any' || low == 'both') {
-          normalizedMode = 'Both';
-        } else {
-          // Try to match case-insensitive
-          final match = _modes.firstWhere((m) => m.toLowerCase() == low,
-              orElse: () => 'Online');
-          normalizedMode = match;
-        }
-      } else {
-        normalizedMode = "Online";
-      }
+      final normalizedMode = _normalizeMode(rawMode);
 
       _profileImageUrl = _resolveImageUrl(p.profilePicture);
 
@@ -603,12 +634,16 @@ class _TutorProfileState extends State<TutorProfile> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(width: 32),
-                const Text(
-                  "Edit Profile",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                const Flexible(
+                  child: Text(
+                    "Edit Profile",
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -780,6 +815,7 @@ class _TutorProfileState extends State<TutorProfile> {
           label: 'Boards',
           selectedIds: _selBoardIds,
           options: _boardOptions(),
+          fallbackNames: _knownBoardNames,
           onTap: () async {
             final picked = await _showMultiSelect(
               context,
@@ -796,7 +832,7 @@ class _TutorProfileState extends State<TutorProfile> {
                 _selSubjectIds.clear();
               });
               if (_selBoardIds.isNotEmpty) {
-                await _leadMeta.loadClasses(_selBoardIds.first);
+                await _leadMeta.loadClassesForBoards(_selBoardIds);
               }
             }
           },
@@ -806,13 +842,14 @@ class _TutorProfileState extends State<TutorProfile> {
           label: 'Classes',
           selectedIds: _selClassIds,
           options: _classOptions(),
+          fallbackNames: _knownClassNames,
           onTap: () async {
             if (_selBoardIds.isEmpty) {
               Get.snackbar('Notice', 'Please select a Board first');
               return;
             }
             if (_leadMeta.classes.isEmpty) {
-              await _leadMeta.loadClasses(_selBoardIds.first);
+              await _leadMeta.loadClassesForBoards(_selBoardIds);
             }
             if (!mounted) return;
             final picked = await _showMultiSelect(
@@ -840,6 +877,7 @@ class _TutorProfileState extends State<TutorProfile> {
           label: 'Subjects',
           selectedIds: _selSubjectIds,
           options: _subjectOptions(),
+          fallbackNames: _knownSubjectNames,
           onTap: () async {
             if (_selClassIds.isEmpty) {
               Get.snackbar('Notice', 'Please select Classes first');
@@ -922,7 +960,10 @@ class _TutorProfileState extends State<TutorProfile> {
           label: 'Teaching Mode',
           value: modeVal,
           items: _modes
-              .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+              .map((m) => DropdownMenuItem(
+                    value: m,
+                    child: Text(m == 'Both' ? 'Both (Online & Offline)' : m),
+                  ))
               .toList(),
           onChanged: (v) => setState(() => modeVal = v),
         ),
@@ -1170,8 +1211,9 @@ class _TutorProfileState extends State<TutorProfile> {
     required List<int> selectedIds,
     required List<OptionInt> options,
     required VoidCallback onTap,
+    Map<int, String>? fallbackNames,
   }) {
-    final selectedNames = _labelsFor(selectedIds, options);
+    final selectedNames = _labelsFor(selectedIds, options, fallbackNames: fallbackNames);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -1225,23 +1267,74 @@ class _TutorProfileState extends State<TutorProfile> {
 
   // -------------------- Data Helpers --------------------
 
-  List<OptionInt> _boardOptions() =>
-      (_master.masterData.value?.data.boardLead ?? [])
-          .map((b) => OptionInt(
-              (b.boardId is int)
-                  ? b.boardId
-                  : int.tryParse('${b.boardId}') ?? 0,
-              b.boardLabel ?? ''))
-          .toList();
-  List<OptionInt> _classOptions() =>
-      _leadMeta.classes.map((c) => OptionInt(c.classId, c.className)).toList();
-  List<OptionInt> _subjectOptions() => _leadMeta.subjects
-      .map((s) => OptionInt(s.subjectId ?? 0, (s.subjectName ?? '').toString()))
-      .toList();
+  String _normalizeMode(String? raw) {
+    if (raw == null) return 'Online';
+    final low = raw.trim().toLowerCase();
+    if (low.isEmpty) return 'Online';
+    if ((low.contains('online') && low.contains('offline')) ||
+        low == 'both' ||
+        low == 'any' ||
+        low.contains('both')) {
+      return 'Both';
+    }
+    if (low.contains('offline')) {
+      return 'Offline';
+    }
+    if (low.contains('online')) {
+      return 'Online';
+    }
+    return 'Online';
+  }
 
-  List<String> _labelsFor(List<int> selectedIds, List<OptionInt> all) {
+  List<OptionInt> _boardOptions() {
+    final map = <int, OptionInt>{};
+    for (final b in _master.masterData.value?.data.boardLead ?? []) {
+      final bid = (b.boardId is int)
+          ? b.boardId as int
+          : int.tryParse('${b.boardId}') ?? 0;
+      if (bid > 0) {
+        map[bid] = OptionInt(bid, b.boardLabel ?? '');
+      }
+    }
+    for (final entry in _knownBoardNames.entries) {
+      map.putIfAbsent(entry.key, () => OptionInt(entry.key, entry.value));
+    }
+    return map.values.toList();
+  }
+
+  List<OptionInt> _classOptions() {
+    final map = <int, OptionInt>{};
+    for (final c in _leadMeta.classes) {
+      map[c.classId] = OptionInt(c.classId, c.className);
+    }
+    for (final entry in _knownClassNames.entries) {
+      map.putIfAbsent(entry.key, () => OptionInt(entry.key, entry.value));
+    }
+    return map.values.toList();
+  }
+
+  List<OptionInt> _subjectOptions() {
+    final map = <int, OptionInt>{};
+    for (final s in _leadMeta.subjects) {
+      map[s.subjectId] = OptionInt(s.subjectId, s.subjectName);
+    }
+    for (final entry in _knownSubjectNames.entries) {
+      map.putIfAbsent(entry.key, () => OptionInt(entry.key, entry.value));
+    }
+    return map.values.toList();
+  }
+
+  List<String> _labelsFor(List<int> selectedIds, List<OptionInt> all,
+      {Map<int, String>? fallbackNames}) {
     final map = {for (final o in all) o.id: o.label};
-    return selectedIds.map((id) => map[id] ?? '#$id').toList();
+    return selectedIds
+        .map((id) {
+          final label = map[id] ?? fallbackNames?[id];
+          if (label != null && label.trim().isNotEmpty) return label.trim();
+          return '';
+        })
+        .where((s) => s.isNotEmpty)
+        .toList();
   }
 
   // -------------------- Share Logic --------------------

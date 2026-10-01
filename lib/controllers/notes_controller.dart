@@ -54,15 +54,29 @@ class NotesController extends GetxController {
         subjects.clear();
         chapters.clear();
         subjects.assignAll(
-            await _svc.fetchSubjects(classId: classId, type: _type(type)));
+            await _svc.fetchSubjects(
+              boardId: boardId,
+              classId: classId,
+              type: _type(type),
+            ));
       });
 
   // Fetch Chapters
-  Future<void> fetchChapters({required int subjectId, String? type}) =>
+  Future<void> fetchChapters({
+    required int subjectId,
+    int? boardId,
+    int? classId,
+    String? type,
+  }) =>
       _run(loadingChapters, () async {
         chapters.clear();
         chapters.assignAll(
-            await _svc.fetchChapters(subjectId: subjectId, type: _type(type)));
+            await _svc.fetchChapters(
+              subjectId: subjectId,
+              boardId: boardId,
+              classId: classId,
+              type: _type(type),
+            ));
       });
 
   // Fetch Chapter Details

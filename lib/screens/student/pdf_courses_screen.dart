@@ -79,9 +79,9 @@ class _PDFCoursesScreenState extends State<PDFCoursesScreen> {
 
   String _greet() {
     final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
+    if (h < 12) return 'Good Morning';
+    if (h < 17) return 'Good Afternoon';
+    return 'Good Evening';
   }
 
   @override
@@ -209,15 +209,19 @@ class _PDFCoursesScreenState extends State<PDFCoursesScreen> {
                       children: [
                         Row(
                           children: [
-                            Text(
-                              item.courseName,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF222B45),
+                            Expanded(
+                              child: Text(
+                                item.courseName,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF222B45),
+                                ),
                               ),
                             ),
-                            Spacer(),
+                            const SizedBox(width: 8),
                             const Icon(Icons.star,
                                 color: Colors.amber, size: 18),
                             const SizedBox(width: 4),
@@ -228,9 +232,7 @@ class _PDFCoursesScreenState extends State<PDFCoursesScreen> {
                                 color: Color(0xFF222B45),
                               ),
                             ),
-                            SizedBox(
-                              width: 8,
-                            ),
+                            const SizedBox(width: 8),
                             _CoinsChip(coins: item.coins),
                           ],
                         ),

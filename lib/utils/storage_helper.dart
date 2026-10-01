@@ -62,9 +62,21 @@ class StorageService {
     _cachedToken = token;
     _cachedRoleId = roleId;
     _cachedProfileStatus = profileStatus;
-    _cachedUserId = userId.toString();
-    _cachedUserName = userName;
-    _cachedUserPhone = userPhone;
+    // Preserve valid existing name if incoming userName is generic ('User', 'Tutor', empty)
+    final incoming = userName.trim();
+    if (incoming.isEmpty ||
+        incoming.toLowerCase() == 'user' ||
+        incoming.toLowerCase() == 'urban user' ||
+        incoming.toLowerCase() == 'tutor') {
+      final existing = await getUserName();
+      if (existing != null && existing.trim().isNotEmpty) {
+        _cachedUserName = existing.trim();
+      } else {
+        _cachedUserName = incoming.isNotEmpty ? incoming : 'User';
+      }
+    } else {
+      _cachedUserName = incoming;
+    }
 
     try {
       final prefs = await _getPrefs();
@@ -75,7 +87,10 @@ class StorageService {
           prefs.setInt(_roleIdKey, roleId),
           prefs.setInt(_profileIdKey, profileStatus),
           prefs.setString(_saveUserID, userId.toString()),
-          prefs.setString(_name, userName),
+          prefs.setString(_name, _cachedUserName!),
+          prefs.setString('teacher_name', _cachedUserName!),
+          prefs.setString('reg_name', _cachedUserName!),
+          prefs.setString('user_name', _cachedUserName!),
           prefs.setString(_phoneNumber, userPhone),
         ]);
       }
@@ -166,21 +181,112 @@ class StorageService {
   }
 
   static Future<void> saveUserName(String name) async {
-    _cachedUserName = name;
+    final clean = name.trim();
+    if (clean.isEmpty ||
+        clean.toLowerCase() == 'user' ||
+        clean.toLowerCase() == 'urban user' ||
+        clean.toLowerCase() == 'tutor') {
+      // Do NOT overwrite an existing valid user name with a generic fallback!
+      return;
+    }
+    _cachedUserName = clean;
     try {
       final prefs = await _getPrefs();
-      await prefs?.setString(_name, name);
+      if (prefs != null) {
+        await Future.wait([
+          prefs.setString(_name, clean),
+          prefs.setString('teacher_name', clean),
+          prefs.setString('student_name', clean),
+          prefs.setString('reg_name', clean),
+          prefs.setString('user_name', clean),
+          prefs.setString('full_name', clean),
+        ]);
+      }
     } catch (_) {}
   }
 
   static Future<String?> getUserName() async {
     try {
-      final prefs = await _getPrefs();
-      final val = prefs?.getString(_name);
-      if (val != null && val.isNotEmpty) {
-        _cachedUserName = val;
-        return val;
+      if (_cachedUserName != null &&
+          _cachedUserName!.trim().isNotEmpty &&
+          _cachedUserName!.trim().toLowerCase() != 'user' &&
+          _cachedUserName!.trim().toLowerCase() != 'urban user' &&
+          _cachedUserName!.trim().toLowerCase() != 'tutor') {
+        return _cachedUserName!.trim();
       }
+
+      final prefs = await _getPrefs();
+      if (prefs == null) return _cachedUserName;
+
+      // 1. Check all standard keys in priority order
+      final keysToCheck = [
+        'teacher_name',
+        'student_name',
+        _name, // 'name'
+        'reg_name',
+        'user_name',
+        'full_name',
+      ];
+
+      for (final k in keysToCheck) {
+        final val = prefs.getString(k);
+        if (val != null &&
+            val.trim().isNotEmpty &&
+            val.trim().toLowerCase() != 'user' &&
+            val.trim().toLowerCase() != 'urban user' &&
+            val.trim().toLowerCase() != 'tutor') {
+          _cachedUserName = val.trim();
+          await prefs.setString(_name, _cachedUserName!);
+          await prefs.setString('teacher_name', _cachedUserName!);
+          return _cachedUserName;
+        }
+      }
+
+      // 2. Try parsing name from stored userData json blob
+      final userDataStr = prefs.getString('userData');
+      if (userDataStr != null && userDataStr.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(userDataStr);
+          if (decoded is Map) {
+            final u = decoded['userData'] ??
+                decoded['data']?['userData'] ??
+                decoded['data'] ??
+                decoded['user'] ??
+                decoded;
+            if (u is Map) {
+              final candidates = [
+                u['teacher_name'],
+                u['student_name'],
+                u['name'],
+                u['full_name'],
+                u['user_name'],
+              ];
+              for (final c in candidates) {
+                if (c != null) {
+                  final s = c.toString().trim();
+                  if (s.isNotEmpty &&
+                      s.toLowerCase() != 'user' &&
+                      s.toLowerCase() != 'urban user' &&
+                      s.toLowerCase() != 'tutor') {
+                    _cachedUserName = s;
+                    await prefs.setString(_name, s);
+                    await prefs.setString('teacher_name', s);
+                    return _cachedUserName;
+                  }
+                }
+              }
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 3. Fallback to whatever is stored if no custom name matched
+      final fallback = prefs.getString(_name) ?? prefs.getString('user_name') ?? _cachedUserName;
+      if (fallback != null && fallback.trim().isNotEmpty) {
+        _cachedUserName = fallback.trim();
+        return _cachedUserName;
+      }
+
       return _cachedUserName;
     } catch (_) {
       return _cachedUserName;

@@ -83,9 +83,9 @@ class _CoinsStudentScreenState extends State<CoinsStudentScreen> {
 
   String _greet() {
     final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
+    if (h < 12) return 'Good Morning';
+    if (h < 17) return 'Good Afternoon';
+    return 'Good Evening';
   }
 
   @override
@@ -144,10 +144,7 @@ class _CoinsStudentScreenState extends State<CoinsStudentScreen> {
             name: displayName,
             balance: balanceText,
             onCoinTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CoinsStudentScreen()),
-              );
+              // Already on the wallet/upgrade screen, do not open again
             },
           );
         }),

@@ -79,10 +79,14 @@ class _OTPScreenState extends State<OTPScreen> {
         final roleId = (userData?.roles.isNotEmpty == true)
             ? userData!.roles[0].roleId
             : widget.roleId;
-        final profileStatus = userData?.profileStatus ?? 0;
+        final profileStatus = (roleId == Roles.student) ? 2 : (userData?.profileStatus ?? 0);
+        if (roleId == Roles.student) {
+          await StorageService.saveIsProfileStatus(2);
+        }
 
         final dashboard = homeScreenFor(roleId, profileStatus);
 
+        if (!mounted) return;
         // Navigate immediately so user doesn't wait
         Navigator.pushAndRemoveUntil(
           context,
@@ -174,31 +178,37 @@ class _OTPScreenState extends State<OTPScreen> {
               const SizedBox(height: 32),
 
               /// OTP Input
-              PinCodeTextField(
-                appContext: context,
-                controller: _otpController,
-                length: 6,
-                keyboardType: TextInputType.number,
-                animationType: AnimationType.fade,
-                autoFocus: true,
-                cursorColor: primary,
-                enableActiveFill: true,
-                onChanged: (value) => setState(() => otp = value),
-                onCompleted: (value) {
-                  setState(() => otp = value);
-                  FocusScope.of(context).unfocus();
-                },
-                pinTheme: PinTheme(
-                  shape: PinCodeFieldShape.box,
-                  borderRadius: BorderRadius.circular(10),
-                  fieldHeight: 50,
-                  fieldWidth: 45,
-                  activeColor: primary,
-                  selectedColor: primary,
-                  inactiveColor: Colors.grey.shade300,
-                  activeFillColor: Colors.white,
-                  selectedFillColor: Colors.white,
-                  inactiveFillColor: Colors.grey.shade100,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: SizedBox(
+                  width: 320,
+                  child: PinCodeTextField(
+                    appContext: context,
+                    controller: _otpController,
+                    length: 6,
+                    keyboardType: TextInputType.number,
+                    animationType: AnimationType.fade,
+                    autoFocus: true,
+                    cursorColor: primary,
+                    enableActiveFill: true,
+                    onChanged: (value) => setState(() => otp = value),
+                    onCompleted: (value) {
+                      setState(() => otp = value);
+                      FocusScope.of(context).unfocus();
+                    },
+                    pinTheme: PinTheme(
+                      shape: PinCodeFieldShape.box,
+                      borderRadius: BorderRadius.circular(10),
+                      fieldHeight: 50,
+                      fieldWidth: 45,
+                      activeColor: primary,
+                      selectedColor: primary,
+                      inactiveColor: Colors.grey.shade300,
+                      activeFillColor: Colors.white,
+                      selectedFillColor: Colors.white,
+                      inactiveFillColor: Colors.grey.shade100,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 30),

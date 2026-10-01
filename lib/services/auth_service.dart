@@ -26,6 +26,12 @@ Future<LoginResponse> verifyOtp({
       'otp': otp,
       'role_id': roleId,
       'firebase_token': "STATIC_FB_TOKEN_ABC123",
+      if (roleId == '3') ...{
+        'profile_status': 2,
+        'status': 1,
+        'is_verify': 1,
+        'is_verified': 1,
+      },
     };
     if (name.trim().isNotEmpty &&
         name.trim().toLowerCase() != 'user' &&

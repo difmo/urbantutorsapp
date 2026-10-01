@@ -147,4 +147,26 @@ void main() {
     expect(prefs.getString('auth_token'), isNull);
     await Get.deleteAll(force: true);
   });
+
+  test('forwards token into Map<String, Object> payloads without type error', () async {
+    final adapter = _install(_FakeAdapter(
+        status: 200,
+        body: jsonEncode({'success': true, 'data': {}})));
+
+    await StorageService.saveToken('test-token-123');
+
+    // Inferred as Map<String, Object> because all values are non-null Objects
+    final Map<String, Object> mapPayload = {
+      'user_id': 123,
+      'name': 'Test User',
+      'experience_years': 5,
+    };
+
+    await ApiService.postt('/test_endpoint', mapPayload, isJson: true);
+
+    expect(adapter.lastRequest, isNotNull);
+    final sentData = adapter.lastRequest!.data;
+    expect(sentData, isA<Map>());
+    expect((sentData as Map)['token'], 'test-token-123');
+  });
 }
