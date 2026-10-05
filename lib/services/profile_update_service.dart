@@ -133,6 +133,42 @@ class ProfileUpdateService {
           ApiConfig.teacherProfileUpdate, updateData,
           isJson: true);
       AppLog.s('Tutor profile updated', name: 'PROFILE');
+
+      // Also sync user name to /profileupdate to ensure users table & website reflect it
+      if (updateData is Map) {
+        final nameCandidate = (updateData['teacher_name'] ??
+                updateData['name'] ??
+                updateData['full_name'] ??
+                updateData['user_name'])
+            ?.toString()
+            .trim();
+        final userId = updateData['user_id'] ?? updateData['id'];
+        if (nameCandidate != null &&
+            nameCandidate.isNotEmpty &&
+            nameCandidate.toLowerCase() != 'user' &&
+            nameCandidate.toLowerCase() != 'tutor') {
+          try {
+            await ApiService.post(
+              ApiConfig.profileUpdate,
+              {
+                if (userId != null) 'user_id': userId,
+                if (userId != null) 'id': userId,
+                'name': nameCandidate,
+                'user_name': nameCandidate,
+                'full_name': nameCandidate,
+                'teacher_name': nameCandidate,
+                if (updateData['email'] != null) 'email': updateData['email'],
+                if (updateData['mobile'] != null) 'mobile': updateData['mobile'],
+              },
+              isJson: true,
+            );
+            AppLog.s('Base profile name synced to /profileupdate: $nameCandidate', name: 'PROFILE');
+          } catch (e) {
+            AppLog.w('Failed to sync to /profileupdate: $e', name: 'PROFILE');
+          }
+        }
+      }
+
       return TutorProfileResponse.fromJson(response.data);
     } catch (e, st) {
       AppLog.e('updateTutorProfile failed', name: 'PROFILE', error: e, st: st);

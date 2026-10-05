@@ -185,13 +185,18 @@ class _StudentDrawerState extends State<Tutordrawer> {
                   );
                 }
 
-                final cached = StorageService.cachedUserName;
-                final serverName = _str(p?.teacherName);
-                final name = serverName.isNotEmpty
-                    ? serverName
-                    : (cached != null && cached.trim().isNotEmpty
-                        ? cached.trim()
-                        : 'User');
+                final cached = StorageService.cachedUserName?.trim();
+                final serverName = _str(p?.teacherName).trim();
+                bool isGeneric(String? s) =>
+                    s == null ||
+                    s.isEmpty ||
+                    s.toLowerCase() == 'user' ||
+                    s.toLowerCase() == 'tutor' ||
+                    s.toLowerCase() == 'urban user';
+
+                final name = (cached != null && !isGeneric(cached))
+                    ? cached
+                    : (!isGeneric(serverName) ? serverName : 'User');
                 final mobile = _str(p?.mobile, fallback: '');
                 final course = _str(p?.teacherName, fallback: '');
                 final profileImage = p?.profilePicture;

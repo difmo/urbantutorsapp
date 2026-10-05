@@ -43,7 +43,7 @@ void main() {
   test('non-JSON responses raise a readable error', () async {
     await expectLater(
       http.runWithClient(
-        () => NotesService().fetchSubjects(classId: 1),
+        () => NotesService().fetchSubjects(classId: 1, boardId: 1),
         () => client('<html>oops</html>'),
       ),
       throwsA(isA<ApiException>()),

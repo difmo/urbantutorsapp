@@ -97,11 +97,13 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
   }
 
   String _toApiIdType(String? idType) {
-    if (idType == null || idType.isEmpty) return '';
+    if (idType == null || idType.isEmpty) return 'Aadhar';
     final clean = idType.trim().toLowerCase();
     if (clean == 'voter id' || clean == 'voterid' || clean == 'voter') {
-      return 'VoterID';
+      return 'Voter ID';
     }
+    if (clean == 'aadhar' || clean == 'aadhaar') return 'Aadhar';
+    if (clean == 'passport') return 'Passport';
     return idType.trim();
   }
   // Values accepted by the server (it rejects 'Any').
@@ -114,9 +116,14 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
   final Map<int, String> _knownSubjectNames = {};
 
   String _normalizeMode(String? raw) {
-    if (raw == null) return 'Online';
+    if (raw == null || raw.trim().isEmpty) {
+      final cached = StorageService.cachedTeachingMode;
+      if (cached != null && cached.trim().isNotEmpty) {
+        return _normalizeMode(cached);
+      }
+      return 'Online';
+    }
     final low = raw.trim().toLowerCase();
-    if (low.isEmpty) return 'Online';
     if ((low.contains('online') && low.contains('offline')) ||
         low == 'both' ||
         low == 'any' ||
@@ -178,7 +185,13 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
       selectedIdType = _normalizeIdType(teacher.idType);
       // Normalize mode cleanly
       final serverMode = (teacher.mode ?? '').trim();
-      selectedIdMode = _normalizeMode(serverMode);
+      final cachedMode = StorageService.cachedTeachingMode;
+      final modeToUse = serverMode.isNotEmpty
+          ? serverMode
+          : (cachedMode != null && cachedMode.trim().isNotEmpty
+              ? cachedMode
+              : (selectedIdMode ?? 'Online'));
+      selectedIdMode = _normalizeMode(modeToUse);
 
       setState(() {});
     });
@@ -350,7 +363,13 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
           (p.experienceYears?.toString() ?? '').toString();
       _qualificationCtrl.text = (p.remark ?? '').toString();
       String? rawMode = (p.mode ?? '').toString().trim();
-      final normalizedMode = _normalizeMode(rawMode);
+      final cachedMode = StorageService.cachedTeachingMode;
+      final modeToUse = rawMode.isNotEmpty
+          ? rawMode
+          : (cachedMode != null && cachedMode.trim().isNotEmpty
+              ? cachedMode
+              : (selectedIdMode ?? 'Online'));
+      final normalizedMode = _normalizeMode(modeToUse);
 
       _profileImageUrl = _resolveImageUrl(p.profilePicture);
 
@@ -604,19 +623,29 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
       final apiIdType = _toApiIdType(selectedIdType);
       final request = {
         "user_id": uidStr,
+        "id": uidStr,
+        "teacher_id": uidStr,
         "teacher_name": newName,
+        "teacherName": newName,
         "name": newName,
         "full_name": newName,
+        "fullName": newName,
+        "user_name": newName,
+        "userName": newName,
+        "tutor_name": newName,
         "email": emailController.text.trim(),
         "location": localityController.text.trim(),
         "idType": apiIdType,
         "idtype": apiIdType,
+        "id_type": apiIdType,
         "qualification": _qualificationCtrl.text.trim(),
         "profile_picture": profileBase64,
         "min_amount": selectedFeeMin ?? 0,
         "max_amount": selectedFeeMax ?? 0,
         "price": (selectedFeeMax ?? 0).toDouble(),
         "mode": selectedIdMode,
+        "teaching_mode": selectedIdMode,
+        "teachingMode": selectedIdMode,
         "experience_years": _expToInt(selectedIdExperienceInYears),
         "place_id": _placeId ?? "",
         "latitude": _latitude ?? "",
@@ -633,6 +662,12 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
       if (ss) {
         if (newName.isNotEmpty) {
           await StorageService.saveUserName(newName);
+        }
+        if ((selectedIdMode ?? '').isNotEmpty) {
+          await StorageService.saveTeachingMode(selectedIdMode!);
+        }
+        if (apiIdType.isNotEmpty) {
+          await StorageService.saveIdType(apiIdType);
         }
         Get.snackbar('Success', 'Profile updated successfully');
         _refreshTutorProfile();
@@ -1383,38 +1418,55 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
                     const SizedBox(height: 16),
 
-                    // Modes
-                    DropdownButtonFormField<String>(
-                      decoration: InputDecoration(
-                        labelText: "Teaching Mode",
-                        prefixIcon: const Icon(Icons.computer_outlined),
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey.shade200),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: primary, width: 2),
+                    Theme(
+                      data: Theme.of(context).copyWith(
+                        canvasColor: Colors.white,
+                        focusColor: Colors.transparent,
+                        hoverColor: Colors.transparent,
+                        splashColor: Colors.transparent,
+                        highlightColor: Colors.transparent,
+                        colorScheme: Theme.of(context).colorScheme.copyWith(
+                          surface: Colors.white,
+                          surfaceContainer: Colors.white,
+                          surfaceContainerHighest: Colors.white,
+                          surfaceContainerLow: Colors.white,
+                          surfaceContainerLowest: Colors.white,
                         ),
                       ),
-                      initialValue: selectedIdMode,
-                      items: _modes
-                          .map((id) =>
-                              DropdownMenuItem(value: id, child: Text(id == 'Both' ? 'Both (Online & Offline)' : id)))
-                          .toList(),
-                      onChanged: (val) => setState(() => selectedIdMode = val),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Mode is required';
-                        }
-                        return null;
-                      },
+                      child: DropdownButtonFormField<String>(
+                        dropdownColor: Colors.white,
+                        decoration: InputDecoration(
+                          labelText: "Teaching Mode",
+                          prefixIcon: const Icon(Icons.computer_outlined),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade200),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: primary, width: 2),
+                          ),
+                        ),
+                        key: ValueKey('mode_$selectedIdMode'),
+                        value: _modes.contains(selectedIdMode) ? selectedIdMode : null,
+                        items: _modes
+                            .map((id) =>
+                                DropdownMenuItem(value: id, child: Text(id == 'Both' ? 'Both (Online & Offline)' : id)))
+                            .toList(),
+                        onChanged: (val) => setState(() => selectedIdMode = val),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return 'Mode is required';
+                          }
+                          return null;
+                        },
+                      ),
                     ),
 
                     const SizedBox(height: 24),

@@ -54,6 +54,7 @@ class _TutorProfileState extends State<TutorProfile> {
 
   // Text fields
   final _nameCtrl = TextEditingController();
+  String? _lastSavedName;
   final _emailCtrl = TextEditingController();
   final _localityCtrl = TextEditingController();
   final _expCtrl = TextEditingController(); // experience years
@@ -95,6 +96,14 @@ class _TutorProfileState extends State<TutorProfile> {
   XFile? _profileImage;
   String? _profileImageUrl; // from server
 
+  // ID verification state
+  static const _idTypes = ['Aadhar', 'Voter ID', 'Passport'];
+  String? selectedIdType = 'Aadhar';
+  XFile? _frontIdImage;
+  String? _frontIdUrl;
+  XFile? _backIdImage;
+  String? _backIdUrl;
+
   // Location
   String? _latitude;
   String? _longitude;
@@ -109,6 +118,16 @@ class _TutorProfileState extends State<TutorProfile> {
   @override
   void initState() {
     super.initState();
+
+    final cachedMode = StorageService.cachedTeachingMode;
+    if (cachedMode != null && cachedMode.trim().isNotEmpty) {
+      modeVal = _normalizeMode(cachedMode);
+    }
+
+    final cachedIdType = StorageService.cachedIdType;
+    if (cachedIdType != null && cachedIdType.trim().isNotEmpty) {
+      selectedIdType = _normalizeIdType(cachedIdType) ?? 'Aadhar';
+    }
 
     _c = Get.isRegistered<CoinsController>()
         ? Get.find<CoinsController>()
@@ -166,7 +185,8 @@ class _TutorProfileState extends State<TutorProfile> {
   String? _resolveImageUrl(String? path) {
     if (path == null || path.isEmpty) return null;
     if (path.startsWith('http')) return path;
-    return 'https://urbantutors.pro/$path';
+    final cleanPath = path.startsWith('/') ? path.substring(1) : path;
+    return 'https://urbantutors.pro/$cleanPath';
   }
 
   List<int> _uniqueInts(Iterable<int?> items) {
@@ -290,23 +310,34 @@ class _TutorProfileState extends State<TutorProfile> {
       selectedFeeMax = _oneOf(p.maxAmount?.toInt() ?? 0, maxOptionsBase);
 
       final serverName = (p.teacherName ?? '').toString().trim();
-      if (serverName.isNotEmpty) {
-        _nameCtrl.text = serverName;
+      final cached = StorageService.cachedUserName?.trim();
+      bool isGeneric(String? s) =>
+          s == null ||
+          s.trim().isEmpty ||
+          s.trim().toLowerCase() == 'user' ||
+          s.trim().toLowerCase() == 'tutor' ||
+          s.trim().toLowerCase() == 'urban user';
+
+      final effectiveName = (_lastSavedName != null && !isGeneric(_lastSavedName))
+          ? _lastSavedName!
+          : (cached != null && !isGeneric(cached)
+              ? cached
+              : (!isGeneric(serverName) ? serverName : ''));
+
+      if (effectiveName.isNotEmpty) {
+        _nameCtrl.text = effectiveName;
       } else {
-        final cached = StorageService.cachedUserName;
-        if (cached != null && cached.trim().isNotEmpty) {
-          _nameCtrl.text = cached.trim();
-        } else {
-          StorageService.getUserName().then((stored) {
-            if (stored != null && stored.trim().isNotEmpty && mounted) {
-              setState(() {
-                _nameCtrl.text = stored.trim();
-              });
-            } else if (serverName.isNotEmpty) {
+        StorageService.getUserName().then((stored) {
+          if (stored != null && !isGeneric(stored) && mounted) {
+            setState(() {
+              _nameCtrl.text = stored.trim();
+            });
+          } else if (serverName.isNotEmpty && !isGeneric(serverName) && mounted) {
+            setState(() {
               _nameCtrl.text = serverName;
-            }
-          });
-        }
+            });
+          }
+        });
       }
       _emailCtrl.text = (p.email ?? '').toString().trim();
       _localityCtrl.text = (p.location ?? '').toString().trim();
@@ -318,9 +349,23 @@ class _TutorProfileState extends State<TutorProfile> {
       _zipcodeCtrl.text = (p.pincode ?? '').toString();
 
       String? rawMode = (p.mode ?? '').toString().trim();
-      final normalizedMode = _normalizeMode(rawMode);
+      final cachedMode = StorageService.cachedTeachingMode;
+      final modeToUse = rawMode.isNotEmpty
+          ? rawMode
+          : (cachedMode != null && cachedMode.trim().isNotEmpty
+              ? cachedMode
+              : (modeVal ?? 'Online'));
+      final normalizedMode = _normalizeMode(modeToUse);
 
       _profileImageUrl = _resolveImageUrl(p.profilePicture);
+      _frontIdUrl = _resolveImageUrl(p.frontId);
+      _backIdUrl = _resolveImageUrl(p.frontBack);
+      final cachedIdType = StorageService.cachedIdType;
+      selectedIdType = _normalizeIdType(p.idType) ??
+          (cachedIdType != null && cachedIdType.isNotEmpty
+              ? _normalizeIdType(cachedIdType)
+              : 'Aadhar') ??
+          'Aadhar';
 
       setState(() {
         modeVal = normalizedMode;
@@ -343,17 +388,28 @@ class _TutorProfileState extends State<TutorProfile> {
 
   // -------------------- Image picker --------------------
 
-  Future<void> _pickImage(ImageSource source) async {
-    final picked = await _picker.pickImage(source: source, imageQuality: 80);
+  Future<void> _pickImage(ImageSource source, {String type = 'profile'}) async {
+    final picked = await _picker.pickImage(
+      source: source,
+      maxWidth: 1280,
+      maxHeight: 1280,
+      imageQuality: 70,
+    );
+    if (!mounted) return;
     if (picked != null) {
-      setState(() => _profileImage = picked);
+      setState(() {
+        if (type == 'profile') _profileImage = picked;
+        if (type == 'front') _frontIdImage = picked;
+        if (type == 'back') _backIdImage = picked;
+      });
     }
-    if (mounted) Navigator.pop(context);
+    if (mounted && Navigator.canPop(context)) Navigator.pop(context);
   }
 
-  void _showPickerOptions() {
+  void _showPickerOptions({String type = 'profile'}) {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (ctx) => SafeArea(
@@ -362,17 +418,33 @@ class _TutorProfileState extends State<TutorProfile> {
             ListTile(
                 leading: const Icon(Icons.camera_alt),
                 title: const Text("Camera"),
-                onTap: () => _pickImage(ImageSource.camera)),
+                onTap: () => _pickImage(ImageSource.camera, type: type)),
             ListTile(
                 leading: const Icon(Icons.photo),
                 title: const Text("Gallery"),
-                onTap: () => _pickImage(ImageSource.gallery)),
-            if (_profileImage != null)
+                onTap: () => _pickImage(ImageSource.gallery, type: type)),
+            if ((type == 'profile' && _profileImage != null) ||
+                (type == 'front' &&
+                    (_frontIdImage != null ||
+                        (_frontIdUrl != null && _frontIdUrl!.isNotEmpty))) ||
+                (type == 'back' &&
+                    (_backIdImage != null ||
+                        (_backIdUrl != null && _backIdUrl!.isNotEmpty))))
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: Colors.red),
                 title: const Text("Remove"),
                 onTap: () {
-                  setState(() => _profileImage = null);
+                  setState(() {
+                    if (type == 'profile') _profileImage = null;
+                    if (type == 'front') {
+                      _frontIdImage = null;
+                      _frontIdUrl = null;
+                    }
+                    if (type == 'back') {
+                      _backIdImage = null;
+                      _backIdUrl = null;
+                    }
+                  });
                   Navigator.pop(context);
                 },
               ),
@@ -494,6 +566,16 @@ class _TutorProfileState extends State<TutorProfile> {
       }
 
       final profileBase64 = await _fileToBase64(_profileImage);
+      final frontBase64 = await _fileToBase64(_frontIdImage);
+      final backBase64 = await _fileToBase64(_backIdImage);
+      final storedFront = _p.tutorprofileData.value?.frontId;
+      final storedBack = _p.tutorprofileData.value?.frontBack;
+      final effectiveIdType = (selectedIdType != null && selectedIdType!.trim().isNotEmpty)
+          ? selectedIdType!.trim()
+          : (_normalizeIdType(_p.tutorprofileData.value?.idType) ??
+              StorageService.cachedIdType ??
+              'Aadhar');
+      final apiIdType = _toApiIdType(effectiveIdType);
 
       final boardIds = _uniqueInts(_selBoardIds);
       final classIds = _uniqueInts(_selClassIds);
@@ -502,11 +584,19 @@ class _TutorProfileState extends State<TutorProfile> {
       final experienceYears = int.tryParse(_expCtrl.text.trim()) ?? 0;
 
       final newName = _nameCtrl.text.trim();
+      _lastSavedName = newName;
       final payload = {
         "user_id": userId,
+        "id": userId,
+        "teacher_id": userId,
         "teacher_name": newName,
+        "teacherName": newName,
         "name": newName,
         "full_name": newName,
+        "fullName": newName,
+        "user_name": newName,
+        "userName": newName,
+        "tutor_name": newName,
         "email": _emailCtrl.text.trim(),
         "location": _localityCtrl.text.trim(),
         "pincode": _zipcodeCtrl.text.trim(),
@@ -514,6 +604,8 @@ class _TutorProfileState extends State<TutorProfile> {
         "min_amount": selectedFeeMin ?? 0,
         "max_amount": selectedFeeMax ?? 0,
         "mode": modeVal ?? '',
+        "teaching_mode": modeVal ?? '',
+        "teachingMode": modeVal ?? '',
         "experience_years": experienceYears,
         "place_id": _placeId ?? '',
         "latitude": _latitude ?? '',
@@ -524,6 +616,9 @@ class _TutorProfileState extends State<TutorProfile> {
         "fb_link": _fbPageLinkCtrl.text.trim(),
         "insta_link": _instaLinkCtrl.text.trim(),
         "wh_link": _teleLinkCtrl.text.trim(),
+        "idType": apiIdType,
+        "idtype": apiIdType,
+        "id_type": apiIdType,
       };
       // New photo → base64; otherwise resend the stored path (the server
       // keeps it). A tutor without any photo sends none.
@@ -534,11 +629,41 @@ class _TutorProfileState extends State<TutorProfile> {
         payload["profile_picture"] = storedPicture;
       }
 
+      if (frontBase64 != null) {
+        payload["frontid"] = frontBase64;
+        payload["front_id"] = frontBase64;
+      } else if (_frontIdUrl != null &&
+          _frontIdUrl!.isNotEmpty &&
+          storedFront != null &&
+          storedFront.isNotEmpty) {
+        payload["frontid"] = storedFront;
+        payload["front_id"] = storedFront;
+      }
+
+      if (backBase64 != null) {
+        payload["backid"] = backBase64;
+        payload["frontback"] = backBase64;
+        payload["back_id"] = backBase64;
+      } else if (_backIdUrl != null &&
+          _backIdUrl!.isNotEmpty &&
+          storedBack != null &&
+          storedBack.isNotEmpty) {
+        payload["backid"] = storedBack;
+        payload["frontback"] = storedBack;
+        payload["back_id"] = storedBack;
+      }
+
       final ok = await _p.updateTutorProfile(payload);
       // The controller already shows the server's success/failure message.
       if (ok == true) {
         if (newName.isNotEmpty) {
           await StorageService.saveUserName(newName);
+        }
+        if ((modeVal ?? '').isNotEmpty) {
+          await StorageService.saveTeachingMode(modeVal!);
+        }
+        if (apiIdType.isNotEmpty) {
+          await StorageService.saveIdType(apiIdType);
         }
         await _p.fetchProfileForTutor();
         if (_p.tutorprofileData.value?.profileStatus == 1) {
@@ -546,7 +671,13 @@ class _TutorProfileState extends State<TutorProfile> {
           return;
         }
         await _hydrate();
-        if (mounted) setState(() => _profileImage = null);
+        if (mounted) {
+          setState(() {
+            _profileImage = null;
+            _frontIdImage = null;
+            _backIdImage = null;
+          });
+        }
       }
     } catch (e) {
       Get.snackbar('Error', 'Failed to update profile: $e',
@@ -590,6 +721,8 @@ class _TutorProfileState extends State<TutorProfile> {
                       _buildProfessionalInfoSection(),
                       const SizedBox(height: 16),
                       _buildLocationSection(),
+                      const SizedBox(height: 16),
+                      _buildIdentitySection(primary),
                       const SizedBox(height: 16),
                       _buildSocialLinksSection(),
                       const SizedBox(height: 32),
@@ -1052,6 +1185,156 @@ class _TutorProfileState extends State<TutorProfile> {
     );
   }
 
+  Widget _buildIdentitySection(Color primary) {
+    return _buildSectionCard(
+      title: 'Identity Verification',
+      children: [
+        _buildDropdown<String>(
+          label: 'ID Type',
+          value: selectedIdType ?? 'Aadhar',
+          items: _idTypes
+              .map((id) => DropdownMenuItem(value: id, child: Text(id)))
+              .toList(),
+          onChanged: (val) => setState(() => selectedIdType = val ?? 'Aadhar'),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _idUploadBox(
+                "Front ID",
+                _frontIdImage,
+                _frontIdUrl,
+                "front",
+                primary: primary,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _idUploadBox(
+                "Back ID",
+                _backIdImage,
+                _backIdUrl,
+                "back",
+                primary: primary,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _idUploadBox(
+    String label,
+    XFile? file,
+    String? networkUrl,
+    String type, {
+    required Color primary,
+  }) {
+    final hasFile = file != null;
+    final hasNetwork = !hasFile && networkUrl != null && networkUrl.isNotEmpty;
+    final hasImage = hasFile || hasNetwork;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            color: Color(0xFF2D3748),
+          ),
+        ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: () => _showPickerOptions(type: type),
+          child: Container(
+            width: double.infinity,
+            height: 140,
+            decoration: BoxDecoration(
+              color: hasImage ? Colors.transparent : Colors.grey.shade50,
+              border: Border.all(
+                color: hasImage
+                    ? primary.withValues(alpha: 0.3)
+                    : Colors.grey.shade300,
+                width: 1.5,
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: hasImage
+                ? Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (hasFile)
+                        Image.file(
+                          File(file.path),
+                          fit: BoxFit.cover,
+                        )
+                      else
+                        Image.network(
+                          networkUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.broken_image_outlined,
+                                    color: Colors.grey.shade400, size: 36),
+                                const SizedBox(height: 4),
+                                Text('Image not available',
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey.shade500)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.6),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.edit,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.add_photo_alternate_outlined,
+                        size: 38,
+                        color: Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tap to upload',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSocialLinksSection() {
     return _buildSectionCard(
       title: 'Social Links',
@@ -1155,7 +1438,7 @@ class _TutorProfileState extends State<TutorProfile> {
             ? Padding(padding: const EdgeInsets.all(12), child: suffix)
             : null,
         filled: true,
-        fillColor: Colors.grey.shade50,
+        fillColor: Colors.white,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
@@ -1180,27 +1463,47 @@ class _TutorProfileState extends State<TutorProfile> {
     required List<DropdownMenuItem<T>> items,
     required Function(T?) onChanged,
   }) {
-    return DropdownButtonFormField<T>(
-      initialValue: value,
-      items: items,
-      onChanged: onChanged,
-      decoration: InputDecoration(
-        labelText: label,
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+    final hasValue = value != null && items.any((it) => it.value == value);
+    final theme = Theme.of(context);
+    return Theme(
+      data: theme.copyWith(
+        canvasColor: Colors.white,
+        focusColor: Colors.transparent,
+        hoverColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        colorScheme: theme.colorScheme.copyWith(
+          surface: Colors.white,
+          surfaceContainer: Colors.white,
+          surfaceContainerHighest: Colors.white,
+          surfaceContainerLow: Colors.white,
+          surfaceContainerLowest: Colors.white,
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.primaryColor, width: 2),
+      ),
+      child: DropdownButtonFormField<T>(
+        key: ValueKey('${label}_$value'),
+        value: hasValue ? value : null,
+        items: items,
+        onChanged: onChanged,
+        dropdownColor: Colors.white,
+        decoration: InputDecoration(
+          labelText: label,
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: AppColors.primaryColor, width: 2),
+          ),
         ),
       ),
     );
@@ -1221,7 +1524,7 @@ class _TutorProfileState extends State<TutorProfile> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          color: Colors.grey.shade50,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.grey.shade300),
         ),
@@ -1268,9 +1571,14 @@ class _TutorProfileState extends State<TutorProfile> {
   // -------------------- Data Helpers --------------------
 
   String _normalizeMode(String? raw) {
-    if (raw == null) return 'Online';
+    if (raw == null || raw.trim().isEmpty) {
+      final cached = StorageService.cachedTeachingMode;
+      if (cached != null && cached.trim().isNotEmpty) {
+        return _normalizeMode(cached);
+      }
+      return 'Online';
+    }
     final low = raw.trim().toLowerCase();
-    if (low.isEmpty) return 'Online';
     if ((low.contains('online') && low.contains('offline')) ||
         low == 'both' ||
         low == 'any' ||
@@ -1284,6 +1592,28 @@ class _TutorProfileState extends State<TutorProfile> {
       return 'Online';
     }
     return 'Online';
+  }
+
+  String? _normalizeIdType(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return null;
+    final clean = raw.trim().toLowerCase();
+    if (clean == 'voterid' || clean == 'voter id' || clean == 'voter') {
+      return 'Voter ID';
+    }
+    if (clean == 'aadhar' || clean == 'aadhaar') return 'Aadhar';
+    if (clean == 'passport') return 'Passport';
+    return _oneOf(raw.trim(), _idTypes);
+  }
+
+  String _toApiIdType(String? idType) {
+    if (idType == null || idType.trim().isEmpty) return 'Aadhar';
+    final clean = idType.trim().toLowerCase();
+    if (clean == 'voter id' || clean == 'voterid' || clean == 'voter') {
+      return 'Voter ID';
+    }
+    if (clean == 'aadhar' || clean == 'aadhaar') return 'Aadhar';
+    if (clean == 'passport') return 'Passport';
+    return idType.trim();
   }
 
   List<OptionInt> _boardOptions() {
@@ -1340,10 +1670,9 @@ class _TutorProfileState extends State<TutorProfile> {
   // -------------------- Share Logic --------------------
 
   Future<String> _publicProfileUrl() async {
-  final uid = await StorageService.getUserId();
-  // Return a deep link / app link for sharing within the mobile app
-  return 'https://play.google.com/store/apps/details?id=pro.urbantutors.app';
-}
+    // Return a deep link / app link for sharing within the mobile app
+    return 'https://play.google.com/store/apps/details?id=pro.urbantutors.app';
+  }
 
   Future<void> _shareProfile() async {
   // Generate the app deep link for the tutor profile

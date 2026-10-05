@@ -244,8 +244,17 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
     return Theme(
       data: theme.copyWith(
         canvasColor: Colors.white,
+        focusColor: Colors.transparent,
+        hoverColor: Colors.transparent,
         splashColor: Colors.transparent,
         highlightColor: Colors.transparent,
+        colorScheme: theme.colorScheme.copyWith(
+          surface: Colors.white,
+          surfaceContainer: Colors.white,
+          surfaceContainerHighest: Colors.white,
+          surfaceContainerLow: Colors.white,
+          surfaceContainerLowest: Colors.white,
+        ),
       ),
       child: child,
     );
@@ -544,6 +553,7 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                           DropdownButtonFormField<int>(
                             isExpanded: true,
                             initialValue: boardId,
+                            dropdownColor: Colors.white,
                             icon: const Icon(Icons.expand_more_rounded,
                                 color: Color(0xFF9CA3AF)),
                             decoration: _fieldDec('Select Board'),
@@ -579,6 +589,7 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                           DropdownButtonFormField<int>(
                             isExpanded: true,
                             initialValue: classId,
+                            dropdownColor: Colors.white,
                             icon: const Icon(Icons.expand_more_rounded,
                                 color: Color(0xFF9CA3AF)),
                             decoration: _fieldDec('Select Class').copyWith(
@@ -805,6 +816,7 @@ class _SearchTutorScreenState extends State<SearchTutorScreen> {
                         DropdownButtonFormField<String>(
                           isExpanded: true,
                           initialValue: modeVal,
+                          dropdownColor: Colors.white,
                           icon: const Icon(Icons.expand_more_rounded,
                               color: Color(0xFF9CA3AF)),
                           decoration: _fieldDec('Select Mode'),

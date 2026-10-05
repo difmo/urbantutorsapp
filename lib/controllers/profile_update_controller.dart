@@ -20,6 +20,7 @@ class ProfileUpdateController extends GetxController {
   var adminProfileData = Rxn<AdminProfileData>();
   var masterData = Rxn<MasterData>();
   var tutorprofileData = Rxn<TutorProfileData>();
+  String? lastSubmittedTutorName;
 
   Future<void> fetchProfileForAdmin() async {
     final token = await StorageService.getToken();
@@ -123,18 +124,86 @@ class ProfileUpdateController extends GetxController {
       if (response.data != null) {
         final serverName = response.data!.teacherName?.trim();
         final cached = await StorageService.getUserName();
-        final finalName = (serverName != null && serverName.isNotEmpty)
-            ? serverName
-            : (cached?.trim() ?? '');
+
+        bool isInvalidOrGeneric(String? s) =>
+            s == null ||
+            s.trim().isEmpty ||
+            s.trim().toLowerCase() == 'user' ||
+            s.trim().toLowerCase() == 'urban user' ||
+            s.trim().toLowerCase() == 'tutor';
+
+        final finalName = (lastSubmittedTutorName != null &&
+                !isInvalidOrGeneric(lastSubmittedTutorName))
+            ? lastSubmittedTutorName!
+            : (!isInvalidOrGeneric(cached)
+                ? cached!.trim()
+                : (!isInvalidOrGeneric(serverName) ? serverName! : ''));
 
         if (finalName.isNotEmpty) {
           await StorageService.saveUserName(finalName);
-          final json = response.data!.toJson();
-          json['teacher_name'] = finalName;
-          tutorprofileData.value = TutorProfileData.fromJson(json);
-        } else {
-          tutorprofileData.value = response.data;
         }
+
+        final serverMode = response.data!.mode?.trim();
+        final cachedMode = await StorageService.getTeachingMode();
+        final finalMode = (serverMode != null && serverMode.isNotEmpty)
+            ? serverMode
+            : (cachedMode?.trim() ?? '');
+
+        if (finalMode.isNotEmpty) {
+          await StorageService.saveTeachingMode(finalMode);
+        }
+
+        final serverIdType = response.data!.idType?.trim();
+        final cachedIdType = await StorageService.getIdType();
+        final finalIdType = (serverIdType != null && serverIdType.isNotEmpty)
+            ? serverIdType
+            : (cachedIdType?.trim() ?? 'Aadhar');
+
+        if (finalIdType.isNotEmpty) {
+          await StorageService.saveIdType(finalIdType);
+        }
+
+        final json = response.data!.toJson();
+        if (finalName.isNotEmpty) {
+          json['teacher_name'] = finalName;
+          json['teacherName'] = finalName;
+          json['name'] = finalName;
+          json['full_name'] = finalName;
+          json['fullName'] = finalName;
+          json['user_name'] = finalName;
+          json['userName'] = finalName;
+          json['tutor_name'] = finalName;
+        }
+        if (finalMode.isNotEmpty) {
+          json['mode'] = finalMode;
+          json['teaching_mode'] = finalMode;
+          json['teachingMode'] = finalMode;
+        }
+        json['idtype'] = finalIdType;
+        json['idType'] = finalIdType;
+        final prevFront = tutorprofileData.value?.frontId;
+        final prevBack = tutorprofileData.value?.frontBack;
+        final prevIdType = tutorprofileData.value?.idType;
+        if (json['frontid'] == null || json['frontid'].toString().isEmpty) {
+          if (prevFront != null && prevFront.isNotEmpty) {
+            json['frontid'] = prevFront;
+            json['front_id'] = prevFront;
+          }
+        }
+        if (json['frontback'] == null || json['frontback'].toString().isEmpty) {
+          if (prevBack != null && prevBack.isNotEmpty) {
+            json['frontback'] = prevBack;
+            json['backid'] = prevBack;
+            json['back_id'] = prevBack;
+          }
+        }
+        if (json['idtype'] == null || json['idtype'].toString().isEmpty) {
+          if (prevIdType != null && prevIdType.isNotEmpty) {
+            json['idtype'] = prevIdType;
+            json['idType'] = prevIdType;
+          }
+        }
+        tutorprofileData.value = TutorProfileData.fromJson(json);
       } else {
         tutorprofileData.value = response.data;
       }
@@ -191,7 +260,11 @@ class ProfileUpdateController extends GetxController {
           await _profileUpdateService.updateTutorProfile(updateData);
       if (response.success) {
         final submittedName = (updateData is Map)
-            ? (updateData['teacher_name'] ?? updateData['name'] ?? updateData['full_name'])
+            ? (updateData['teacher_name'] ??
+                    updateData['name'] ??
+                    updateData['full_name'] ??
+                    updateData['user_name'] ??
+                    updateData['teacherName'])
                 ?.toString()
                 .trim()
             : null;
@@ -201,13 +274,140 @@ class ProfileUpdateController extends GetxController {
             : (respName != null && respName.isNotEmpty ? respName : '');
 
         if (finalName.isNotEmpty) {
+          lastSubmittedTutorName = finalName;
           await StorageService.saveUserName(finalName);
+        }
+
+        final submittedMode = (updateData is Map)
+            ? (updateData['mode'] ??
+                    updateData['teaching_mode'] ??
+                    updateData['teachingMode'])
+                ?.toString()
+                .trim()
+            : null;
+        final respMode = response.data?.mode?.trim();
+        final finalMode = (submittedMode != null && submittedMode.isNotEmpty)
+            ? submittedMode
+            : (respMode != null && respMode.isNotEmpty ? respMode : '');
+
+        if (finalMode.isNotEmpty) {
+          await StorageService.saveTeachingMode(finalMode);
+        }
+
+        final submittedIdTypeCandidate = (updateData is Map)
+            ? (updateData['idType'] ?? updateData['idtype'] ?? updateData['id_type'])
+                ?.toString()
+                .trim()
+            : null;
+        final respIdType = response.data?.idType?.trim();
+        final finalIdType = (submittedIdTypeCandidate != null && submittedIdTypeCandidate.isNotEmpty)
+            ? submittedIdTypeCandidate
+            : (respIdType != null && respIdType.isNotEmpty
+                ? respIdType
+                : (StorageService.cachedIdType ?? 'Aadhar'));
+
+        if (finalIdType.isNotEmpty) {
+          await StorageService.saveIdType(finalIdType);
         }
 
         if (response.data != null) {
           final json = response.data!.toJson();
           if (finalName.isNotEmpty) {
             json['teacher_name'] = finalName;
+            json['teacherName'] = finalName;
+            json['name'] = finalName;
+            json['full_name'] = finalName;
+            json['fullName'] = finalName;
+            json['user_name'] = finalName;
+            json['userName'] = finalName;
+            json['tutor_name'] = finalName;
+          }
+          if (finalMode.isNotEmpty) {
+            json['mode'] = finalMode;
+            json['teaching_mode'] = finalMode;
+            json['teachingMode'] = finalMode;
+          }
+          final submittedFront = (updateData is Map)
+              ? (updateData['frontid'] ?? updateData['front_id'])?.toString()
+              : null;
+          final submittedBack = (updateData is Map)
+              ? (updateData['frontback'] ?? updateData['backid'] ?? updateData['back_id'])?.toString()
+              : null;
+          final submittedIdType = (updateData is Map)
+              ? (updateData['idType'] ?? updateData['idtype'])?.toString()
+              : null;
+          final prevFront = tutorprofileData.value?.frontId;
+          final prevBack = tutorprofileData.value?.frontBack;
+          final prevIdType = tutorprofileData.value?.idType;
+
+          if (json['frontid'] == null || json['frontid'].toString().isEmpty) {
+            if (submittedFront != null && submittedFront.isNotEmpty) {
+              json['frontid'] = submittedFront;
+              json['front_id'] = submittedFront;
+            } else if (prevFront != null && prevFront.isNotEmpty) {
+              json['frontid'] = prevFront;
+              json['front_id'] = prevFront;
+            }
+          }
+          if (json['frontback'] == null || json['frontback'].toString().isEmpty) {
+            if (submittedBack != null && submittedBack.isNotEmpty) {
+              json['frontback'] = submittedBack;
+              json['backid'] = submittedBack;
+              json['back_id'] = submittedBack;
+            } else if (prevBack != null && prevBack.isNotEmpty) {
+              json['frontback'] = prevBack;
+              json['backid'] = prevBack;
+              json['back_id'] = prevBack;
+            }
+          }
+          if (json['idtype'] == null || json['idtype'].toString().isEmpty) {
+            if (submittedIdType != null && submittedIdType.isNotEmpty) {
+              json['idtype'] = submittedIdType;
+              json['idType'] = submittedIdType;
+            } else if (prevIdType != null && prevIdType.isNotEmpty) {
+              json['idtype'] = prevIdType;
+              json['idType'] = prevIdType;
+            }
+          }
+          tutorprofileData.value = TutorProfileData.fromJson(json);
+        } else if (tutorprofileData.value != null) {
+          final json = tutorprofileData.value!.toJson();
+          if (finalName.isNotEmpty) {
+            json['teacher_name'] = finalName;
+            json['teacherName'] = finalName;
+            json['name'] = finalName;
+            json['full_name'] = finalName;
+            json['fullName'] = finalName;
+            json['user_name'] = finalName;
+            json['userName'] = finalName;
+            json['tutor_name'] = finalName;
+          }
+          if (finalMode.isNotEmpty) {
+            json['mode'] = finalMode;
+            json['teaching_mode'] = finalMode;
+            json['teachingMode'] = finalMode;
+          }
+          final submittedFront = (updateData is Map)
+              ? (updateData['frontid'] ?? updateData['front_id'])?.toString()
+              : null;
+          final submittedBack = (updateData is Map)
+              ? (updateData['frontback'] ?? updateData['backid'] ?? updateData['back_id'])?.toString()
+              : null;
+          final submittedIdType = (updateData is Map)
+              ? (updateData['idType'] ?? updateData['idtype'])?.toString()
+              : null;
+          if (submittedFront != null && submittedFront.isNotEmpty) {
+            json['frontid'] = submittedFront;
+            json['front_id'] = submittedFront;
+          }
+          if (submittedBack != null && submittedBack.isNotEmpty) {
+            json['frontback'] = submittedBack;
+            json['backid'] = submittedBack;
+            json['back_id'] = submittedBack;
+          }
+          if (submittedIdType != null && submittedIdType.isNotEmpty) {
+            json['idtype'] = submittedIdType;
+            json['idType'] = submittedIdType;
           }
           tutorprofileData.value = TutorProfileData.fromJson(json);
         }

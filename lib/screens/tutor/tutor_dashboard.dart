@@ -68,7 +68,13 @@ class _TutorDashboardState extends State<TutorDashboard> {
     ever(_p.tutorprofileData, (prof) {
       if (prof == null) return;
       final serverName = prof.teacherName?.trim() ?? '';
-      if (serverName.isNotEmpty) {
+      bool isGeneric(String s) =>
+          s.isEmpty ||
+          s.toLowerCase() == 'user' ||
+          s.toLowerCase() == 'tutor' ||
+          s.toLowerCase() == 'urban user';
+
+      if (!isGeneric(serverName)) {
         StorageService.saveUserName(serverName);
         if (mounted && _storedUserName != serverName) {
           setState(() => _storedUserName = serverName);
@@ -209,15 +215,21 @@ class _TutorDashboardState extends State<TutorDashboard> {
           final serverName = prof?.teacherName?.trim() ?? '';
           final cached = StorageService.cachedUserName?.trim() ?? '';
 
+          bool isGeneric(String s) =>
+              s.isEmpty ||
+              s.toLowerCase() == 'user' ||
+              s.toLowerCase() == 'tutor' ||
+              s.toLowerCase() == 'urban user';
+
           String rawName = '';
-          if (serverName.isNotEmpty) {
-            rawName = serverName;
-          } else if (_storedUserName.isNotEmpty) {
-            rawName = _storedUserName;
-          } else if (cached.isNotEmpty) {
+          if (!isGeneric(cached)) {
             rawName = cached;
+          } else if (!isGeneric(_storedUserName)) {
+            rawName = _storedUserName;
+          } else if (!isGeneric(serverName)) {
+            rawName = serverName;
           } else {
-            rawName = 'User';
+            rawName = 'Tutor';
           }
 
           final initial = _initial(rawName);

@@ -15,6 +15,8 @@ class StorageService {
   static const String _name = 'name';
   static const String _phoneNumber = 'phone_number';
   static const String _leadStatus = 'lead_status';
+  static const String _teachingModeKey = 'teaching_mode';
+  static const String _idTypeKey = 'id_type';
 
   // In-memory cache ensures zero crashes if platform channel fails
   static String? _cachedToken;
@@ -25,9 +27,17 @@ class StorageService {
   static String? _cachedRole;
   static int? _cachedRoleId;
   static int? _cachedProfileStatus;
+  static String? _cachedTeachingMode;
+  static String? _cachedIdType;
 
   /// Synchronous in-memory access to the current cached user name
   static String? get cachedUserName => _cachedUserName;
+
+  /// Synchronous in-memory access to the current cached teaching mode
+  static String? get cachedTeachingMode => _cachedTeachingMode;
+
+  /// Synchronous in-memory access to the current cached id type
+  static String? get cachedIdType => _cachedIdType;
 
   @visibleForTesting
   static void resetCache() {
@@ -39,6 +49,8 @@ class StorageService {
     _cachedRole = null;
     _cachedRoleId = null;
     _cachedProfileStatus = null;
+    _cachedTeachingMode = null;
+    _cachedIdType = null;
   }
 
   static Future<SharedPreferences?> _getPrefs() async {
@@ -386,6 +398,126 @@ class StorageService {
     } catch (_) {
       return _cachedProfileStatus;
     }
+  }
+
+  static Future<void> saveTeachingMode(String mode) async {
+    final clean = mode.trim();
+    if (clean.isEmpty) return;
+    _cachedTeachingMode = clean;
+    try {
+      final prefs = await _getPrefs();
+      if (prefs != null) {
+        await Future.wait([
+          prefs.setString(_teachingModeKey, clean),
+          prefs.setString('mode', clean),
+        ]);
+      }
+    } catch (e) {
+      print('\x1B[93m[StorageService] saveTeachingMode error: $e\x1B[0m');
+    }
+  }
+
+  static Future<String?> getTeachingMode() async {
+    if (_cachedTeachingMode != null && _cachedTeachingMode!.trim().isNotEmpty) {
+      return _cachedTeachingMode;
+    }
+    try {
+      final prefs = await _getPrefs();
+      if (prefs != null) {
+        final val = prefs.getString(_teachingModeKey) ?? prefs.getString('mode');
+        if (val != null && val.trim().isNotEmpty) {
+          _cachedTeachingMode = val.trim();
+          return _cachedTeachingMode;
+        }
+
+        // Try extracting from stored userData JSON blob if present
+        final userDataStr = prefs.getString('userData');
+        if (userDataStr != null && userDataStr.isNotEmpty) {
+          try {
+            final decoded = jsonDecode(userDataStr);
+            if (decoded is Map) {
+              final u = decoded['userData'] ??
+                  decoded['data']?['userData'] ??
+                  decoded['data'] ??
+                  decoded['user'] ??
+                  decoded;
+              if (u is Map) {
+                final modeCandidate =
+                    (u['mode'] ?? u['teaching_mode'] ?? u['teachingMode'])
+                        ?.toString()
+                        .trim();
+                if (modeCandidate != null && modeCandidate.isNotEmpty) {
+                  _cachedTeachingMode = modeCandidate;
+                  await prefs.setString(_teachingModeKey, modeCandidate);
+                  return _cachedTeachingMode;
+                }
+              }
+            }
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+    return _cachedTeachingMode;
+  }
+
+  static Future<void> saveIdType(String idType) async {
+    final clean = idType.trim();
+    if (clean.isEmpty) return;
+    _cachedIdType = clean;
+    try {
+      final prefs = await _getPrefs();
+      if (prefs != null) {
+        await Future.wait([
+          prefs.setString(_idTypeKey, clean),
+          prefs.setString('idtype', clean),
+          prefs.setString('idType', clean),
+        ]);
+      }
+    } catch (e) {
+      print('\x1B[93m[StorageService] saveIdType error: $e\x1B[0m');
+    }
+  }
+
+  static Future<String?> getIdType() async {
+    if (_cachedIdType != null && _cachedIdType!.trim().isNotEmpty) {
+      return _cachedIdType;
+    }
+    try {
+      final prefs = await _getPrefs();
+      if (prefs != null) {
+        final val = prefs.getString(_idTypeKey) ??
+            prefs.getString('idtype') ??
+            prefs.getString('idType');
+        if (val != null && val.trim().isNotEmpty) {
+          _cachedIdType = val.trim();
+          return _cachedIdType;
+        }
+
+        final userDataStr = prefs.getString('userData');
+        if (userDataStr != null && userDataStr.isNotEmpty) {
+          try {
+            final decoded = jsonDecode(userDataStr);
+            if (decoded is Map) {
+              final u = decoded['userData'] ??
+                  decoded['data']?['userData'] ??
+                  decoded['data'] ??
+                  decoded['user'] ??
+                  decoded;
+              if (u is Map) {
+                final idCandidate = (u['idtype'] ?? u['idType'] ?? u['id_type'])
+                    ?.toString()
+                    .trim();
+                if (idCandidate != null && idCandidate.isNotEmpty) {
+                  _cachedIdType = idCandidate;
+                  return _cachedIdType;
+                }
+              }
+            }
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+    return _cachedIdType;
   }
 
   static Future<void> saveRoleId(int roleId) async {

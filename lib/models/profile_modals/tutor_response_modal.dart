@@ -135,18 +135,45 @@ class TutorProfileData {
     return <TeachingDetails>[];
   }
 
+  static String? _pickValidName(List<dynamic> candidates) {
+    for (final c in candidates) {
+      if (c == null) continue;
+      final s = c.toString().trim();
+      if (s.isEmpty) continue;
+      final lower = s.toLowerCase();
+      if (lower == 'null' ||
+          lower == 'user' ||
+          lower == 'urban user' ||
+          lower == 'tutor') {
+        continue;
+      }
+      return s;
+    }
+    return null;
+  }
+
   factory TutorProfileData.fromJson(Map<String, dynamic> json) {
     final userObj = json['user'] is Map
         ? json['user'] as Map
         : (json['userData'] is Map ? json['userData'] as Map : null);
-    final rawName = (json['teacher_name'] ??
-            json['name'] ??
-            json['user_name'] ??
-            json['full_name'] ??
-            userObj?['name'] ??
-            userObj?['user_name'] ??
-            userObj?['teacher_name'])
-        ?.toString();
+    final rawName = _pickValidName([
+      json['teacher_name'],
+      json['teacherName'],
+      json['name'],
+      json['full_name'],
+      json['fullName'],
+      json['user_name'],
+      json['userName'],
+      json['tutor_name'],
+      userObj?['teacher_name'],
+      userObj?['teacherName'],
+      userObj?['name'],
+      userObj?['full_name'],
+      userObj?['fullName'],
+      userObj?['user_name'],
+      userObj?['userName'],
+      userObj?['tutor_name'],
+    ]);
 
     return TutorProfileData(
       id: _parseInt(json['id']) ?? 0,
@@ -158,7 +185,12 @@ class TutorProfileData {
       positionShow: _parseInt(json['positionShow']),
       experienceYears: _parseInt(json['experience_years']),
       fbLink: json['fb_link']?.toString(),
-      frontId: json['frontid']?.toString(),
+      frontId: (json['frontid'] ??
+              json['front_id'] ??
+              json['frontId'] ??
+              userObj?['frontid'] ??
+              userObj?['front_id'])
+          ?.toString(),
       instaLink: json['insta_link']?.toString(),
       whLink: json['wh_link']?.toString(),
       email: json['email']?.toString(),
@@ -174,15 +206,32 @@ class TutorProfileData {
       latitude: _parseDouble(json['latitude']),
       longitude: _parseDouble(json['longitude']),
       state: json['state']?.toString(),
-      idType: json['idtype']?.toString(),
-      frontBack: json['frontback']?.toString(),
+      idType: (json['idtype'] ?? json['idType'] ?? userObj?['idtype'] ?? userObj?['idType'])?.toString(),
+      frontBack: (json['frontback'] ??
+              json['backid'] ??
+              json['back_id'] ??
+              json['backId'] ??
+              json['front_back'] ??
+              userObj?['frontback'] ??
+              userObj?['backid'] ??
+              userObj?['back_id'])
+          ?.toString(),
       remark: json['remark']?.toString(),
       status: json['status']?.toString(),
       createdAt: json['created_at']?.toString(),
       updatedAt: json['updated_at']?.toString(),
       teachingDetails: _parseTeachingDetails(
           json['teaching_details'] ?? json['teachingDetails']),
-      mode: json['mode']?.toString(),
+      mode: (json['mode'] ??
+              json['teaching_mode'] ??
+              json['teachingMode'] ??
+              json['mode_of_teaching'] ??
+              json['class_mode'] ??
+              userObj?['mode'] ??
+              userObj?['teaching_mode'] ??
+              userObj?['teachingMode'] ??
+              userObj?['mode_of_teaching'])
+          ?.toString(),
       pincode: json['pincode']?.toString(),
       qualification: json['qualification']?.toString(),
     );
@@ -192,6 +241,13 @@ class TutorProfileData {
     return {
       'id': id,
       'teacher_name': teacherName,
+      'teacherName': teacherName,
+      'name': teacherName,
+      'full_name': teacherName,
+      'fullName': teacherName,
+      'user_name': teacherName,
+      'userName': teacherName,
+      'tutor_name': teacherName,
       'profile_status': profileStatus,
       'profile_id': profileId,
       'rating': rating,
@@ -200,6 +256,7 @@ class TutorProfileData {
       'experience_years': experienceYears,
       'fb_link': fbLink,
       'frontid': frontId,
+      'front_id': frontId,
       'insta_link': instaLink,
       'wh_link': whLink,
       'email': email,
@@ -216,13 +273,18 @@ class TutorProfileData {
       'longitude': longitude?.toString(),
       'state': state,
       'idtype': idType,
+      'idType': idType,
       'frontback': frontBack,
+      'backid': frontBack,
+      'back_id': frontBack,
       'remark': remark,
       'status': status,
       'created_at': createdAt,
       'updated_at': updatedAt,
       'teaching_details': teachingDetails.map((e) => e.toJson()).toList(),
       'mode': mode,
+      'teaching_mode': mode,
+      'teachingMode': mode,
       'pincode': pincode,
       'qualification': qualification,
     };
