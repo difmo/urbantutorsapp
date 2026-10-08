@@ -29,6 +29,7 @@ class StorageService {
   static int? _cachedProfileStatus;
   static String? _cachedTeachingMode;
   static String? _cachedIdType;
+  static String? _cachedTeachingDetailsJson;
 
   /// Synchronous in-memory access to the current cached user name
   static String? get cachedUserName => _cachedUserName;
@@ -51,6 +52,7 @@ class StorageService {
     _cachedProfileStatus = null;
     _cachedTeachingMode = null;
     _cachedIdType = null;
+    _cachedTeachingDetailsJson = null;
   }
 
   static Future<SharedPreferences?> _getPrefs() async {
@@ -100,9 +102,11 @@ class StorageService {
           prefs.setInt(_profileIdKey, profileStatus),
           prefs.setString(_saveUserID, userId.toString()),
           prefs.setString(_name, _cachedUserName!),
+          prefs.setString('student_name', _cachedUserName!),
           prefs.setString('teacher_name', _cachedUserName!),
           prefs.setString('reg_name', _cachedUserName!),
           prefs.setString('user_name', _cachedUserName!),
+          prefs.setString('full_name', _cachedUserName!),
           prefs.setString(_phoneNumber, userPhone),
         ]);
       }
@@ -232,8 +236,8 @@ class StorageService {
 
       // 1. Check all standard keys in priority order
       final keysToCheck = [
-        'teacher_name',
         'student_name',
+        'teacher_name',
         _name, // 'name'
         'reg_name',
         'user_name',
@@ -246,10 +250,11 @@ class StorageService {
             val.trim().isNotEmpty &&
             val.trim().toLowerCase() != 'user' &&
             val.trim().toLowerCase() != 'urban user' &&
+            val.trim().toLowerCase() != 'student' &&
             val.trim().toLowerCase() != 'tutor') {
           _cachedUserName = val.trim();
           await prefs.setString(_name, _cachedUserName!);
-          await prefs.setString('teacher_name', _cachedUserName!);
+          await prefs.setString('student_name', _cachedUserName!);
           return _cachedUserName;
         }
       }
@@ -267,8 +272,8 @@ class StorageService {
                 decoded;
             if (u is Map) {
               final candidates = [
-                u['teacher_name'],
                 u['student_name'],
+                u['teacher_name'],
                 u['name'],
                 u['full_name'],
                 u['user_name'],
@@ -279,10 +284,11 @@ class StorageService {
                   if (s.isNotEmpty &&
                       s.toLowerCase() != 'user' &&
                       s.toLowerCase() != 'urban user' &&
+                      s.toLowerCase() != 'student' &&
                       s.toLowerCase() != 'tutor') {
                     _cachedUserName = s;
                     await prefs.setString(_name, s);
-                    await prefs.setString('teacher_name', s);
+                    await prefs.setString('student_name', s);
                     return _cachedUserName;
                   }
                 }
@@ -292,9 +298,23 @@ class StorageService {
         } catch (_) {}
       }
 
-      // 3. Fallback to whatever is stored if no custom name matched
-      final fallback = prefs.getString(_name) ?? prefs.getString('user_name') ?? _cachedUserName;
-      if (fallback != null && fallback.trim().isNotEmpty) {
+      // 3. If in-memory cache is non-generic, return it
+      if (_cachedUserName != null &&
+          _cachedUserName!.trim().isNotEmpty &&
+          _cachedUserName!.trim().toLowerCase() != 'user' &&
+          _cachedUserName!.trim().toLowerCase() != 'student') {
+        return _cachedUserName;
+      }
+
+      // 4. Fallback to whatever is stored if no custom name matched
+      final fallback = prefs.getString('student_name') ??
+          prefs.getString(_name) ??
+          prefs.getString('user_name') ??
+          _cachedUserName;
+      if (fallback != null &&
+          fallback.trim().isNotEmpty &&
+          fallback.trim().toLowerCase() != 'user' &&
+          fallback.trim().toLowerCase() != 'student') {
         _cachedUserName = fallback.trim();
         return _cachedUserName;
       }
@@ -549,6 +569,91 @@ class StorageService {
     }
   }
 
+  static const String _cachedTeachingDetailsKey = 'cached_teaching_details';
+  static const String _cachedKnownMetaNamesKey = 'cached_known_meta_names';
+
+  static Future<void> saveTeachingDetails(List<dynamic> details) async {
+    try {
+      final jsonStr = jsonEncode(details);
+      _cachedTeachingDetailsJson = jsonStr;
+      final prefs = await _getPrefs();
+      await prefs?.setString(_cachedTeachingDetailsKey, jsonStr);
+    } catch (_) {}
+  }
+
+  static Future<List<Map<String, dynamic>>?> getTeachingDetails() async {
+    try {
+      if (_cachedTeachingDetailsJson != null && _cachedTeachingDetailsJson!.isNotEmpty) {
+        final decoded = jsonDecode(_cachedTeachingDetailsJson!);
+        if (decoded is List) {
+          return decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        }
+      }
+      final prefs = await _getPrefs();
+      final str = prefs?.getString(_cachedTeachingDetailsKey);
+      if (str != null && str.isNotEmpty) {
+        _cachedTeachingDetailsJson = str;
+        final decoded = jsonDecode(str);
+        if (decoded is List) {
+          return decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<void> saveKnownMetaNames({
+    Map<int, String>? boards,
+    Map<int, String>? classes,
+    Map<int, String>? subjects,
+  }) async {
+    try {
+      final prefs = await _getPrefs();
+      final existingStr = prefs?.getString(_cachedKnownMetaNamesKey);
+      Map<String, dynamic> data = {};
+      if (existingStr != null && existingStr.isNotEmpty) {
+        try {
+          data = Map<String, dynamic>.from(jsonDecode(existingStr) as Map);
+        } catch (_) {}
+      }
+      if (boards != null) {
+        data['boards'] = {...(data['boards'] is Map ? data['boards'] as Map : {}), ...boards.map((k, v) => MapEntry(k.toString(), v))};
+      }
+      if (classes != null) {
+        data['classes'] = {...(data['classes'] is Map ? data['classes'] as Map : {}), ...classes.map((k, v) => MapEntry(k.toString(), v))};
+      }
+      if (subjects != null) {
+        data['subjects'] = {...(data['subjects'] is Map ? data['subjects'] as Map : {}), ...subjects.map((k, v) => MapEntry(k.toString(), v))};
+      }
+      await prefs?.setString(_cachedKnownMetaNamesKey, jsonEncode(data));
+    } catch (_) {}
+  }
+
+  static Future<Map<String, Map<int, String>>> getKnownMetaNames() async {
+    final Map<String, Map<int, String>> res = {'boards': {}, 'classes': {}, 'subjects': {}};
+    try {
+      final prefs = await _getPrefs();
+      final str = prefs?.getString(_cachedKnownMetaNamesKey);
+      if (str != null && str.isNotEmpty) {
+        final decoded = jsonDecode(str);
+        if (decoded is Map) {
+          for (final key in ['boards', 'classes', 'subjects']) {
+            if (decoded[key] is Map) {
+              final map = decoded[key] as Map;
+              map.forEach((k, v) {
+                final id = int.tryParse(k.toString());
+                if (id != null && v != null) {
+                  res[key]![id] = v.toString();
+                }
+              });
+            }
+          }
+        }
+      }
+    } catch (_) {}
+    return res;
+  }
+
   static Future<void> clearTokenAndRole() async {
     _cachedToken = null;
     _cachedRole = null;
@@ -557,6 +662,7 @@ class StorageService {
       await prefs?.remove(_tokenKey);
       await prefs?.remove(_altTokenKey);
       await prefs?.remove(_roleKey);
+      await prefs?.remove(_cachedTeachingDetailsKey);
     } catch (_) {}
   }
 

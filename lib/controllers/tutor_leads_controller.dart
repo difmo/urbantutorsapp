@@ -90,14 +90,14 @@ class TutorLeadsController extends GetxController {
   }
 
   /// Call when user taps “Grab” on a lead
-  Future<String?> grabLead(String leadId) async {
+  Future<dynamic> grabLead(String leadId) async {
     try {
       final uid = await StorageService.getUserId();
       if (uid == null) throw ApiException('User not logged in');
 
-      final msg = await _service.grabLead(userId: uid, leadId: leadId);
+      final res = await _service.grabLead(userId: uid, leadId: leadId);
       await Future.wait([loadGrabbed(), loadAvailable()]);
-      return msg;
+      return res;
     } catch (e) {
       error.value = e.toString();
       return null;
@@ -124,7 +124,10 @@ class TutorLeadsController extends GetxController {
 
   /// The grab record for [leadId] if this tutor has already grabbed it.
   GrabLead? grabbedFor(int leadId) =>
-      grabbedLeads.firstWhereOrNull((g) => g.leadId == leadId);
+      grabbedLeads.firstWhereOrNull((g) =>
+          g.leadId == leadId ||
+          g.grabLeadId == leadId ||
+          g.leadId.toString() == leadId.toString());
 
   // Convenience getters for tabs
   List<TutorLead> get enquiries => leads;

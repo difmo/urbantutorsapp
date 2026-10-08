@@ -17,8 +17,8 @@ class LeadsViewService {
     throw ApiException((data is Map ? data['message']?.toString() : null) ?? 'Failed to fetch leads');
   }
 
-  /// Returns message from server (use it in a snackbar/toast)
-  Future<String> grabLead({
+  /// Returns response map from server (contains message and data)
+  Future<dynamic> grabLead({
     required String userId,
     required String leadId,
   }) async {
@@ -29,7 +29,7 @@ class LeadsViewService {
     print("Grabbing lead...${res.data}");
     final data = res.data;
     if (data is Map && data['success'] == true) {
-      return (data['message'] ?? 'Lead grabbed successfully').toString();
+      return data;
     }
     throw ApiException((data is Map ? data['message']?.toString() : null) ?? 'Failed to grab lead');
   }

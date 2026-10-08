@@ -49,9 +49,35 @@ class TutorLead {
     required this.updatedAt,
   });
 
+  static int _asInt(dynamic v) {
+    if (v == null) return 0;
+    if (v is int) return v;
+    return int.tryParse(v.toString()) ?? 0;
+  }
+
+  static String _extractLeadMobile(Map<String, dynamic> j) {
+    final candidates = [
+      j['mobile'],
+      j['student_mobile'],
+      j['student_mobile_no'],
+      j['student_phone'],
+      j['phone'],
+      j['contact'],
+    ];
+    for (final c in candidates) {
+      if (c != null) {
+        final s = c.toString().trim();
+        if (s.isNotEmpty && s != 'null' && s != '0' && s != '—') {
+          return s;
+        }
+      }
+    }
+    return '';
+  }
+
   factory TutorLead.fromJson(Map<String, dynamic> j) => TutorLead(
-        id: j['id'] ?? 0,
-        userId: j['user_id'] ?? 0,
+        id: _asInt(j['id']),
+        userId: _asInt(j['user_id']),
         studentName: (j['student_name'] ?? j['studentName'] ?? j['name'] ?? '').toString(),
         studentId: (j['student_id'] ?? j['studentId'] ?? '').toString(),
         boardName: (j['board_name'] ?? j['board'] ?? j['board_label'] ?? j['board_lable'] ?? j['board_title'] ?? '').toString(),
@@ -65,12 +91,12 @@ class TutorLead {
         latitude: (j['latitude'] ?? '').toString(),
         longitude: (j['longitude'] ?? '').toString(),
         place_id: (j['place_id'] ?? '').toString(),
-        mobile: (j['mobile'] ?? '').toString(),
+        mobile: _extractLeadMobile(j),
         price: (j['price'] ?? j['fee'] ?? '').toString(),
         state: (j['state'] ?? '').toString(),
         location: (j['location'] ?? j['locality'] ?? '').toString(),
         mode: (j['mode'] ?? '').toString(),
-        status: j['status'] ?? 0,
+        status: _asInt(j['status']),
         createdAt: j['created_at'] != null ? DateTime.tryParse(j['created_at']) : null,
         updatedAt: j['updated_at'] != null ? DateTime.tryParse(j['updated_at']) : null,
       );

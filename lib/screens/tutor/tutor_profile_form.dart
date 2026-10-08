@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:urbantutorsapp/utils/geo_helper.dart';
 
 import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
@@ -65,10 +64,12 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
   // Other form bits
   String? selectedState;
-  String? selectedIdType;
+  String? selectedIdType = 'Aadhar';
   String? selectedIdMode;
   String? selectedIdExperienceInYears;
   String? _profileImageUrl; // from server
+  String? _frontIdUrl; // from server
+  String? _backIdUrl; // from server
   // Location data
   String? _latitude;
   String? _longitude;
@@ -182,7 +183,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
       priceController.text = teacher.minAmount?.toString() ?? '';
       selectedFeeMin = _oneOf(teacher.minAmount?.toInt() ?? 300, minOptions);
       selectedFeeMax = _oneOf(teacher.maxAmount?.toInt() ?? 500, maxOptionsBase);
-      selectedIdType = _normalizeIdType(teacher.idType);
+      selectedIdType = _normalizeIdType(teacher.idType) ?? selectedIdType ?? 'Aadhar';
       // Normalize mode cleanly
       final serverMode = (teacher.mode ?? '').trim();
       final cachedMode = StorageService.cachedTeachingMode;
@@ -324,9 +325,18 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
 
   Future<void> _hydrate() async {
     final p = _p.tutorprofileData.value;
-    if (p == null) return;
-
-    final lists = _listFromTeachingDetails(p.teachingDetails);
+    var lists = _listFromTeachingDetails(p?.teachingDetails);
+    final cachedTd = await StorageService.getTeachingDetails();
+    if (cachedTd != null && cachedTd.isNotEmpty) {
+      final cachedLists = _listFromTeachingDetails(cachedTd);
+      lists['board_id'] = {...(lists['board_id'] ?? []), ...(cachedLists['board_id'] ?? [])}.toList();
+      lists['class_id'] = {...(lists['class_id'] ?? []), ...(cachedLists['class_id'] ?? [])}.toList();
+      lists['subject_id'] = {...(lists['subject_id'] ?? []), ...(cachedLists['subject_id'] ?? [])}.toList();
+    }
+    final cachedNames = await StorageService.getKnownMetaNames();
+    _knownBoardNames.addAll(cachedNames['boards'] ?? {});
+    _knownClassNames.addAll(cachedNames['classes'] ?? {});
+    _knownSubjectNames.addAll(cachedNames['subjects'] ?? {});
 
     _selBoardIds
       ..clear()
@@ -341,6 +351,11 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
     if (_selBoardIds.isNotEmpty) {
       try {
         await _leadMeta.loadClassesForBoards(_selBoardIds);
+        for (final c in _leadMeta.classes) {
+          if (c.className.isNotEmpty) {
+            _knownClassNames[c.classId] = c.className;
+          }
+        }
       } catch (_) {}
     }
 
@@ -348,34 +363,45 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
       try {
         await _leadMeta.loadSubjects1(
             selClassIds: _selClassIds, selBoardIds: _selBoardIds);
+        for (final s in _leadMeta.subjects) {
+          if (s.subjectName.isNotEmpty) {
+            _knownSubjectNames[s.subjectId] = s.subjectName;
+          }
+        }
       } catch (_) {}
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      selectedFeeMin = _oneOf(p.minAmount?.toInt() ?? 0, minOptions);
-      selectedFeeMax = _oneOf(p.maxAmount?.toInt() ?? 0, maxOptionsBase);
+      if (p != null) {
+        selectedFeeMin = _oneOf(p.minAmount?.toInt() ?? 0, minOptions);
+        selectedFeeMax = _oneOf(p.maxAmount?.toInt() ?? 0, maxOptionsBase);
 
-      nameController.text = (p.teacherName ?? '').toString().trim();
-      emailController.text = (p.email ?? '').toString().trim();
-      localityController.text = (p.location ?? '').toString().trim();
-      experienceController.text =
-          (p.experienceYears?.toString() ?? '').toString();
-      _qualificationCtrl.text = (p.remark ?? '').toString();
-      String? rawMode = (p.mode ?? '').toString().trim();
-      final cachedMode = StorageService.cachedTeachingMode;
-      final modeToUse = rawMode.isNotEmpty
-          ? rawMode
-          : (cachedMode != null && cachedMode.trim().isNotEmpty
-              ? cachedMode
-              : (selectedIdMode ?? 'Online'));
-      final normalizedMode = _normalizeMode(modeToUse);
+        nameController.text = (p.teacherName ?? '').toString().trim();
+        emailController.text = (p.email ?? '').toString().trim();
+        localityController.text = (p.location ?? '').toString().trim();
+        experienceController.text =
+            (p.experienceYears?.toString() ?? '').toString();
+        _qualificationCtrl.text = (p.remark ?? '').toString();
+        String? rawMode = (p.mode ?? '').toString().trim();
+        final cachedMode = StorageService.cachedTeachingMode;
+        final modeToUse = rawMode.isNotEmpty
+            ? rawMode
+            : (cachedMode != null && cachedMode.trim().isNotEmpty
+                ? cachedMode
+                : (selectedIdMode ?? 'Online'));
+        final normalizedMode = _normalizeMode(modeToUse);
 
-      _profileImageUrl = _resolveImageUrl(p.profilePicture);
-
-      setState(() {
+        _profileImageUrl = _resolveImageUrl(p.profilePicture);
+        _frontIdUrl = _resolveImageUrl(p.frontId);
+        _backIdUrl = _resolveImageUrl(p.frontBack);
+        final rawIdType = p.idType;
+        if (rawIdType != null && rawIdType.isNotEmpty) {
+          selectedIdType = _normalizeIdType(rawIdType) ?? selectedIdType ?? 'Aadhar';
+        }
         selectedIdMode = normalizedMode;
-      });
+      }
+      setState(() {});
     });
   }
 
@@ -419,9 +445,18 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
     if (!mounted) return;
     if (picked != null) {
       setState(() {
-        if (type == "profile") _profileImage = picked;
-        if (type == "front") _frontIdImage = picked;
-        if (type == "back") _backIdImage = picked;
+        if (type == "profile") {
+          _profileImage = picked;
+          _profileImageError = false;
+        }
+        if (type == "front") {
+          _frontIdImage = picked;
+          _frontIdError = false;
+        }
+        if (type == "back") {
+          _backIdImage = picked;
+          _backIdError = false;
+        }
       });
     }
     if (mounted && Navigator.canPop(context)) {
@@ -432,6 +467,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
   void _showPickerOptions(String type) {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -448,6 +484,37 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
               title: const Text("Gallery"),
               onTap: () => _pickImage(ImageSource.gallery, type),
             ),
+            if ((type == "front" &&
+                    (_frontIdImage != null ||
+                        (_frontIdUrl != null && _frontIdUrl!.isNotEmpty))) ||
+                (type == "back" &&
+                    (_backIdImage != null ||
+                        (_backIdUrl != null && _backIdUrl!.isNotEmpty))) ||
+                (type == "profile" &&
+                    (_profileImage != null ||
+                        (_profileImageUrl != null &&
+                            _profileImageUrl!.isNotEmpty))))
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: const Text("Remove"),
+                onTap: () {
+                  setState(() {
+                    if (type == "front") {
+                      _frontIdImage = null;
+                      _frontIdUrl = null;
+                    }
+                    if (type == "back") {
+                      _backIdImage = null;
+                      _backIdUrl = null;
+                    }
+                    if (type == "profile") {
+                      _profileImage = null;
+                      _profileImageUrl = null;
+                    }
+                  });
+                  Navigator.pop(ctx);
+                },
+              ),
           ],
         ),
       ),
@@ -572,21 +639,27 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
       multiSelectsOk = false;
     }
 
-    // Validate ID images
-    final profileImageOk = _profileImage != null;
-    final frontOk = _frontIdImage != null;
-    final backOk = _backIdImage != null;
+    // Validate profile image
+    final profileImageOk = _profileImage != null ||
+        (_profileImageUrl != null && _profileImageUrl!.isNotEmpty);
     if (!profileImageOk) _profileImageError = true;
+
+    // Validate ID images
+    final frontOk = _frontIdImage != null ||
+        (_frontIdUrl != null && _frontIdUrl!.isNotEmpty);
     if (!frontOk) _frontIdError = true;
+
+    final backOk = _backIdImage != null ||
+        (_backIdUrl != null && _backIdUrl!.isNotEmpty);
     if (!backOk) _backIdError = true;
 
     setState(() {}); // update UI for errors
 
     if (!formValid ||
         !multiSelectsOk ||
+        !profileImageOk ||
         !frontOk ||
-        !backOk ||
-        !profileImageOk) {
+        !backOk) {
       Get.snackbar('Error', 'Please fill all required fields.',
           snackPosition: SnackPosition.BOTTOM);
       return;
@@ -605,26 +678,214 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
         return;
       }
 
-      final profileBase64 = await _fileToBase64(_profileImage) ?? '';
-      final frontBase64 = await _fileToBase64(_frontIdImage) ?? '';
-      final backBase64 = await _fileToBase64(_backIdImage) ?? '';
-      print(profileBase64);
-      print(frontBase64);
-      print(backBase64);
+      final profileBase64 = await _fileToBase64(_profileImage);
+      final frontBase64 = await _fileToBase64(_frontIdImage);
+      final backBase64 = await _fileToBase64(_backIdImage);
+      final storedPicture = _p.tutorprofileData.value?.profilePicture;
+      final storedFront = _p.tutorprofileData.value?.frontId;
+      final storedBack = _p.tutorprofileData.value?.frontBack;
+
+      final effProfile = (profileBase64 != null && profileBase64.isNotEmpty)
+          ? profileBase64
+          : (storedPicture ?? '');
+      final effFront = (frontBase64 != null && frontBase64.isNotEmpty)
+          ? frontBase64
+          : (storedFront ?? '');
+      final effBack = (backBase64 != null && backBase64.isNotEmpty)
+          ? backBase64
+          : (storedBack ?? '');
 
       final boardIds = _uniqueInts(_selBoardIds);
       final classIds = _uniqueInts(_selClassIds);
       final subjectIds = _uniqueInts(_selSubjectIds);
-      print(boardIds);
-      print(classIds);
-      print(subjectIds);
+
+      // Build subject-to-class and subject-to-board mapping
+      final Map<int, Set<int>> subjectToClasses = {};
+      final Map<int, Set<int>> subjectToBoards = {};
+
+      for (final s in _leadMeta.subjects) {
+        if (s.subjectId > 0) {
+          if (s.classId != null && s.classId! > 0) {
+            subjectToClasses.putIfAbsent(s.subjectId, () => {}).add(s.classId!);
+          }
+          if (s.boardId != null && s.boardId! > 0) {
+            subjectToBoards.putIfAbsent(s.subjectId, () => {}).add(s.boardId!);
+          }
+        }
+      }
+
+      final existingDetails = [
+        ...(_p.tutorprofileData.value?.teachingDetails ?? []),
+        ...((await StorageService.getTeachingDetails()) ?? []),
+      ];
+      for (final td in existingDetails) {
+        int? sId, cId, bId;
+        if (td is TeachingDetails) {
+          sId = td.subjectId;
+          cId = td.classId;
+          bId = td.boardId;
+        } else if (td is Map) {
+          sId = td['subject_id'] is int ? td['subject_id'] : int.tryParse(td['subject_id']?.toString() ?? '');
+          cId = td['class_id'] is int ? td['class_id'] : int.tryParse(td['class_id']?.toString() ?? '');
+          bId = td['board_id'] is int ? td['board_id'] : int.tryParse(td['board_id']?.toString() ?? '');
+        }
+        if (sId != null && sId > 0) {
+          if (cId != null && cId > 0) {
+            subjectToClasses.putIfAbsent(sId, () => {}).add(cId);
+          }
+          if (bId != null && bId > 0) {
+            subjectToBoards.putIfAbsent(sId, () => {}).add(bId);
+          }
+        }
+      }
+
+      final List<String> boardNamesList = boardIds.map((b) {
+        return (_knownBoardNames[b]?.isNotEmpty == true)
+            ? _knownBoardNames[b]!
+            : (_master.masterData.value?.data.boardLead.firstWhereOrNull((e) => e.boardId == b)?.boardLabel ?? '');
+      }).whereType<String>().where((s) => s.isNotEmpty).toList();
+
+      final List<String> classNamesList = classIds.map((c) {
+        return (_knownClassNames[c]?.isNotEmpty == true)
+            ? _knownClassNames[c]!
+            : (_leadMeta.classes.firstWhereOrNull((e) => e.classId == c)?.className ?? '');
+      }).whereType<String>().where((s) => s.isNotEmpty).toList();
+
+      final List<String> subjectNamesList = subjectIds.map((s) {
+        final name = (_knownSubjectNames[s]?.isNotEmpty == true)
+            ? _knownSubjectNames[s]!
+            : (_leadMeta.subjects.firstWhereOrNull((e) => e.subjectId == s)?.subjectName ?? '');
+        final clean = name.split(' (').first.trim();
+        return clean.isNotEmpty ? clean : name.trim();
+      }).where((s) => s.isNotEmpty).toList();
+
+      final boardNamesJoined = boardNamesList.join(', ');
+      final classNamesJoined = classNamesList.join(', ');
+      final subjectNamesJoined = subjectNamesList.join(', ');
+      final boardIdsStr = boardIds.join(',');
+      final classIdsStr = classIds.join(',');
+      final subjectIdsStr = subjectIds.join(',');
+
+      final List<Map<String, dynamic>> teachingDetailsPayload = [];
+      final Set<String> seenDetailCombos = {};
+
+      void addDetail(int bId, int cId, int? sId) {
+        final key = '$bId-$cId-${sId ?? 0}';
+        if (seenDetailCombos.contains(key)) return;
+        seenDetailCombos.add(key);
+
+        final bName = (_knownBoardNames[bId]?.isNotEmpty == true)
+            ? _knownBoardNames[bId]!
+            : (_master.masterData.value?.data.boardLead.firstWhereOrNull((e) => e.boardId == bId)?.boardLabel ?? '');
+        final cName = (_knownClassNames[cId]?.isNotEmpty == true)
+            ? _knownClassNames[cId]!
+            : (_leadMeta.classes.firstWhereOrNull((e) => e.classId == cId)?.className ?? '');
+        String sName = (sId != null && sId > 0)
+            ? (_leadMeta.subjects.firstWhereOrNull((e) => e.subjectId == sId)?.subjectName ??
+                ((_knownSubjectNames[sId]?.isNotEmpty == true) ? _knownSubjectNames[sId]! : ''))
+            : '';
+        if (sName.contains(' (')) {
+          sName = sName.split(' (').first.trim();
+        }
+
+        final Map<String, dynamic> item = {
+          "user_id": uidStr,
+          "teacher_id": uidStr,
+          "tutor_id": uidStr,
+          "board_id": bId,
+          "boardId": bId,
+          "board_name": bName,
+          "boardName": bName,
+          "board_label": bName,
+          "class_id": cId,
+          "classId": cId,
+          "course_id": cId,
+          "courseId": cId,
+          "class_name": cName,
+          "className": cName,
+          "course_name": cName,
+          "courseName": cName,
+          "status": 1,
+          "is_verify": 1,
+        };
+        if (sId != null && sId > 0) {
+          item["subject_id"] = sId;
+          item["subjectId"] = sId;
+          item["subject_name"] = sName;
+          item["subjectName"] = sName;
+          item["subjectname"] = sName;
+          item["name"] = sName;
+          item["all_subjects"] = subjectNamesJoined;
+          item["subject_names"] = subjectNamesList;
+          item["subject_ids"] = subjectIdsStr;
+          item["subjects"] = subjectNamesJoined;
+        }
+        teachingDetailsPayload.add(item);
+      }
+
+      final targetBoards = boardIds.isNotEmpty ? boardIds : [1];
+      final targetClasses = classIds.isNotEmpty ? classIds : [0];
+
+      if (subjectIds.isNotEmpty) {
+        for (final bId in targetBoards) {
+          for (final sId in subjectIds) {
+            // Find which class this subject belongs to
+            final validClasses = (subjectToClasses[sId]?.isNotEmpty == true)
+                ? subjectToClasses[sId]!.where((c) => targetClasses.contains(c)).toList()
+                : <int>[];
+
+            final classesToAssign = validClasses.isNotEmpty
+                ? validClasses
+                : targetClasses;
+
+            for (final cId in classesToAssign) {
+              addDetail(bId, cId, sId);
+            }
+          }
+
+          // Ensure each targetClass has at least one entry
+          for (final cId in targetClasses) {
+            final hasEntry = teachingDetailsPayload.any(
+                (td) => td['board_id'] == bId && td['class_id'] == cId);
+            if (!hasEntry) {
+              addDetail(bId, cId, null);
+            }
+          }
+        }
+      } else {
+        for (final bId in targetBoards) {
+          for (final cId in targetClasses) {
+            addDetail(bId, cId, null);
+          }
+        }
+      }
+
+
 
       final newName = nameController.text.trim();
       final apiIdType = _toApiIdType(selectedIdType);
+
+      final mobileNum = (_p.tutorprofileData.value?.mobile?.isNotEmpty == true)
+          ? _p.tutorprofileData.value!.mobile!
+          : (await StorageService.getUserPhoneNumber()) ?? '';
+      final stateVal = (selectedState != null && selectedState!.isNotEmpty)
+          ? selectedState!
+          : ((_p.tutorprofileData.value?.state?.isNotEmpty == true)
+              ? _p.tutorprofileData.value!.state!
+              : 'Delhi');
+      final remarkVal = (_p.tutorprofileData.value?.remark?.isNotEmpty == true)
+          ? _p.tutorprofileData.value!.remark!
+          : 'Certified Tutor';
+      final expYears = _expToInt(selectedIdExperienceInYears);
+      final isAlreadyVerified = _p.tutorprofileData.value?.profileStatus == 2;
+      final targetProfileStatus = isAlreadyVerified ? 2 : 1;
+      final targetVerifyStatus = isAlreadyVerified ? 1 : 0;
+
       final request = {
         "user_id": uidStr,
         "id": uidStr,
         "teacher_id": uidStr,
+        "teacher_user_id": uidStr,
         "teacher_name": newName,
         "teacherName": newName,
         "name": newName,
@@ -634,28 +895,123 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
         "userName": newName,
         "tutor_name": newName,
         "email": emailController.text.trim(),
+        "mobile": mobileNum,
+        "phone": mobileNum,
+        "contact": mobileNum,
+        "mobile_no": mobileNum,
         "location": localityController.text.trim(),
+        "city": localityController.text.trim(),
+        "address": localityController.text.trim(),
+        "state": stateVal,
         "idType": apiIdType,
         "idtype": apiIdType,
         "id_type": apiIdType,
         "qualification": _qualificationCtrl.text.trim(),
-        "profile_picture": profileBase64,
+        "highest_qualification": _qualificationCtrl.text.trim(),
+        "education": _qualificationCtrl.text.trim(),
+        "profile_picture": effProfile,
+        "profile_image": effProfile,
+        "image": effProfile,
+        "photo": effProfile,
+        "avatar": effProfile,
         "min_amount": selectedFeeMin ?? 0,
         "max_amount": selectedFeeMax ?? 0,
         "price": (selectedFeeMax ?? 0).toDouble(),
+        "fee": (selectedFeeMax ?? 0).toDouble(),
+        "fees": (selectedFeeMax ?? 0).toDouble(),
+        "hourly_rate": (selectedFeeMax ?? 0).toDouble(),
         "mode": selectedIdMode,
         "teaching_mode": selectedIdMode,
         "teachingMode": selectedIdMode,
-        "experience_years": _expToInt(selectedIdExperienceInYears),
+        "mode_of_teaching": selectedIdMode,
+        "class_mode": selectedIdMode,
+        "experience_years": expYears,
+        "experience": expYears,
+        "experience_year": expYears,
+        "year_of_experience": expYears,
         "place_id": _placeId ?? "",
         "latitude": _latitude ?? "",
         "longitude": _longitude ?? "",
         "pincode": pinCodeController.text.trim(),
+        // Boards
         "board_id": boardIds,
+        "board_ids": boardIdsStr,
+        "boards": boardIds,
+        "boards_id": boardIds,
+        "boardId": boardIds.isNotEmpty ? boardIds.first : null,
+        "board": boardNamesJoined,
+        "board_name": boardNamesJoined,
+        "boardName": boardNamesJoined,
+        "board_label": boardNamesJoined,
+        "board_names": boardNamesList,
+        // Classes / Courses
         "class_id": classIds,
+        "class_ids": classIdsStr,
+        "classes": classIds,
+        "classes_id": classIds,
+        "classId": classIds.isNotEmpty ? classIds.first : null,
+        "class": classNamesJoined,
+        "class_name": classNamesJoined,
+        "className": classNamesJoined,
+        "class_names": classNamesList,
+        "course_id": classIds,
+        "course_ids": classIdsStr,
+        "courses": classIds,
+        "courseId": classIds.isNotEmpty ? classIds.first : null,
+        "course": classNamesJoined,
+        "course_name": classNamesJoined,
+        "courseName": classNamesJoined,
+        "course_names": classNamesList,
+        // Subjects
         "subject_id": subjectIds,
-        "frontid": frontBase64,
-        "backid": backBase64,
+        "subject_ids": subjectIdsStr,
+        "subjects": subjectIds,
+        "subjects_id": subjectIds,
+        "subjectId": subjectIds.isNotEmpty ? subjectIds.first : null,
+        "subject": subjectNamesJoined,
+        "subject_name": subjectNamesJoined,
+        "subjectName": subjectNamesJoined,
+        "subjectname": subjectNamesJoined,
+        "subject_names": subjectNamesList,
+        "all_subjects": subjectNamesJoined,
+        if (subjectIds.isNotEmpty) ...{
+          "mostexperiensubjects_id": subjectIds.first,
+          "most_experien_subjects_id": subjectIds.first,
+          "most_experien_subject": subjectNamesJoined,
+          "mostexperiensubject": subjectNamesJoined,
+          "most_experien_subjects": subjectNamesJoined,
+          "mostexperiensubjects": subjectNamesJoined,
+        },
+        "teaching_details": teachingDetailsPayload,
+        "teaching_details_json": jsonEncode(teachingDetailsPayload),
+        "teachingDetails": teachingDetailsPayload,
+        "fb_link": _p.tutorprofileData.value?.fbLink ?? '',
+        "facebook": _p.tutorprofileData.value?.fbLink ?? '',
+        "insta_link": _p.tutorprofileData.value?.instaLink ?? '',
+        "instagram": _p.tutorprofileData.value?.instaLink ?? '',
+        "wh_link": _p.tutorprofileData.value?.whLink ?? '',
+        "whatsapp": _p.tutorprofileData.value?.whLink ?? '',
+        "tel_link": _p.tutorprofileData.value?.whLink ?? '',
+        "telegram": _p.tutorprofileData.value?.whLink ?? '',
+        "remark": remarkVal,
+        "about": remarkVal,
+        "bio": remarkVal,
+        "description": remarkVal,
+
+        // Ensure newly submitted profile goes into under-verification (status 1)
+        "profile_status": targetProfileStatus,
+        "status": 1,
+        "is_verify": targetVerifyStatus,
+        "is_verified": targetVerifyStatus,
+        "verify": targetVerifyStatus,
+        "frontid": effFront,
+        "front_id": effFront,
+        "id_card": effFront,
+        "identity_card": effFront,
+        "frontback": effBack,
+        "backid": effBack,
+        "back_id": effBack,
+        "id_back": effBack,
       };
 
       final ss = await _p.updateTutorProfile(request);
@@ -669,8 +1025,128 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
         if (apiIdType.isNotEmpty) {
           await StorageService.saveIdType(apiIdType);
         }
-        Get.snackbar('Success', 'Profile updated successfully');
+        await StorageService.saveTeachingDetails(teachingDetailsPayload);
+        await StorageService.saveKnownMetaNames(
+          boards: _knownBoardNames,
+          classes: _knownClassNames,
+          subjects: _knownSubjectNames,
+        );
+
+        final finalStatus = targetProfileStatus;
+        await StorageService.saveIsProfileStatus(finalStatus);
+        _p.tutorprofileData.value =
+            _p.tutorprofileData.value?.copyWith(profileStatus: finalStatus);
+
+        // Auto-refresh profile data from server
+        await _p.fetchProfileForTutor();
         _refreshTutorProfile();
+
+        if (finalStatus == 1) {
+          // Under verification flow: show popup dialog and navigate to TeacherPendingScreen
+          if (mounted) {
+            await showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 24,
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 76,
+                      height: 76,
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.access_time_filled_rounded,
+                        size: 46,
+                        color: Colors.orange.shade700,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    const Text(
+                      "Your profile is under verification",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Kindly Wait...",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.orange.shade800,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      "Our team will verify your account within 24 hours,\nthen you can start exploring all opportunities.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade700,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          Get.offAll(() => const TeacherPendingScreen());
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryColor,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          "OK",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+          Get.offAll(() => const TeacherPendingScreen());
+        } else {
+          Get.snackbar(
+            'Success',
+            'Profile updated successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green,
+            colorText: Colors.white,
+          );
+
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          } else {
+            Get.offAll(() => const TutorDashboard());
+          }
+        }
       }
     } catch (e) {
       Get.snackbar('Error', e.toString());
@@ -750,16 +1226,40 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                                     ),
                                   ],
                                 ),
-                                child: CircleAvatar(
-                                  radius: 60,
-                                  backgroundImage: _profileImage != null
-                                      ? FileImage(File(_profileImage!.path))
-                                      : null,
-                                  backgroundColor: Colors.grey.shade200,
-                                  child: _profileImage == null
-                                      ? Icon(Icons.person,
-                                          size: 60, color: Colors.grey.shade400)
-                                      : null,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    final ImageProvider? imgProvider = _profileImage != null
+                                        ? FileImage(File(_profileImage!.path))
+                                        : (_profileImageUrl != null &&
+                                                _profileImageUrl!.isNotEmpty
+                                            ? NetworkImage(_profileImageUrl!)
+                                            : null);
+                                    if (imgProvider != null) {
+                                      _showImagePreview(context,
+                                          title: 'Profile Photo',
+                                          imageProvider: imgProvider);
+                                    } else {
+                                      _showPickerOptions("profile");
+                                    }
+                                  },
+                                  child: CircleAvatar(
+                                    radius: 60,
+                                    backgroundImage: _profileImage != null
+                                        ? FileImage(File(_profileImage!.path))
+                                        : (_profileImageUrl != null &&
+                                                _profileImageUrl!.isNotEmpty
+                                            ? NetworkImage(_profileImageUrl!)
+                                                as ImageProvider
+                                            : null),
+                                    backgroundColor: Colors.grey.shade200,
+                                    child: (_profileImage == null &&
+                                            (_profileImageUrl == null ||
+                                                _profileImageUrl!.isEmpty))
+                                        ? Icon(Icons.person,
+                                            size: 60,
+                                            color: Colors.grey.shade400)
+                                        : null,
+                                  ),
                                 ),
                               ),
                               Positioned(
@@ -1102,12 +1602,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                             selectedNames: _labelsFor(
                               _selBoardIds,
                               (_master.masterData.value?.data.boardLead ?? [])
-                                  .map((b) => OptionInt(
-                                        (b.boardId is int)
-                                            ? b.boardId
-                                            : int.tryParse('${b.boardId}') ?? 0,
-                                        b.boardLabel ?? '',
-                                      ))
+                                  .map((b) => OptionInt(b.boardId, b.boardLabel))
                                   .toList(),
                             ),
                             primary: primary,
@@ -1115,12 +1610,7 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                               final options = (_master
                                           .masterData.value?.data.boardLead ??
                                       [])
-                                  .map((b) => OptionInt(
-                                        (b.boardId is int)
-                                            ? b.boardId
-                                            : int.tryParse('${b.boardId}') ?? 0,
-                                        b.boardLabel ?? '',
-                                      ))
+                                  .map((b) => OptionInt(b.boardId, b.boardLabel))
                                   .toList();
 
                               if (!context.mounted) return;
@@ -1136,16 +1626,46 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                                   _selBoardIds
                                     ..clear()
                                     ..addAll(picked);
-                                  _selClassIds.clear();
-                                  _selSubjectIds.clear();
+                                  for (final id in picked) {
+                                    final found = options.firstWhereOrNull((b) => b.id == id);
+                                    if (found != null && found.label.isNotEmpty) {
+                                      _knownBoardNames[id] = found.label;
+                                    }
+                                  }
                                   _boardError = false;
-                                  _classError = false;
-                                  _subjectError = false;
                                 });
 
                                 if (_selBoardIds.isNotEmpty) {
                                   await _leadMeta
                                       .loadClassesForBoards(_selBoardIds);
+                                  for (final c in _leadMeta.classes) {
+                                    if (c.className.isNotEmpty) {
+                                      _knownClassNames[c.classId] = c.className;
+                                    }
+                                  }
+                                  final validClassIds = _leadMeta.classes.map((c) => c.classId).toSet();
+                                  _selClassIds.removeWhere((id) => !validClassIds.contains(id));
+
+                                  if (_selClassIds.isNotEmpty) {
+                                    await _leadMeta.loadSubjects1(
+                                      selBoardIds: _selBoardIds,
+                                      selClassIds: _selClassIds,
+                                    );
+                                    final validSubjectIds = _leadMeta.subjects.map((s) => s.subjectId).toSet();
+                                    if (validSubjectIds.isNotEmpty) {
+                                      _selSubjectIds.removeWhere((id) => !validSubjectIds.contains(id) && !_knownSubjectNames.containsKey(id));
+                                    }
+                                  } else {
+                                    _selSubjectIds.clear();
+                                    _leadMeta.subjects.clear();
+                                  }
+                                  if (mounted) setState(() {});
+                                } else {
+                                  _selClassIds.clear();
+                                  _selSubjectIds.clear();
+                                  _leadMeta.classes.clear();
+                                  _leadMeta.subjects.clear();
+                                  if (mounted) setState(() {});
                                 }
                               }
                             },
@@ -1221,9 +1741,13 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                                   _selClassIds
                                     ..clear()
                                     ..addAll(picked);
-                                  _selSubjectIds.clear();
+                                  for (final id in picked) {
+                                    final found = options.firstWhereOrNull((c) => c.id == id);
+                                    if (found != null && found.label.isNotEmpty) {
+                                      _knownClassNames[id] = found.label;
+                                    }
+                                  }
                                   _classError = false;
-                                  _subjectError = false;
                                 });
 
                                 if (_selBoardIds.isNotEmpty &&
@@ -1232,6 +1756,20 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                                     selBoardIds: _selBoardIds,
                                     selClassIds: _selClassIds,
                                   );
+                                  for (final s in _leadMeta.subjects) {
+                                    if (s.subjectName.isNotEmpty) {
+                                      _knownSubjectNames[s.subjectId] = s.subjectName;
+                                    }
+                                  }
+                                  final validSubjectIds = _leadMeta.subjects.map((s) => s.subjectId).toSet();
+                                  if (validSubjectIds.isNotEmpty) {
+                                    _selSubjectIds.removeWhere((id) => !validSubjectIds.contains(id) && !_knownSubjectNames.containsKey(id));
+                                  }
+                                  if (mounted) setState(() {});
+                                } else {
+                                  _selSubjectIds.clear();
+                                  _leadMeta.subjects.clear();
+                                  if (mounted) setState(() {});
                                 }
                               }
                             },
@@ -1266,8 +1804,8 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                               _selSubjectIds,
                               _leadMeta.subjects
                                   .map((s) => OptionInt(
-                                        s.subjectId ?? 0,
-                                        (s.subjectName ?? '').toString(),
+                                        s.subjectId,
+                                        s.subjectName,
                                       ))
                                   .toList(),
                               fallbackNames: _knownSubjectNames,
@@ -1283,19 +1821,58 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                                 );
                                 return;
                               }
-                              if (_leadMeta.subjects.isEmpty) {
+                              Get.dialog(
+                                const Center(
+                                  child: Card(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(20.0),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          CircularProgressIndicator(),
+                                          SizedBox(height: 16),
+                                          Text('Loading subjects...',
+                                              style: TextStyle(fontWeight: FontWeight.w600)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                barrierDismissible: false,
+                              );
+                              try {
                                 await _leadMeta.loadSubjects1(
                                   selBoardIds: _selBoardIds,
                                   selClassIds: _selClassIds,
                                 );
+                                for (final s in _leadMeta.subjects) {
+                                  if (s.subjectName.isNotEmpty) {
+                                    _knownSubjectNames[s.subjectId] = s.subjectName;
+                                  }
+                                }
+                              } finally {
+                                if (Get.isDialogOpen == true) {
+                                  Get.back();
+                                }
                               }
 
                               final optionsMap = <int, OptionInt>{};
                               for (final s in _leadMeta.subjects) {
-                                optionsMap[s.subjectId] = OptionInt(s.subjectId, s.subjectName);
+                                if (s.subjectName.trim().isEmpty) continue;
+                                String label = s.subjectName;
+                                if (s.classId != null && s.classId! > 0 && _selClassIds.length > 1) {
+                                  final cName = _knownClassNames[s.classId!] ??
+                                      _leadMeta.classes.firstWhereOrNull((c) => c.classId == s.classId!)?.className;
+                                  if (cName != null && cName.isNotEmpty) {
+                                    label = '${s.subjectName} ($cName)';
+                                  }
+                                }
+                                optionsMap[s.subjectId] = OptionInt(s.subjectId, label);
                               }
                               for (final entry in _knownSubjectNames.entries) {
-                                optionsMap.putIfAbsent(entry.key, () => OptionInt(entry.key, entry.value));
+                                if (entry.value.trim().isNotEmpty) {
+                                  optionsMap.putIfAbsent(entry.key, () => OptionInt(entry.key, entry.value.trim()));
+                                }
                               }
                               final options = optionsMap.values.toList();
 
@@ -1312,6 +1889,17 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                                   _selSubjectIds
                                     ..clear()
                                     ..addAll(picked);
+                                  for (final id in picked) {
+                                    final found = options.firstWhereOrNull((s) => s.id == id);
+                                    if (found != null && found.label.isNotEmpty) {
+                                      _knownSubjectNames[id] = found.label;
+                                    } else {
+                                      final metaFound = _leadMeta.subjects.firstWhereOrNull((s) => s.subjectId == id);
+                                      if (metaFound != null && metaFound.subjectName.isNotEmpty) {
+                                        _knownSubjectNames[id] = metaFound.subjectName;
+                                      }
+                                    }
+                                  }
                                   _subjectError = false;
                                 });
                               }
@@ -1594,53 +2182,86 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                     const SizedBox(height: 16),
 
                     // ID Type
-                    DropdownButtonFormField<String>(
-                      decoration: InputDecoration(
-                        labelText: "ID Type",
-                        prefixIcon: const Icon(Icons.credit_card),
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey.shade200),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: primary, width: 2),
+                    Theme(
+                      data: Theme.of(context).copyWith(
+                        canvasColor: Colors.white,
+                        focusColor: Colors.transparent,
+                        hoverColor: Colors.transparent,
+                        splashColor: Colors.transparent,
+                        highlightColor: Colors.transparent,
+                        colorScheme: Theme.of(context).colorScheme.copyWith(
+                          surface: Colors.white,
+                          surfaceContainer: Colors.white,
+                          surfaceContainerHighest: Colors.white,
+                          surfaceContainerLow: Colors.white,
+                          surfaceContainerLowest: Colors.white,
                         ),
                       ),
-                      initialValue: selectedIdType,
-                      items: const ["Aadhar", "Voter ID", "Passport"]
-                          .map((id) =>
-                              DropdownMenuItem(value: id, child: Text(id)))
-                          .toList(),
-                      onChanged: (val) => setState(() => selectedIdType = val),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'ID Type is required';
-                        }
-                        return null;
-                      },
+                      child: DropdownButtonFormField<String>(
+                        dropdownColor: Colors.white,
+                        decoration: InputDecoration(
+                          labelText: "ID Type",
+                          prefixIcon: const Icon(Icons.badge_outlined),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade200),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: primary, width: 2),
+                          ),
+                        ),
+                        key: ValueKey('id_type_$selectedIdType'),
+                        initialValue: const ["Aadhar", "Voter ID", "Passport"]
+                                .contains(selectedIdType)
+                            ? selectedIdType
+                            : "Aadhar",
+                        items: const ["Aadhar", "Voter ID", "Passport"]
+                            .map((id) =>
+                                DropdownMenuItem(value: id, child: Text(id)))
+                            .toList(),
+                        onChanged: (val) =>
+                            setState(() => selectedIdType = val),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return 'ID Type is required';
+                          }
+                          return null;
+                        },
+                      ),
                     ),
 
                     const SizedBox(height: 16),
 
-                    // ID images
+                    // ID images (Front & Back)
                     Row(
                       children: [
                         Expanded(
                           child: _idUploadBox(
-                              "Front ID", _frontIdImage, "front",
-                              error: _frontIdError, primary: primary),
+                            "Front ID",
+                            _frontIdImage,
+                            _frontIdUrl,
+                            "front",
+                            error: _frontIdError,
+                            primary: primary,
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: _idUploadBox("Back ID", _backIdImage, "back",
-                              error: _backIdError, primary: primary),
+                          child: _idUploadBox(
+                            "Back ID",
+                            _backIdImage,
+                            _backIdUrl,
+                            "back",
+                            error: _backIdError,
+                            primary: primary,
+                          ),
                         ),
                       ],
                     ),
@@ -1689,6 +2310,66 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
     );
   }
 
+  void _showImagePreview(BuildContext context,
+      {required String title, ImageProvider? imageProvider}) {
+    if (imageProvider == null) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 20,
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: InteractiveViewer(
+                      child: Image(
+                        image: imageProvider,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.black87),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   List<String> _labelsFor(List<int> selectedIds, List<OptionInt> all,
       {Map<int, String>? fallbackNames}) {
     final map = {for (final o in all) o.id: o.label};
@@ -1698,8 +2379,19 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
         .toList();
   }
 
-  Widget _idUploadBox(String label, XFile? file, String type,
-      {bool error = false, required Color primary}) {
+  Widget _idUploadBox(
+    String label,
+    XFile? file,
+    String? url,
+    String type, {
+    bool error = false,
+    required Color primary,
+  }) {
+    final bool hasImage = file != null || (url != null && url.isNotEmpty);
+    final ImageProvider? imageProvider = file != null
+        ? FileImage(File(file.path))
+        : (url != null && url.isNotEmpty ? NetworkImage(url) : null);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1712,17 +2404,71 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
         ),
         const SizedBox(height: 8),
         GestureDetector(
-          onTap: () => _showPickerOptions(type),
+          onTap: () {
+            if (hasImage && imageProvider != null) {
+              showModalBottomSheet(
+                context: context,
+                backgroundColor: Colors.white,
+                shape: const RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+                builder: (ctx) => SafeArea(
+                  child: Wrap(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.visibility_outlined),
+                        title: const Text("View Image"),
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          _showImagePreview(context,
+                              title: label, imageProvider: imageProvider);
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.edit_outlined),
+                        title: const Text("Change Image"),
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          _showPickerOptions(type);
+                        },
+                      ),
+                      ListTile(
+                        leading:
+                            const Icon(Icons.delete_outline, color: Colors.red),
+                        title: const Text("Remove"),
+                        onTap: () {
+                          setState(() {
+                            if (type == "front") {
+                              _frontIdImage = null;
+                              _frontIdUrl = null;
+                            }
+                            if (type == "back") {
+                              _backIdImage = null;
+                              _backIdUrl = null;
+                            }
+                          });
+                          Navigator.pop(ctx);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            } else {
+              _showPickerOptions(type);
+            }
+          },
           child: Container(
             width: double.infinity,
-            height: 160,
+            height: 150,
             decoration: BoxDecoration(
-              color: file == null ? Colors.grey.shade50 : null,
-              border: file == null
+              color: !hasImage ? Colors.grey.shade50 : null,
+              border: !hasImage
                   ? Border.all(
-                      color: error ? Colors.red.shade400 : Colors.grey.shade300,
+                      color:
+                          error ? Colors.red.shade400 : Colors.grey.shade300,
                       width: 2,
-                      strokeAlign: BorderSide.strokeAlignInside,
                     )
                   : Border.all(
                       color: primary.withValues(alpha: 0.3),
@@ -1731,13 +2477,13 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             clipBehavior: Clip.antiAlias,
-            child: file == null
+            child: !hasImage
                 ? Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
                         Icons.add_photo_alternate_outlined,
-                        size: 48,
+                        size: 44,
                         color:
                             error ? Colors.red.shade400 : Colors.grey.shade400,
                       ),
@@ -1747,21 +2493,33 @@ class _TutorProfileFormScreenState extends State<TutorProfileFormScreen> {
                         style: TextStyle(
                           color: Colors.grey.shade600,
                           fontSize: 12,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   )
                 : Stack(
+                    fit: StackFit.expand,
                     children: [
-                      Image.file(File(file.path),
+                      if (file != null)
+                        Image.file(
+                          File(file.path),
                           fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity),
+                        )
+                      else if (url != null && url.isNotEmpty)
+                        Image.network(
+                          url,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Center(
+                            child: Icon(Icons.broken_image,
+                                size: 36, color: Colors.grey),
+                          ),
+                        ),
                       Positioned(
                         top: 8,
                         right: 8,
                         child: Container(
-                          padding: const EdgeInsets.all(4),
+                          padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
                             color: Colors.black.withValues(alpha: 0.6),
                             shape: BoxShape.circle,

@@ -11,12 +11,12 @@ import 'package:urbantutorsapp/screens/student/childs_screens/HistoryScreen.dart
 import 'package:urbantutorsapp/screens/student/childs_screens/HomeScreen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/SupportScreen.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/UpgradeScreen.dart';
-import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart';
 import 'package:urbantutorsapp/screens/student/notes_screen.dart';
 import 'package:urbantutorsapp/screens/student/pdf_courses_screen.dart';
 import 'package:urbantutorsapp/screens/student/search_tutor_screen.dart';
 import 'package:urbantutorsapp/widgets/CustomStudentNavBar.dart';
 import 'package:urbantutorsapp/widgets/StudentDrawer.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../theme/theme_constants.dart';
 
@@ -41,6 +41,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
   late final CoinsController _c;
   late final ProfileUpdateController _p; // ⬅️ NEW
+  String _storedUserName = '';
 
   @override
   void initState() {
@@ -55,6 +56,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         : Get.put(ProfileUpdateController());
     // Try to ensure profile is present
     _p.fetchProfileForStudent();
+
+    StorageService.getUserName().then((n) {
+      if (mounted && n != null && n.trim().isNotEmpty) {
+        setState(() => _storedUserName = n.trim());
+      }
+    });
   }
 
   num _toNum(dynamic v) {
@@ -63,15 +70,32 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     return num.tryParse(v.toString()) ?? 0;
   }
 
+  bool _isGeneric(String? s) {
+    if (s == null) return true;
+    final t = s.trim().toLowerCase();
+    return t.isEmpty ||
+        t == 'user' ||
+        t == 'student' ||
+        t == 'urban user' ||
+        t == 'tutor';
+  }
+
+  String _resolveName(String? serverName) {
+    final s = (serverName ?? '').trim();
+    final cached = StorageService.cachedUserName?.trim() ?? '';
+    if (!_isGeneric(s)) return s;
+    if (!_isGeneric(cached)) return cached;
+    if (!_isGeneric(_storedUserName)) return _storedUserName;
+    return 'Student';
+  }
+
   String _initial(String? name) {
-    final n = (name ?? '').trim();
-    if (n.isEmpty) return 'S';
+    final n = _resolveName(name);
     return n.characters.first.toUpperCase();
   }
 
   String _firstName(String? name) {
-    final n = (name ?? '').trim();
-    if (n.isEmpty) return 'Student';
+    final n = _resolveName(name);
     final parts = n.split(RegExp(r'\s+'));
     return parts.first;
   }

@@ -58,14 +58,25 @@ class LeadClass {
 class LeadSubject {
   final int subjectId;
   final String subjectName;
-  LeadSubject({required this.subjectId, required this.subjectName});
+  final int? classId;
+  final int? boardId;
+  LeadSubject({
+    required this.subjectId,
+    required this.subjectName,
+    this.classId,
+    this.boardId,
+  });
 
-  factory LeadSubject.fromJson(Map<String, dynamic> j) {
+  factory LeadSubject.fromJson(Map<String, dynamic> j, {int? boardId, int? classId}) {
     final rawId = j['subject_id'] ?? j['id'];
     final rawName = j['subjectname'] ?? j['subject_name'] ?? j['name'];
+    final rawClassId = j['class_id'] ?? j['classId'];
     return LeadSubject(
-        subjectId: int.tryParse('$rawId') ?? 0,
-        subjectName: (rawName ?? '').toString());
+      subjectId: int.tryParse('$rawId') ?? 0,
+      subjectName: (rawName ?? '').toString(),
+      classId: rawClassId != null ? int.tryParse('$rawClassId') : classId,
+      boardId: boardId,
+    );
   }
 }
 
@@ -205,31 +216,61 @@ class LeadMetaService {
 
   Future<List<LeadSubject>> getSubjectsByClassAndBoard1(
       {required List<int> selBoardIds, required List<int> selClassIds}) async {
-    final requestBody = {
-      'board_id': selBoardIds.isNotEmpty ? selBoardIds.first : 99,
-      'class_id': selClassIds,
-    };
+    final validBoards = selBoardIds.where((b) => b > 0).toSet().toList();
+    final validClasses = selClassIds.where((c) => c > 0).toSet().toList();
+    if (validClasses.isEmpty) return [];
+
+    final boardsToQuery = validBoards.isNotEmpty ? validBoards : [8];
     final uri = Uri.parse('$_base/leadgetsubjects');
-    print('Request Body: ${jsonEncode(requestBody)}');
-    print('URI: $uri');
-    
-    final res = await _httpPost(uri,
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(requestBody),
-    );
-    print("[API] Response: ${res.body}");
-    
-    if (res.statusCode >= 200 && res.statusCode < 300) {
-      final body = _decodeJson(res.body);
-      final list = body['data'] ?? [];
-      return List.from(list)
-          .map((e) => LeadSubject.fromJson(Map<String, dynamic>.from(e)))
-          .toList();
+    final Map<int, LeadSubject> merged = {};
+
+    // Query per (board, class) so backend receives standard 'class_id' & 'board_id'
+    final List<Future<void>> futures = [];
+    for (final boardId in boardsToQuery) {
+      for (final classId in validClasses) {
+        futures.add(() async {
+          try {
+            final res = await _httpPost(
+              uri,
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/x-www-form-urlencoded',
+              },
+              body: {
+                'board_id': boardId.toString(),
+                'class_id': classId.toString(),
+              },
+            );
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+              final jsonBody = _decodeJson(res.body);
+              final isOk = jsonBody['success'] == true ||
+                  jsonBody['success'] == 1 ||
+                  jsonBody['success']?.toString() == '1' ||
+                  jsonBody['success']?.toString().toLowerCase() == 'true' ||
+                  jsonBody['data'] is List;
+              if (isOk) {
+                final list = jsonBody['data'] is List ? jsonBody['data'] as List : [];
+                for (final item in list) {
+                  final s = LeadSubject.fromJson(
+                    Map<String, dynamic>.from(item),
+                    boardId: boardId,
+                    classId: classId,
+                  );
+                  if (s.subjectId > 0 && s.subjectName.isNotEmpty) {
+                    merged[s.subjectId] = s;
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            print('[API] leadgetsubjects error for board $boardId, class $classId: $e');
+          }
+        }());
+      }
     }
-    throw ApiException('Failed to load subjects (${res.statusCode})');
+    await Future.wait(futures);
+
+    return merged.values.toList();
   }
 
   Future<List<LeadSubject>> getSubjectsByClassAndBoard(
@@ -247,7 +288,7 @@ class LeadMetaService {
       final body = _decodeJson(res.body);
       final list = body['data'] ?? [];
       return List.from(list)
-          .map((e) => LeadSubject.fromJson(Map<String, dynamic>.from(e)))
+          .map((e) => LeadSubject.fromJson(Map<String, dynamic>.from(e), boardId: boardId, classId: classId))
           .toList();
     }
     throw ApiException('Failed to load subjects (${res.statusCode})');

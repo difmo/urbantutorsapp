@@ -10,6 +10,7 @@ import 'package:urbantutorsapp/controllers/profile_update_controller.dart';
 import 'package:urbantutorsapp/models/coin_package.dart';
 import 'package:urbantutorsapp/models/my_coins.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class CoinsStudentScreen extends StatefulWidget {
   const CoinsStudentScreen({super.key});
@@ -68,15 +69,31 @@ class _CoinsStudentScreenState extends State<CoinsStudentScreen> {
     return num.tryParse(v.toString()) ?? 0;
   }
 
+  bool _isGeneric(String? s) {
+    if (s == null) return true;
+    final t = s.trim().toLowerCase();
+    return t.isEmpty ||
+        t == 'user' ||
+        t == 'student' ||
+        t == 'urban user' ||
+        t == 'tutor';
+  }
+
+  String _resolveName(String? serverName) {
+    final s = (serverName ?? '').trim();
+    final cached = StorageService.cachedUserName?.trim() ?? '';
+    if (!_isGeneric(s)) return s;
+    if (!_isGeneric(cached)) return cached;
+    return 'Student';
+  }
+
   String _initial(String? name) {
-    final n = (name ?? '').trim();
-    if (n.isEmpty) return 'S';
+    final n = _resolveName(name);
     return n.characters.first.toUpperCase();
   }
 
   String _firstName(String? name) {
-    final n = (name ?? '').trim();
-    if (n.isEmpty) return 'Student';
+    final n = _resolveName(name);
     final parts = n.split(RegExp(r'\s+'));
     return parts.first;
   }

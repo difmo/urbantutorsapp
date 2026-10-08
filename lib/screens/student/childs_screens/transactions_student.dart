@@ -10,6 +10,7 @@ import 'package:urbantutorsapp/controllers/transaction_controller.dart';
 import 'package:urbantutorsapp/models/transaction_models.dart';
 import 'package:urbantutorsapp/screens/tutor/tutor_coins_screen.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 
 class TransactionsStudent extends StatefulWidget {
   const TransactionsStudent({super.key});
@@ -29,6 +30,35 @@ class _TransactionsTutorState extends State<TransactionsStudent> {
     if (v == null) return 0;
     if (v is num) return v;
     return num.tryParse(v.toString()) ?? 0;
+  }
+
+  bool _isGeneric(String? s) {
+    if (s == null) return true;
+    final t = s.trim().toLowerCase();
+    return t.isEmpty ||
+        t == 'user' ||
+        t == 'student' ||
+        t == 'urban user' ||
+        t == 'tutor';
+  }
+
+  String _resolveName(String? serverName) {
+    final s = (serverName ?? '').trim();
+    final cached = StorageService.cachedUserName?.trim() ?? '';
+    if (!_isGeneric(s)) return s;
+    if (!_isGeneric(cached)) return cached;
+    return 'Student';
+  }
+
+  String _initial(String? name) {
+    final n = _resolveName(name);
+    return n.characters.first.toUpperCase();
+  }
+
+  String _firstName(String? name) {
+    final n = _resolveName(name);
+    final parts = n.split(RegExp(r'\s+'));
+    return parts.first;
   }
 
   @override
@@ -90,9 +120,9 @@ class _TransactionsTutorState extends State<TransactionsStudent> {
           final balanceText = balanceNum.toStringAsFixed(0);
 
           final prof = _p.studentprofileData.value;
-          final name = prof?.studentName?.trim() ?? '';
-          final displayName =
-              name.isEmpty ? 'Tutor' : name.split(RegExp(r'\s+')).first;
+          final name = prof?.studentName?.trim();
+          final displayName = _firstName(name);
+          final initial = _initial(name);
 
           if (loadingCoins && wallet == null && prof == null) {
             return const SizedBox(
@@ -106,7 +136,7 @@ class _TransactionsTutorState extends State<TransactionsStudent> {
           return _Header(
             primary: primary,
             accent: accent,
-            initial: (displayName.isEmpty ? 'T' : displayName[0].toUpperCase()),
+            initial: initial,
             greeting: "Transactions",
             name: displayName,
             balance: balanceText,

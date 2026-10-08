@@ -1,3 +1,5 @@
+import 'package:urbantutorsapp/utils/storage_helper.dart';
+
 class StudentProfileResponsdModal {
   final bool success;
   final StudentProfileDataNew? data;
@@ -105,22 +107,79 @@ class StudentProfileDataNew {
       return int.tryParse(v.toString());
     }
 
+    final userObj = json['user'] is Map
+        ? json['user'] as Map
+        : (json['userData'] is Map ? json['userData'] as Map : null);
+
+    String? pickValidName(List<dynamic> candidates) {
+      for (final c in candidates) {
+        if (c == null) continue;
+        final s = c.toString().trim();
+        if (s.isEmpty) continue;
+        final lower = s.toLowerCase();
+        if (lower == 'null' ||
+            lower == 'user' ||
+            lower == 'urban user' ||
+            lower == 'student' ||
+            lower == 'tutor') {
+          continue;
+        }
+        return s;
+      }
+      return null;
+    }
+
+    final cachedName = StorageService.cachedUserName?.trim();
+    final validCached = (cachedName != null &&
+            cachedName.isNotEmpty &&
+            cachedName.toLowerCase() != 'user' &&
+            cachedName.toLowerCase() != 'student' &&
+            cachedName.toLowerCase() != 'urban user')
+        ? cachedName
+        : null;
+
+    final resolvedStudentName = pickValidName([
+          json['student_name'],
+          json['studentName'],
+          json['name'],
+          json['full_name'],
+          json['fullName'],
+          json['user_name'],
+          json['username'],
+          userObj?['student_name'],
+          userObj?['studentName'],
+          userObj?['name'],
+          userObj?['full_name'],
+          userObj?['fullName'],
+          userObj?['user_name'],
+          userObj?['username'],
+        ]) ??
+        validCached ??
+        (json['student_name']?.toString().trim().isNotEmpty == true
+            ? json['student_name'].toString().trim()
+            : null) ??
+        (json['name']?.toString().trim().isNotEmpty == true
+            ? json['name'].toString().trim()
+            : null) ??
+        'Student';
+
+    final resolvedMobile = json['mobile'] ??
+        json['phone'] ??
+        json['phone_number'] ??
+        json['tutorbureau_number'] ??
+        userObj?['mobile'] ??
+        userObj?['phone'] ??
+        userObj?['phone_number'] ??
+        '';
+
     return StudentProfileDataNew(
       id: json['id'] ?? 0,
       profile_status: json['profile_status'] ?? json['tutorburo_profile_status']??0,
       profileId: json['profile_id'],
       profile_picture: json['profile_picture'],
       leadStatus: json['lead_status'],
-      studentName: json['student_name'] ??
-          json['name'] ??
-          json['full_name'] ??
-          json['tutorbureau'] ??
-          '',
-      mobile: json['mobile'] ??
-          json['phone'] ??
-          json['phone_number'] ??
-          json['tutorbureau_number'] ??
-          '',
+      studentName: resolvedStudentName,
+      mobile: resolvedMobile,
       totalCoins: json['total_coins']?.toString() ?? "0",
       totalSpentCoins: json['total_spent_coins']?.toString() ?? "0",
       totalAvailableCoins: json['total_Available_coins']?.toString() ?? "0",

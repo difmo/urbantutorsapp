@@ -79,7 +79,7 @@ class ProfileUpdateController extends GetxController {
         await StorageService.saveUserLeadStatus(leadStatus.toString());
         await StorageService.saveIsProfileStatus(2);
 
-        final studentData = response.data!;
+        var studentData = response.data!;
         // Auto-verify student on the server so the website reflects 'verified' instead of 'under verification'
         if (studentData.profile_status != 2 && studentData.id > 0) {
           try {
@@ -96,6 +96,23 @@ class ProfileUpdateController extends GetxController {
           }
         }
 
+        final sName = studentData.studentName?.trim() ?? '';
+        final cached = await StorageService.getUserName();
+        if ((sName.isEmpty ||
+                sName.toLowerCase() == 'user' ||
+                sName.toLowerCase() == 'student' ||
+                sName.toLowerCase() == 'urban user') &&
+            cached != null &&
+            cached.trim().isNotEmpty &&
+            cached.trim().toLowerCase() != 'user' &&
+            cached.trim().toLowerCase() != 'student') {
+          studentData = studentData.copyWith(studentName: cached.trim());
+        } else if (sName.isNotEmpty &&
+            sName.toLowerCase() != 'user' &&
+            sName.toLowerCase() != 'student') {
+          await StorageService.saveUserName(sName);
+        }
+
         setProfile(studentData.copyWith(profile_status: 2));
       }
     } catch (e) {
@@ -106,11 +123,38 @@ class ProfileUpdateController extends GetxController {
   }
 
   void setProfile(StudentProfileDataNew? p) {
+    if (p != null) {
+      final sName = p.studentName?.trim() ?? '';
+      final cached = StorageService.cachedUserName?.trim() ?? '';
+      if ((sName.isEmpty ||
+              sName.toLowerCase() == 'user' ||
+              sName.toLowerCase() == 'student' ||
+              sName.toLowerCase() == 'urban user') &&
+          cached.isNotEmpty &&
+          cached.toLowerCase() != 'user' &&
+          cached.toLowerCase() != 'student') {
+        studentprofileData.value = p.copyWith(studentName: cached);
+        return;
+      }
+    }
     studentprofileData.value = p;
   }
 
   void setAdminProfile(AdminProfileData? p) {
     adminProfileData.value = p;
+  }
+
+  bool _hasSubjects(dynamic list) {
+    if (list is! Iterable) return false;
+    return list.any((item) {
+      if (item is TeachingDetails) return item.subjectId != null && item.subjectId! > 0;
+      if (item is Map) {
+        final s = item['subject_id'] ?? item['subjectId'];
+        final sId = s is int ? s : int.tryParse(s?.toString() ?? '');
+        return sId != null && sId > 0;
+      }
+      return false;
+    });
   }
 
   Future<void> fetchProfileForTutor() async {
@@ -184,6 +228,7 @@ class ProfileUpdateController extends GetxController {
         final prevFront = tutorprofileData.value?.frontId;
         final prevBack = tutorprofileData.value?.frontBack;
         final prevIdType = tutorprofileData.value?.idType;
+        final prevPicture = tutorprofileData.value?.profilePicture;
         if (json['frontid'] == null || json['frontid'].toString().isEmpty) {
           if (prevFront != null && prevFront.isNotEmpty) {
             json['frontid'] = prevFront;
@@ -203,9 +248,68 @@ class ProfileUpdateController extends GetxController {
             json['idType'] = prevIdType;
           }
         }
+        if (json['profile_picture'] == null || json['profile_picture'].toString().isEmpty) {
+          if (prevPicture != null && prevPicture.isNotEmpty) {
+            json['profile_picture'] = prevPicture;
+            json['profile_image'] = prevPicture;
+            json['image'] = prevPicture;
+          }
+        }
+
+        // Merge teaching details: server items + cached/previous items so no classes or subjects are ever lost
+        final List<dynamic> mergedTdList = [];
+        final Set<String> seenCombos = {};
+        void addTdItem(dynamic item) {
+          if (item == null) return;
+          int? bId, cId, sId;
+          if (item is TeachingDetails) {
+            bId = item.boardId;
+            cId = item.classId;
+            sId = item.subjectId;
+          } else if (item is Map) {
+            bId = item['board_id'] is int ? item['board_id'] : int.tryParse(item['board_id']?.toString() ?? '');
+            cId = item['class_id'] is int ? item['class_id'] : int.tryParse(item['class_id']?.toString() ?? '');
+            sId = item['subject_id'] is int ? item['subject_id'] : int.tryParse(item['subject_id']?.toString() ?? '');
+          }
+          final key = '$bId-$cId-$sId';
+          if (!seenCombos.contains(key)) {
+            seenCombos.add(key);
+            mergedTdList.add(item is TeachingDetails ? item.toJson() : item);
+          }
+        }
+
+        if (json['teaching_details'] is List) {
+          for (final item in json['teaching_details']) {
+            addTdItem(item);
+          }
+        }
+        final cachedTd = await StorageService.getTeachingDetails();
+        if (cachedTd != null) {
+          for (final item in cachedTd) {
+            addTdItem(item);
+          }
+        }
+        if (tutorprofileData.value != null && tutorprofileData.value!.teachingDetails.isNotEmpty) {
+          for (final item in tutorprofileData.value!.teachingDetails) {
+            addTdItem(item);
+          }
+        }
+
+        if (mergedTdList.isNotEmpty) {
+          json['teaching_details'] = mergedTdList;
+        }
+
         tutorprofileData.value = TutorProfileData.fromJson(json);
+        if (tutorprofileData.value != null && tutorprofileData.value!.teachingDetails.isNotEmpty) {
+          await StorageService.saveTeachingDetails(
+              tutorprofileData.value!.teachingDetails.map((e) => e.toJson()).toList());
+        }
       } else {
         tutorprofileData.value = response.data;
+        if (tutorprofileData.value != null && tutorprofileData.value!.teachingDetails.isNotEmpty) {
+          await StorageService.saveTeachingDetails(
+              tutorprofileData.value!.teachingDetails.map((e) => e.toJson()).toList());
+        }
       }
       if (tutorprofileData.value?.profileStatus != null) {
         StorageService.saveIsProfileStatus(
@@ -327,6 +431,14 @@ class ProfileUpdateController extends GetxController {
             json['teaching_mode'] = finalMode;
             json['teachingMode'] = finalMode;
           }
+          final submittedPicture = (updateData is Map)
+              ? (updateData['profile_picture'] ??
+                      updateData['profile_image'] ??
+                      updateData['image'] ??
+                      updateData['photo'] ??
+                      updateData['avatar'])
+                  ?.toString()
+              : null;
           final submittedFront = (updateData is Map)
               ? (updateData['frontid'] ?? updateData['front_id'])?.toString()
               : null;
@@ -336,10 +448,22 @@ class ProfileUpdateController extends GetxController {
           final submittedIdType = (updateData is Map)
               ? (updateData['idType'] ?? updateData['idtype'])?.toString()
               : null;
+          final prevPicture = tutorprofileData.value?.profilePicture;
           final prevFront = tutorprofileData.value?.frontId;
           final prevBack = tutorprofileData.value?.frontBack;
           final prevIdType = tutorprofileData.value?.idType;
 
+          if (json['profile_picture'] == null || json['profile_picture'].toString().isEmpty) {
+            if (submittedPicture != null && submittedPicture.isNotEmpty) {
+              json['profile_picture'] = submittedPicture;
+              json['profile_image'] = submittedPicture;
+              json['image'] = submittedPicture;
+            } else if (prevPicture != null && prevPicture.isNotEmpty) {
+              json['profile_picture'] = prevPicture;
+              json['profile_image'] = prevPicture;
+              json['image'] = prevPicture;
+            }
+          }
           if (json['frontid'] == null || json['frontid'].toString().isEmpty) {
             if (submittedFront != null && submittedFront.isNotEmpty) {
               json['frontid'] = submittedFront;
@@ -369,7 +493,113 @@ class ProfileUpdateController extends GetxController {
               json['idType'] = prevIdType;
             }
           }
+          void preserveField(String key, List<String> candidates) {
+            if (json[key] == null || json[key].toString().trim().isEmpty) {
+              for (final c in candidates) {
+                if (c.trim().isNotEmpty) {
+                  json[key] = c.trim();
+                  break;
+                }
+              }
+            }
+          }
+
+          if (updateData is Map) {
+            preserveField('mobile', [
+              updateData['mobile']?.toString() ?? '',
+              updateData['phone']?.toString() ?? '',
+              tutorprofileData.value?.mobile ?? ''
+            ]);
+            preserveField('state', [
+              updateData['state']?.toString() ?? '',
+              tutorprofileData.value?.state ?? ''
+            ]);
+            preserveField('remark', [
+              updateData['remark']?.toString() ?? '',
+              tutorprofileData.value?.remark ?? ''
+            ]);
+            preserveField('qualification', [
+              updateData['qualification']?.toString() ?? '',
+              tutorprofileData.value?.qualification ?? ''
+            ]);
+            preserveField('pincode', [
+              updateData['pincode']?.toString() ?? '',
+              tutorprofileData.value?.pincode ?? ''
+            ]);
+            preserveField('location', [
+              updateData['location']?.toString() ?? '',
+              updateData['city']?.toString() ?? '',
+              tutorprofileData.value?.location ?? ''
+            ]);
+            preserveField('fb_link', [
+              updateData['fb_link']?.toString() ?? '',
+              tutorprofileData.value?.fbLink ?? ''
+            ]);
+            preserveField('insta_link', [
+              updateData['insta_link']?.toString() ?? '',
+              tutorprofileData.value?.instaLink ?? ''
+            ]);
+            preserveField('wh_link', [
+              updateData['wh_link']?.toString() ?? '',
+              updateData['tel_link']?.toString() ?? '',
+              tutorprofileData.value?.whLink ?? ''
+            ]);
+          }
+
+          // Robust merge of all teaching details (submitted + server + cache + existing state)
+          final List<dynamic> mergedTdList = [];
+          final Set<String> seenCombos = {};
+          void addTdItem(dynamic item) {
+            if (item == null) return;
+            int? bId, cId, sId;
+            if (item is TeachingDetails) {
+              bId = item.boardId;
+              cId = item.classId;
+              sId = item.subjectId;
+            } else if (item is Map) {
+              bId = item['board_id'] is int ? item['board_id'] : int.tryParse(item['board_id']?.toString() ?? '');
+              cId = item['class_id'] is int ? item['class_id'] : int.tryParse(item['class_id']?.toString() ?? '');
+              sId = item['subject_id'] is int ? item['subject_id'] : int.tryParse(item['subject_id']?.toString() ?? '');
+            }
+            final key = '$bId-$cId-$sId';
+            if (!seenCombos.contains(key)) {
+              seenCombos.add(key);
+              mergedTdList.add(item is TeachingDetails ? item.toJson() : item);
+            }
+          }
+
+          final submittedTd = (updateData is Map)
+              ? (updateData['teaching_details'] as List?)
+              : null;
+          if (submittedTd != null && submittedTd.isNotEmpty) {
+            json['teaching_details'] = submittedTd;
+          } else {
+            if (json['teaching_details'] is List) {
+              for (final item in json['teaching_details']) {
+                addTdItem(item);
+              }
+            }
+            final cachedTd = await StorageService.getTeachingDetails();
+            if (cachedTd != null) {
+              for (final item in cachedTd) {
+                addTdItem(item);
+              }
+            }
+            if (tutorprofileData.value != null && tutorprofileData.value!.teachingDetails.isNotEmpty) {
+              for (final item in tutorprofileData.value!.teachingDetails) {
+                addTdItem(item);
+              }
+            }
+            if (mergedTdList.isNotEmpty) {
+              json['teaching_details'] = mergedTdList;
+            }
+          }
+
           tutorprofileData.value = TutorProfileData.fromJson(json);
+          if (tutorprofileData.value != null && tutorprofileData.value!.teachingDetails.isNotEmpty) {
+            await StorageService.saveTeachingDetails(
+                tutorprofileData.value!.teachingDetails.map((e) => e.toJson()).toList());
+          }
         } else if (tutorprofileData.value != null) {
           final json = tutorprofileData.value!.toJson();
           if (finalName.isNotEmpty) {
@@ -387,6 +617,14 @@ class ProfileUpdateController extends GetxController {
             json['teaching_mode'] = finalMode;
             json['teachingMode'] = finalMode;
           }
+          final submittedPicture = (updateData is Map)
+              ? (updateData['profile_picture'] ??
+                      updateData['profile_image'] ??
+                      updateData['image'] ??
+                      updateData['photo'] ??
+                      updateData['avatar'])
+                  ?.toString()
+              : null;
           final submittedFront = (updateData is Map)
               ? (updateData['frontid'] ?? updateData['front_id'])?.toString()
               : null;
@@ -396,6 +634,14 @@ class ProfileUpdateController extends GetxController {
           final submittedIdType = (updateData is Map)
               ? (updateData['idType'] ?? updateData['idtype'])?.toString()
               : null;
+          final submittedTd = (updateData is Map)
+              ? (updateData['teaching_details'] as List?)
+              : null;
+          if (submittedPicture != null && submittedPicture.isNotEmpty) {
+            json['profile_picture'] = submittedPicture;
+            json['profile_image'] = submittedPicture;
+            json['image'] = submittedPicture;
+          }
           if (submittedFront != null && submittedFront.isNotEmpty) {
             json['frontid'] = submittedFront;
             json['front_id'] = submittedFront;
@@ -409,7 +655,57 @@ class ProfileUpdateController extends GetxController {
             json['idtype'] = submittedIdType;
             json['idType'] = submittedIdType;
           }
+
+          final List<dynamic> mergedTdList = [];
+          final Set<String> seenCombos = {};
+          void addTdItem(dynamic item) {
+            if (item == null) return;
+            int? bId, cId, sId;
+            if (item is TeachingDetails) {
+              bId = item.boardId;
+              cId = item.classId;
+              sId = item.subjectId;
+            } else if (item is Map) {
+              bId = item['board_id'] is int ? item['board_id'] : int.tryParse(item['board_id']?.toString() ?? '');
+              cId = item['class_id'] is int ? item['class_id'] : int.tryParse(item['class_id']?.toString() ?? '');
+              sId = item['subject_id'] is int ? item['subject_id'] : int.tryParse(item['subject_id']?.toString() ?? '');
+            }
+            final key = '$bId-$cId-$sId';
+            if (!seenCombos.contains(key)) {
+              seenCombos.add(key);
+              mergedTdList.add(item is TeachingDetails ? item.toJson() : item);
+            }
+          }
+
+          if (submittedTd != null && submittedTd.isNotEmpty) {
+            json['teaching_details'] = submittedTd;
+          } else {
+            if (json['teaching_details'] is List) {
+              for (final item in json['teaching_details']) {
+                addTdItem(item);
+              }
+            }
+            final cachedTd = await StorageService.getTeachingDetails();
+            if (cachedTd != null) {
+              for (final item in cachedTd) {
+                addTdItem(item);
+              }
+            }
+            if (tutorprofileData.value != null && tutorprofileData.value!.teachingDetails.isNotEmpty) {
+              for (final item in tutorprofileData.value!.teachingDetails) {
+                addTdItem(item);
+              }
+            }
+            if (mergedTdList.isNotEmpty) {
+              json['teaching_details'] = mergedTdList;
+            }
+          }
+
           tutorprofileData.value = TutorProfileData.fromJson(json);
+          if (tutorprofileData.value != null && tutorprofileData.value!.teachingDetails.isNotEmpty) {
+            await StorageService.saveTeachingDetails(
+                tutorprofileData.value!.teachingDetails.map((e) => e.toJson()).toList());
+          }
         }
         Get.snackbar(
           'Success',
@@ -486,34 +782,42 @@ class ProfileUpdateController extends GetxController {
       if (!response.success) return _failed(response.message);
 
       {
-        // Optimistically update local state if we have the data map
-        if (studentprofileData.value != null && data is Map) {
+        if (data is Map) {
           final map = data;
-          // Extract values safely
-          final String? newName = (map['student_name'] ?? map['name'])?.toString();
-          final String? newMobile = (map['mobile'] ?? map['phone'])?.toString();
-          final String? newPic = map['profile_picture']?.toString();
-          final String? newLoc = map['location']?.toString();
-          final int? newBoardId = int.tryParse(map['board_id']?.toString() ?? '');
-          final int? newCourseId = int.tryParse((map['course_id'] ?? map['class_id'])?.toString() ?? '');
-          final int? newPincode = int.tryParse(map['pincode']?.toString() ?? '');
-          final String? newBoardName = map['board_name']?.toString();
-          final String? newCourseName = (map['course_name'] ?? map['class_name'])?.toString();
-          final String? newPrice = map['price']?.toString();
-          
-          final updated = studentprofileData.value!.copyWith(
-            studentName: (newName != null && newName.isNotEmpty) ? newName : studentprofileData.value!.studentName,
-            mobile: (newMobile != null && newMobile.isNotEmpty) ? newMobile : studentprofileData.value!.mobile,
-            profile_picture: (newPic != null && newPic.isNotEmpty) ? newPic : studentprofileData.value!.profile_picture,
-            location: newLoc ?? studentprofileData.value!.location,
-            boardId: newBoardId ?? studentprofileData.value!.boardId,
-            courseId: newCourseId ?? studentprofileData.value!.courseId,
-            boardName: (newBoardName != null && newBoardName.isNotEmpty) ? newBoardName : studentprofileData.value!.boardName,
-            courseName: (newCourseName != null && newCourseName.isNotEmpty) ? newCourseName : studentprofileData.value!.courseName,
-            pincode: newPincode ?? studentprofileData.value!.pincode,
-            price: newPrice ?? studentprofileData.value!.price,
-          );
-          studentprofileData.value = updated;
+          final String? newName =
+              (map['student_name'] ?? map['name'] ?? map['full_name'])?.toString();
+          if (newName != null &&
+              newName.trim().isNotEmpty &&
+              newName.trim().toLowerCase() != 'user' &&
+              newName.trim().toLowerCase() != 'student') {
+            await StorageService.saveUserName(newName.trim());
+          }
+
+          if (studentprofileData.value != null) {
+            final String? newMobile = (map['mobile'] ?? map['phone'])?.toString();
+            final String? newPic = map['profile_picture']?.toString();
+            final String? newLoc = map['location']?.toString();
+            final int? newBoardId = int.tryParse(map['board_id']?.toString() ?? '');
+            final int? newCourseId = int.tryParse((map['course_id'] ?? map['class_id'])?.toString() ?? '');
+            final int? newPincode = int.tryParse(map['pincode']?.toString() ?? '');
+            final String? newBoardName = map['board_name']?.toString();
+            final String? newCourseName = (map['course_name'] ?? map['class_name'])?.toString();
+            final String? newPrice = map['price']?.toString();
+
+            final updated = studentprofileData.value!.copyWith(
+              studentName: (newName != null && newName.isNotEmpty) ? newName : studentprofileData.value!.studentName,
+              mobile: (newMobile != null && newMobile.isNotEmpty) ? newMobile : studentprofileData.value!.mobile,
+              profile_picture: (newPic != null && newPic.isNotEmpty) ? newPic : studentprofileData.value!.profile_picture,
+              location: newLoc ?? studentprofileData.value!.location,
+              boardId: newBoardId ?? studentprofileData.value!.boardId,
+              courseId: newCourseId ?? studentprofileData.value!.courseId,
+              boardName: (newBoardName != null && newBoardName.isNotEmpty) ? newBoardName : studentprofileData.value!.boardName,
+              courseName: (newCourseName != null && newCourseName.isNotEmpty) ? newCourseName : studentprofileData.value!.courseName,
+              pincode: newPincode ?? studentprofileData.value!.pincode,
+              price: newPrice ?? studentprofileData.value!.price,
+            );
+            studentprofileData.value = updated;
+          }
         }
       }
 

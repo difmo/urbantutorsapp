@@ -51,16 +51,42 @@ class GrabLead {
     required this.teacherMobile,
   });
 
+  static int _asInt(dynamic v) {
+    if (v == null) return 0;
+    if (v is int) return v;
+    return int.tryParse(v.toString()) ?? 0;
+  }
+
+  static String _resolvePhone(Map<String, dynamic> j) {
+    final candidates = [
+      j['mobile'],
+      j['student_mobile'],
+      j['student_mobile_no'],
+      j['student_phone'],
+      j['phone'],
+      j['contact'],
+    ];
+    for (final c in candidates) {
+      if (c != null) {
+        final s = c.toString().trim();
+        if (s.isNotEmpty && s != 'null' && s != '0' && s != '—') {
+          return s;
+        }
+      }
+    }
+    return '';
+  }
+
   factory GrabLead.fromJson(Map<String, dynamic> j) => GrabLead(
-        grabLeadId: j['grab_lead_id'] ?? 0,
-        leadId: j['lead_id'] ?? 0,
-        fakeLeadStatus: j['fake_lead_status'] ?? 0,
+        grabLeadId: _asInt(j['grab_lead_id']),
+        leadId: _asInt(j['lead_id']),
+        fakeLeadStatus: _asInt(j['fake_lead_status']),
         fakeLeadMessage: j['fake_lead_massage'],
-        leadOwnerName: (j['lead_wonner_name'] ?? '').toString(),
-        leadOwnerNumber: (j['lead_wonner_number'] ?? '').toString(),
+        leadOwnerName: (j['lead_wonner_name'] ?? j['lead_owner_name'] ?? '').toString(),
+        leadOwnerNumber: (j['lead_wonner_number'] ?? j['lead_owner_number'] ?? '').toString(),
         studentId: (j['student_id'] ?? '').toString(),
-        studentName: (j['student_name'] ?? '').toString(),
-        studentMobile: (j['student_mobile'] ?? '').toString(),
+        studentName: (j['student_name'] ?? j['name'] ?? '').toString(),
+        studentMobile: _resolvePhone(j),
         boardName: (j['board_name'] ?? '').toString(),
         courseName: (j['course_name'] ?? '').toString(),
         subjectName: (j['subjectname'] ?? '').toString(),

@@ -11,6 +11,7 @@ import 'package:urbantutorsapp/models/pay_course_models.dart';
 import 'package:urbantutorsapp/screens/student/childs_screens/coins_student.dart';
 import 'package:urbantutorsapp/theme/theme_constants.dart';
 import 'package:urbantutorsapp/widgets/StudentDrawer.dart';
+import 'package:urbantutorsapp/utils/storage_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class PDFCoursesScreen extends StatefulWidget {
@@ -64,15 +65,31 @@ class _PDFCoursesScreenState extends State<PDFCoursesScreen> {
     return num.tryParse(v.toString()) ?? 0;
   }
 
+  bool _isGeneric(String? s) {
+    if (s == null) return true;
+    final t = s.trim().toLowerCase();
+    return t.isEmpty ||
+        t == 'user' ||
+        t == 'student' ||
+        t == 'urban user' ||
+        t == 'tutor';
+  }
+
+  String _resolveName(String? serverName) {
+    final s = (serverName ?? '').trim();
+    final cached = StorageService.cachedUserName?.trim() ?? '';
+    if (!_isGeneric(s)) return s;
+    if (!_isGeneric(cached)) return cached;
+    return 'Student';
+  }
+
   String _initial(String? name) {
-    final n = (name ?? '').trim();
-    if (n.isEmpty) return 'S';
+    final n = _resolveName(name);
     return n.characters.first.toUpperCase();
   }
 
   String _firstName(String? name) {
-    final n = (name ?? '').trim();
-    if (n.isEmpty) return 'Student';
+    final n = _resolveName(name);
     final parts = n.split(RegExp(r'\s+'));
     return parts.first;
   }

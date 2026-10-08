@@ -192,7 +192,11 @@ https://play.google.com/store/apps/details?id=pro.urbantutors.app
   // ---- Contact sheet
   void _showContactSheet(BuildContext context) {
     final name = _nz(enquiry.studentName, 'Student');
-    final phone = _nz(enquiry.studentMobile, '');
+    final resolved = (enquiry.studentMobile.trim().isNotEmpty &&
+            enquiry.studentMobile.trim() != 'null')
+        ? enquiry.studentMobile.trim()
+        : '';
+    final phone = _nz(resolved, '');
     final area = _nz(enquiry.location);
     final mode = _nz(enquiry.mode);
 

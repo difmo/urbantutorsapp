@@ -139,15 +139,31 @@ class _NotesScreenState extends State<NotesScreen> {
     super.dispose();
   }
 
+  bool _isGeneric(String? s) {
+    if (s == null) return true;
+    final t = s.trim().toLowerCase();
+    return t.isEmpty ||
+        t == 'user' ||
+        t == 'student' ||
+        t == 'urban user' ||
+        t == 'tutor';
+  }
+
+  String _resolveName(String? serverName) {
+    final s = (serverName ?? '').trim();
+    final cached = StorageService.cachedUserName?.trim() ?? '';
+    if (!_isGeneric(s)) return s;
+    if (!_isGeneric(cached)) return cached;
+    return 'Student';
+  }
+
   String _initial(String? name) {
-    final n = (name ?? '').trim();
-    if (n.isEmpty) return 'S';
+    final n = _resolveName(name);
     return n.characters.first.toUpperCase();
   }
 
   String _firstName(String? name) {
-    final n = (name ?? '').trim();
-    if (n.isEmpty) return 'Student';
+    final n = _resolveName(name);
     final parts = n.split(RegExp(r'\s+'));
     return parts.first;
   }

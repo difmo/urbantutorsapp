@@ -199,6 +199,18 @@ class _LeadDetailPageState extends State<LeadDetailPage> {
             return widget.enquiry.mode.trim();
           }
           break;
+        case 'mobile':
+        case 'phone':
+        case 'student_mobile':
+        case 'student_mobile_no':
+        case 'lead_wonner_number':
+        case 'lead_owner_number':
+        case 'student_phone':
+          if (widget.enquiry.mobile.trim().isNotEmpty &&
+              widget.enquiry.mobile.trim() != 'null') {
+            return widget.enquiry.mobile.trim();
+          }
+          break;
       }
     }
 
@@ -344,7 +356,11 @@ https://play.google.com/store/apps/details?id=pro.urbantutors.app
             greeting: "Nearby Enquiries",
             name: displayName,
             balance: balanceText,
-            onCoinTap: () => _shareLead(context), // fixed callback
+            onCoinTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const TutorCoinsScreen()),
+            ),
+            onShareTap: () => _shareLead(context),
           );
         }),
       ),
@@ -420,7 +436,7 @@ https://play.google.com/store/apps/details?id=pro.urbantutors.app
                 Obx(() => _buildBlueButton(
                       context,
                       _leads.grabbedFor(widget.enquiry.id) != null
-                          ? "View Contact"
+                          ? "Call / View Contact"
                           : "Unlock Contact",
                       // The server masks the number until the lead is grabbed.
                       () => unlockLeadContact(context, widget.enquiry),
@@ -537,7 +553,7 @@ https://play.google.com/store/apps/details?id=pro.urbantutors.app
 
   void _showContactSheet(BuildContext context) {
     final name = _val(['student_name', 'name'], 'Student');
-    final phone = _val(['mobile', 'phone'], '');
+    final phone = _val(['mobile', 'student_mobile', 'student_mobile_no', 'student_phone', 'phone', 'contact'], '');
     final area = _val(['location', 'locality'], '—');
     final mode = _val(['mode'], '—');
 
@@ -737,6 +753,7 @@ class _Header extends StatelessWidget {
     required this.primary,
     required this.accent,
     required this.onCoinTap,
+    required this.onShareTap,
     required this.balance,
     required this.initial,
     required this.greeting,
@@ -746,6 +763,7 @@ class _Header extends StatelessWidget {
   final Color primary;
   final Color accent;
   final VoidCallback onCoinTap;
+  final VoidCallback onShareTap;
   final String balance;
 
   final String initial;
@@ -808,7 +826,7 @@ class _Header extends StatelessWidget {
         ),
         IconButton(
           icon: const Icon(Icons.share, color: Colors.white),
-          onPressed: onCoinTap,
+          onPressed: onShareTap,
           tooltip: 'Share lead',
         ),
         const SizedBox(width: 8),

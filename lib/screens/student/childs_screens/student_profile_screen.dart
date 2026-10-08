@@ -399,9 +399,26 @@ _getCurrentLocation();
     return null;
   }
 
+  bool _isGeneric(String? s) {
+    if (s == null) return true;
+    final t = s.trim().toLowerCase();
+    return t.isEmpty ||
+        t == 'user' ||
+        t == 'student' ||
+        t == 'urban user' ||
+        t == 'tutor';
+  }
+
+  String _resolveName(String? serverName) {
+    final s = (serverName ?? '').trim();
+    final cached = StorageService.cachedUserName?.trim() ?? '';
+    if (!_isGeneric(s)) return s;
+    if (!_isGeneric(cached)) return cached;
+    return 'Student';
+  }
+
   String _initialFromName(String? name) {
-    final n = (name ?? '').trim();
-    if (n.isEmpty) return 'U';
+    final n = _resolveName(name);
     return n.characters.first.toUpperCase();
   }
 
@@ -598,10 +615,9 @@ _getCurrentLocation();
 
           final prof = _p.studentprofileData.value;
           final name = prof?.studentName?.trim();
-          final initial = _initialFromName(name);
-          final displayName = (name == null || name.isEmpty)
-              ? 'Student'
-              : name.split(' ').first;
+          final resolvedName = _resolveName(name);
+          final initial = _initialFromName(resolvedName);
+          final displayName = resolvedName.split(' ').first;
 
           if (loadingCoins && wallet == null && prof == null) {
             return const SizedBox(
